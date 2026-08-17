@@ -3,19 +3,19 @@
     "message": "EQ Toolkit - Equalizer audio"
   },
   "extDescription": {
-    "message": "Equalizer audio dan penguat volume untuk tab apa pun: boost bass, atur suara, simpan preset, mute tab."
+    "message": "Equalizer audio dan penguat volume untuk tab apa pun: tingkatkan bass, sesuaikan suara, simpan preset, bisukan tab, gunakan pintasan, dan mulai otomatis."
   },
   "gain_slider_label": {
-    "message": "Amplifikasi:"
+    "message": "Gain:"
   },
   "reset_button_label": {
-    "message": "Reset"
+    "message": "Atur ulang"
   },
   "enable_eq_button_label": {
-    "message": "Aktifkan eq di tab ini"
+    "message": "Aktifkan EQ di tab ini"
   },
   "stop_eq_button_label": {
-    "message": "Hentikan eq di tab ini"
+    "message": "Hentikan EQ di tab ini"
   },
   "empty_preset_name": {
     "message": "Tidak ada"
@@ -36,7 +36,7 @@
     "message": "Komunitas"
   },
   "help_with_translation_label": {
-    "message": "Bantu terjemahan:"
+    "message": "Bantu penerjemahan:"
   },
   "translators_label": {
     "message": "Penerjemah:"
@@ -45,10 +45,10 @@
     "message": "Kode sumber:"
   },
   "import_presets_button_label": {
-    "message": "Impor preset"
+    "message": "Impor"
   },
   "export_presets_button_label": {
-    "message": "Ekspor preset"
+    "message": "Ekspor"
   },
   "enable_spectrum_setting_option": {
     "message": "Aktifkan visualisasi spektrum"
@@ -57,7 +57,7 @@
     "message": "Jumlah titik EQ"
   },
   "points_reset_title": {
-    "message": "Ubah jumlah titik EQ?"
+    "message": "Ubah jumlah titik?"
   },
   "points_reset_message": {
     "message": "Mengubah jumlah titik akan mengatur ulang pengaturan EQ saat ini."
@@ -66,7 +66,7 @@
     "message": "Jangan tampilkan lagi"
   },
   "ok": {
-    "message": "OK"
+    "message": "Oke"
   },
   "cancel": {
     "message": "Batal"
@@ -75,7 +75,7 @@
     "message": "Tema"
   },
   "capture_error_prefix": {
-    "message": "Gagal menangkap aliran audio. Coba gunakan \"Mode jendela\"."
+    "message": "Gagal menangkap stream audio. Coba gunakan “Mode jendela”."
   },
   "toolkit_window_already_open": {
     "message": "Equalizer sudah terbuka di jendela"
@@ -87,19 +87,19 @@
     "message": "Pengaturan"
   },
   "volume_mute_button_tooltip": {
-    "message": "Bisukan/aktifkan volume"
+    "message": "Bisukan/suarakan volume"
   },
   "window_mode_button_tooltip": {
     "message": "Buka mode jendela"
   },
   "add_to_autostart_tooltip": {
-    "message": "Tambahkan situs saat ini ke daftar autostart"
+    "message": "Tambahkan situs saat ini ke daftar putih mulai otomatis"
   },
   "autostart_modal_title": {
-    "message": "Tambahkan ke autostart"
+    "message": "Tambahkan ke mulai otomatis"
   },
   "autostart_settings_title": {
-    "message": "Autostart"
+    "message": "Mulai otomatis"
   },
   "autostart_rule_type_domain_label": {
     "message": "Domain"
@@ -117,10 +117,10 @@
     "message": "Daftar putih kosong"
   },
   "autostart_validation_error": {
-    "message": "Masukkan domain atau URL yang valid dan pilih preset."
+    "message": "Masukkan domain atau URL yang valid, lalu pilih preset."
   },
   "preset_delete_error": {
-    "message": "Preset ini digunakan dalam daftar putih. Hapus entri terkait terlebih dahulu."
+    "message": "Preset ini digunakan dalam aturan mulai otomatis. Hapus aturan terkait terlebih dahulu."
   },
   "add": {
     "message": "Tambah"
@@ -132,25 +132,25 @@
     "message": "Bahasa"
   },
   "shortcuts_settings_title": {
-    "message": "Pintasan keyboard"
+    "message": "Pintasan"
   },
   "shortcut_mute_label": {
-    "message": "Bisukan/aktifkan suara"
+    "message": "Bisukan/suarakan"
   },
   "shortcut_toggle_eq_label": {
     "message": "Aktifkan/nonaktifkan"
   },
   "shortcut_validation_error": {
-    "message": "Gunakan setidaknya satu tombol pengubah (Ctrl, Alt, Shift, atau Meta) dan satu huruf atau angka."
+    "message": "Gunakan setidaknya satu pengubah (Ctrl, Alt, Shift, atau Meta) dan satu huruf atau angka."
   },
   "shortcut_duplicate_error": {
     "message": "Pintasan ini sudah digunakan oleh perintah lain."
   },
   "global_controls_title": {
-    "message": "Kontrol global"
+    "message": "Kontrol Global"
   },
   "preset_controls_title": {
-    "message": "Kontrol preset"
+    "message": "Kontrol Preset"
   },
   "save": {
     "message": "Simpan"
@@ -165,7 +165,7 @@
     "message": "Masukkan nama preset."
   },
   "preset_name_reserved_error": {
-    "message": "Nama ini disediakan untuk preset bawaan."
+    "message": "Nama ini dicadangkan untuk preset bawaan."
   },
   "preset_name_duplicate_error": {
     "message": "Preset dengan nama ini sudah ada."
@@ -192,19 +192,19 @@
     "message": "Anda dapat mengubah pintasan ini di Pengaturan."
   },
   "guide_canvas_hint": {
-    "message": "Seret titik untuk mengatur equalizer. Ubah jumlah titik di Pengaturan."
+    "message": "Seret titik untuk membentuk equalizer. Ubah jumlah titik di Pengaturan."
   },
   "guide_volume_hint": {
     "message": "Gunakan penggeser ini untuk menyesuaikan volume keseluruhan."
   },
   "guide_presets_hint": {
-    "message": "Simpan pengaturan saat ini atau terapkan preset di sini."
+    "message": "Simpan penyiapan saat ini atau terapkan preset di sini."
   },
   "donation_reminder_title": {
     "message": "Dukung pengembang"
   },
   "donation_reminder_message": {
-    "message": "Jika ekstensi ini berguna, Anda dapat mendukung pengembangannya."
+    "message": "Jika ekstensi ini bermanfaat bagi Anda, dukung pengembangannya."
   },
   "donation_reminder_link": {
     "message": "Dukung pengembangan"
