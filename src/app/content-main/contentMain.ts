@@ -250,7 +250,7 @@ const reattach = (): void => {
   }
 
   bypassedSources.forEach((source) => {
-    source.disconnect();
+    source.disconnect(getAudioContext(source).destination);
     attach(source);
   });
 };

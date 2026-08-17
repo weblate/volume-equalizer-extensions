@@ -34,8 +34,10 @@ class FakeAudioNode {
     return destination;
   }
 
-  disconnect(): void {
-    this.connections = [];
+  disconnect(destination?: unknown): void {
+    this.connections = destination
+      ? this.connections.filter((connection) => connection !== destination)
+      : [];
   }
 }
 
@@ -253,14 +255,19 @@ describe("contentMain spectrum state", () => {
     await loadContentMain(port);
     const context = new FakeAudioContext(-42);
     const source = new FakeAudioNode(context, "early-source");
+    const pageAnalyser = new FakeAnalyserNode(context, "page-analyser");
 
+    source.connect(pageAnalyser);
     source.connect(context.destination);
-    expect(source.connections).toEqual([context.destination]);
+    expect(source.connections).toEqual([pageAnalyser, context.destination]);
 
     port.dataset.enabled = "true";
     port.dispatchEvent(new Event("enabled-changed"));
 
-    expect(source.connections[0]).toBeInstanceOf(FakeGainNode);
+    expect(
+      source.connections.some((connection) => connection instanceof FakeGainNode),
+    ).toBe(true);
+    expect(source.connections).toContain(pageAnalyser);
   });
 
   test("marks the reusable main bridge as ready", async () => {
