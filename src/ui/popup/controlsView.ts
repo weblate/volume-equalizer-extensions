@@ -7,7 +7,6 @@ export const createControlsView = (deps: {
   masterVolumeValue: HTMLOutputElement;
   volumeMuteButton: HTMLElement;
   windowModeButton: HTMLElement;
-  isToolkitWindow: boolean;
   getMessage(messageName: string): string;
   onToggleEqualizer(): Promise<void>;
   onReset(): Promise<void>;
@@ -17,7 +16,6 @@ export const createControlsView = (deps: {
   onMuteStateApplied(): void;
 }) => {
   deps.changeEqButton.addEventListener("click", () => {
-    if (deps.isToolkitWindow) return;
     void deps.onToggleEqualizer();
   });
 

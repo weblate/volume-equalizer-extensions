@@ -134,7 +134,6 @@ export const createPopupApp = ({
   const toolkitController = createToolkitWindowController({
     body: document.body,
     capturedTabs: elements.capturedTabs,
-    changeEqButton: elements.changeEqButton,
     audioContext,
     equalizerState,
     getDimensions: equalizerCanvas.getDimensions,
@@ -231,7 +230,10 @@ export const createPopupApp = ({
   };
 
   const onToggleEqualizer = async (): Promise<void> => {
-    if (toolkitController.isToolkitWindow) return;
+    if (toolkitController.isToolkitWindow) {
+      toolkitController.toggleEqualizer();
+      return;
+    }
 
     const tabId = await getCurrentTabId();
     if (tabId == null) return;
@@ -308,7 +310,6 @@ export const createPopupApp = ({
     masterVolumeValue: elements.masterVolumeValue,
     volumeMuteButton: elements.volumeMuteButton,
     windowModeButton: elements.windowModeButton,
-    isToolkitWindow: toolkitController.isToolkitWindow,
     getMessage: localization.getMessage,
     onToggleEqualizer,
     onReset,

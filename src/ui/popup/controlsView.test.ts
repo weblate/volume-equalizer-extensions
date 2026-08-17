@@ -11,6 +11,31 @@ class FakeElement extends EventTarget {
 }
 
 describe("createControlsView", () => {
+  test("toggles the equalizer when the power button is clicked in window mode", () => {
+    const changeEqButton = new FakeElement();
+    const onToggleEqualizer = vi.fn(async () => undefined);
+
+    createControlsView({
+      changeEqButton: changeEqButton as unknown as HTMLImageElement,
+      resetButton: new FakeElement() as unknown as HTMLButtonElement,
+      masterVolume: new FakeInput() as unknown as HTMLInputElement,
+      masterVolumeValue: new FakeElement() as unknown as HTMLOutputElement,
+      volumeMuteButton: new FakeElement() as unknown as HTMLElement,
+      windowModeButton: new FakeElement() as unknown as HTMLElement,
+      getMessage: (name) => name,
+      onToggleEqualizer,
+      onReset: async () => undefined,
+      onVolumeInput: async () => undefined,
+      onToggleMute: async () => undefined,
+      onWindowMode: async () => undefined,
+      onMuteStateApplied: () => undefined,
+    });
+
+    changeEqButton.dispatchEvent(new Event("click"));
+
+    expect(onToggleEqualizer).toHaveBeenCalledOnce();
+  });
+
   test("updates the gain value output while moving the master volume slider", () => {
     const masterVolume = new FakeInput();
     const masterVolumeValue = new FakeElement();
@@ -23,7 +48,6 @@ describe("createControlsView", () => {
       masterVolumeValue: masterVolumeValue as unknown as HTMLOutputElement,
       volumeMuteButton: new FakeElement() as unknown as HTMLElement,
       windowModeButton: new FakeElement() as unknown as HTMLElement,
-      isToolkitWindow: false,
       getMessage: (name) => name,
       onToggleEqualizer: async () => undefined,
       onReset: async () => undefined,
