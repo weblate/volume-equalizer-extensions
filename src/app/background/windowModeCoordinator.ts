@@ -183,8 +183,8 @@ export const createToolkitWindow = async (
   const window = await chrome.windows.create({
     url: chrome.runtime.getURL("popup.html?mode=window"),
     type: "popup",
-    width: 560,
-    height: 586,
+    width: 702,
+    height: 580,
     focused: true,
   });
   const storageValues: Record<string, unknown> = {
