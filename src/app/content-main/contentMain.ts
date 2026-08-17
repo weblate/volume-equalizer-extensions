@@ -33,6 +33,7 @@ let spectrumTimer: ReturnType<typeof setInterval> | null = null;
 const mediaSources = new WeakMap<HTMLMediaElement, CapturedMediaSource>();
 const pendingMedia = new WeakSet<HTMLMediaElement>();
 const cachedMedia = new Set<HTMLMediaElement>();
+const bypassedSources = new Set<AudioNode>();
 
 const nativeConnect = AudioNode.prototype.connect;
 
@@ -125,8 +126,11 @@ const attach = (source: AudioNode): AudioNode => {
   const context = getAudioContext(source);
 
   if (port.dataset.enabled === "false") {
+    bypassedSources.add(source);
     return connectToDestination(source, context.destination);
   }
+
+  bypassedSources.delete(source);
 
   if (equalizerGraphs.has(source)) {
     port.dispatchEvent(new Event("connected"));
@@ -244,6 +248,11 @@ const reattach = (): void => {
   if (equalizerGraphs.size) {
     port.dispatchEvent(new Event("connected"));
   }
+
+  bypassedSources.forEach((source) => {
+    source.disconnect();
+    attach(source);
+  });
 };
 
 const updateSpectrumState = (): void => {

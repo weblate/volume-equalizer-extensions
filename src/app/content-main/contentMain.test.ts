@@ -39,6 +39,8 @@ class FakeAudioNode {
   }
 }
 
+const nativeFakeConnect = FakeAudioNode.prototype.connect;
+
 class FakeAudioDestinationNode extends FakeAudioNode {}
 
 class FakeBiquadFilterNode extends FakeAudioNode {
@@ -117,6 +119,7 @@ const loadContentMain = async (
   media: FakeHTMLMediaElement[] = [],
 ): Promise<void> => {
   vi.resetModules();
+  FakeAudioNode.prototype.connect = nativeFakeConnect;
 
   vi.stubGlobal("document", {
     getElementById: (id: string) => (id === "eq-tools-port" ? port : null),
@@ -242,6 +245,22 @@ describe("contentMain spectrum state", () => {
     await Promise.resolve();
 
     expect(media.captured).toBe(true);
+  });
+
+  test("reattaches an early audio node after enabled state arrives", async () => {
+    const port = new FakePort();
+    port.dataset.enabled = "false";
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "early-source");
+
+    source.connect(context.destination);
+    expect(source.connections).toEqual([context.destination]);
+
+    port.dataset.enabled = "true";
+    port.dispatchEvent(new Event("enabled-changed"));
+
+    expect(source.connections[0]).toBeInstanceOf(FakeGainNode);
   });
 
   test("marks the reusable main bridge as ready", async () => {

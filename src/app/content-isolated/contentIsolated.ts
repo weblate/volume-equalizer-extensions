@@ -39,6 +39,8 @@ port.id = "eq-tools-port";
 port.hidden = true;
 if (!port.isConnected) document.documentElement.append(port);
 const isCurrentInstance = claimContentInstance(port);
+port.dataset.enabled = "false";
+port.dispatchEvent(new Event("enabled-changed"));
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (
