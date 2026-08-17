@@ -463,7 +463,10 @@ export const createPopupApp = ({
       const tabId = await getCurrentTabId();
       if (tabId == null) return;
 
-      if (changes[STORAGE_KEYS.tabEnabled(tabId)]) {
+      if (
+        !toolkitController.isToolkitWindow &&
+        changes[STORAGE_KEYS.tabEnabled(tabId)]
+      ) {
         controlsView.setEnableButtonClass(
           changes[STORAGE_KEYS.tabEnabled(tabId)].newValue === true,
         );
@@ -490,7 +493,10 @@ export const createPopupApp = ({
         }
       }
 
-      if (toolkitController.isToolkitWindow) {
+      if (
+        toolkitController.isToolkitWindow &&
+        changes[STORAGE_KEYS.tabFilters(tabId)]
+      ) {
         toolkitController.refreshCaptureFilters();
       }
     })();

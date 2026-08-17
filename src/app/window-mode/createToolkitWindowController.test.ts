@@ -173,6 +173,96 @@ afterEach(() => {
 });
 
 describe("createToolkitWindowController spectrum", () => {
+  test("bypasses filters without stopping captured audio when disabled", async () => {
+    const storage = createChromeStorage();
+    const setEnableButtonClass = vi.fn();
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController({
+      setEnableButtonClass,
+    });
+
+    await controller.startTabCapture();
+    const filteredPreamp = audioContext.createdSource
+      ?.connections[0] as FakeGainNode;
+    expect(filteredPreamp.connections[0]).toBeInstanceOf(FakeBiquadFilterNode);
+    expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
+
+    controller.toggleEqualizer();
+
+    const bypassPreamp = audioContext.createdSource
+      ?.connections[0] as FakeGainNode;
+    expect(bypassPreamp.connections).toContain(audioContext.destination);
+    expect(
+      bypassPreamp.connections.some(
+        (connection) => connection instanceof FakeBiquadFilterNode,
+      ),
+    ).toBe(false);
+    expect(setEnableButtonClass).toHaveBeenLastCalledWith(false);
+
+    setEnableButtonClass.mockClear();
+    await controller.loadTabSettings(123);
+    expect(setEnableButtonClass).toHaveBeenCalledWith(false);
+
+    controller.toggleEqualizer();
+    const restoredPreamp = audioContext.createdSource
+      ?.connections[0] as FakeGainNode;
+    expect(restoredPreamp.connections[0]).toBeInstanceOf(FakeBiquadFilterNode);
+    expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
+  });
+
+  test("preserves independent enabled state for captured tabs", async () => {
+    const storage = createChromeStorage();
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] = {
+      123: "stream-123",
+      456: "stream-456",
+    };
+    const setEnableButtonClass = vi.fn();
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller } = createController({ setEnableButtonClass });
+
+    await controller.startTabCapture();
+    controller.toggleEqualizer();
+
+    setEnableButtonClass.mockClear();
+    await controller.loadTabSettings(456);
+    expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
+
+    await controller.loadTabSettings(123);
+    expect(setEnableButtonClass).toHaveBeenLastCalledWith(false);
+  });
+
   test("emits spectrum meta and frames from the active captured tab", async () => {
     const spectrumMeta: unknown[] = [];
     const spectrumFrames: Array<Float32Array | null> = [];
@@ -287,6 +377,41 @@ describe("createToolkitWindowController spectrum", () => {
 
     controller.refreshCaptureFilters(123);
 
+    expect(setInterval).not.toHaveBeenCalled();
+    expect(clearInterval).not.toHaveBeenCalled();
+  });
+
+  test("keeps the bypass graph intact when capture settings refresh", async () => {
+    const storage = createChromeStorage();
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController();
+
+    await controller.startTabCapture();
+    controller.toggleEqualizer();
+    const bypassPreamp = audioContext.createdSource
+      ?.connections[0] as FakeGainNode;
+    vi.mocked(setInterval).mockClear();
+    vi.mocked(clearInterval).mockClear();
+
+    controller.refreshCaptureFilters();
+
+    expect(audioContext.createdSource?.connections[0]).toBe(bypassPreamp);
     expect(setInterval).not.toHaveBeenCalled();
     expect(clearInterval).not.toHaveBeenCalled();
   });

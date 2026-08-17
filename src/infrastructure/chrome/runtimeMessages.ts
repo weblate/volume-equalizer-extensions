@@ -4,6 +4,7 @@ export const RUNTIME_MESSAGES = {
   GET_CAPTURED_TABS: "getCapturedTabs",
   SPECTRUM_FRAME: "spectrum-frame",
   GET_TAB_ID: "getTabId",
+  IS_TOOLKIT_CAPTURED: "isToolkitCaptured",
   PAGE_STARTED: "pageStarted",
   CONNECTED: "connected",
   DISCONNECTED: "disconnected",

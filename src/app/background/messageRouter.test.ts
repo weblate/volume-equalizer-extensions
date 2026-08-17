@@ -116,6 +116,31 @@ describe("createRuntimeMessageHandler", () => {
     expect(response).toHaveBeenCalledWith(7);
   });
 
+  test("reports whether the sender tab is captured by the toolkit window", () => {
+    const chromeMock = createChromeMock();
+    chromeMock.sessionGet.mockImplementation((_keys, callback) => {
+      callback({ [STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]: [7] });
+    });
+    const response = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      toggleWindowMode: vi.fn(),
+    });
+
+    const result = handler(
+      {
+        method: RUNTIME_MESSAGES.IS_TOOLKIT_CAPTURED,
+      },
+      { tab: { id: 7 } as chrome.tabs.Tab },
+      response,
+    );
+
+    expect(result).toBe(true);
+    expect(response).toHaveBeenCalledWith(true);
+  });
+
   test("applies autostart with reset when page starts", () => {
     createChromeMock();
     const applyAutostartForTab = vi.fn();

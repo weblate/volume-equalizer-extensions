@@ -241,6 +241,11 @@ export const createToolkitWindowController = (deps: {
 
     const filterSettings = getCaptureFilterSettings(tabId);
     capture.filterSettings = filterSettings;
+    if (!capture.enabled) {
+      applyCaptureSettings(tabId);
+      return;
+    }
+
     if (capture.filters.length !== filterSettings.length) {
       buildCaptureGraph(tabId ?? activeTabId ?? "");
       return;

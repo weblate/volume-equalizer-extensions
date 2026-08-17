@@ -17,6 +17,10 @@ import {
 } from "../../infrastructure/chrome/runtimeMessages";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import { claimContentInstance } from "./contentInstance";
+import {
+  resolveShortcutToggle,
+  resolveTabEnabled,
+} from "./toolkitCaptureState";
 
 type SendRuntimeMessageWithCallback = (
   message: RuntimeMessage,
@@ -71,6 +75,27 @@ const withTabId = (callback: (tabId: number) => void): void => {
   }
 
   getTabId(callback);
+};
+
+const isToolkitCaptured = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    sendRuntimeMessageWithCallback(
+      { method: RUNTIME_MESSAGES.IS_TOOLKIT_CAPTURED },
+      (captured) => resolve(captured === true),
+    );
+  });
+};
+
+const applyTabEnabledState = async (
+  requestedEnabled: boolean,
+): Promise<void> => {
+  const captured = await isToolkitCaptured();
+  if (!isCurrentInstance()) return;
+
+  port.dataset.enabled = String(
+    resolveTabEnabled(requestedEnabled, captured),
+  );
+  port.dispatchEvent(new Event("enabled-changed"));
 };
 
 const setCaptureError = (message: string): void => {
@@ -129,34 +154,40 @@ getTabId((tabId) => {
       [STORAGE_KEYS.tabMute(tabId)]: false,
     },
     (prefs) => {
-      if (!isCurrentInstance()) return;
+      void (async () => {
+        if (!isCurrentInstance()) return;
 
-      const filters = prefs[STORAGE_KEYS.tabFilters(tabId)] ?? defaultFilters;
-      const freqsMapped = normalizeFilterSettings(filters);
-      port.dataset.freqs = JSON.stringify(freqsMapped);
-      port.dataset.pan = String(prefs[STORAGE_KEYS.tabPan(tabId)]);
-      port.dataset.preamp = String(prefs[STORAGE_KEYS.tabVolume(tabId)]);
-      port.dataset.enabled = String(prefs[STORAGE_KEYS.tabEnabled(tabId)]);
-      port.dataset.mute = String(prefs[STORAGE_KEYS.tabMute(tabId)]);
-      port.dataset.enableSpectrum = String(prefs[STORAGE_KEYS.ENABLE_SPECTRUM]);
-      console.log("[contentIsolated] State ready", {
-        tabId,
-        enabled: port.dataset.enabled,
-        filters: freqsMapped.length,
-      });
+        const filters = prefs[STORAGE_KEYS.tabFilters(tabId)] ?? defaultFilters;
+        const freqsMapped = normalizeFilterSettings(filters);
+        port.dataset.freqs = JSON.stringify(freqsMapped);
+        port.dataset.pan = String(prefs[STORAGE_KEYS.tabPan(tabId)]);
+        port.dataset.preamp = String(prefs[STORAGE_KEYS.tabVolume(tabId)]);
+        port.dataset.mute = String(prefs[STORAGE_KEYS.tabMute(tabId)]);
+        port.dataset.enableSpectrum = String(
+          prefs[STORAGE_KEYS.ENABLE_SPECTRUM],
+        );
+        await applyTabEnabledState(
+          prefs[STORAGE_KEYS.tabEnabled(tabId)] === true,
+        );
+        if (!isCurrentInstance()) return;
+        console.log("[contentIsolated] State ready", {
+          tabId,
+          enabled: port.dataset.enabled,
+          filters: freqsMapped.length,
+        });
 
-      if (prefs[STORAGE_KEYS.tabMute(tabId)]) {
-        port.dispatchEvent(new Event("mute-enabled"));
-      }
-      if (prefs[STORAGE_KEYS.tabEnabled(tabId)]) {
-        port.dispatchEvent(new Event("enabled-changed"));
-      }
+        if (prefs[STORAGE_KEYS.tabMute(tabId)]) {
+          port.dispatchEvent(new Event("mute-enabled"));
+        }
+      })();
     },
   );
 });
 
-chrome.storage.onChanged.addListener((changes) => {
+chrome.storage.onChanged.addListener((changes, areaName) => {
   if (!isCurrentInstance()) return;
+
+  if (areaName !== "local") return;
 
   if (changes[STORAGE_KEYS.SHORTCUTS]) {
     shortcuts = resolveShortcuts(
@@ -189,8 +220,9 @@ chrome.storage.onChanged.addListener((changes) => {
 
     const tabEnabledKey = STORAGE_KEYS.tabEnabled(tabId);
     if (changes[tabEnabledKey]) {
-      port.dataset.enabled = String(changes[tabEnabledKey].newValue);
-      port.dispatchEvent(new Event("enabled-changed"));
+      void applyTabEnabledState(
+        changes[tabEnabledKey].newValue === true,
+      );
     }
 
     const tabMuteKey = STORAGE_KEYS.tabMute(tabId);
@@ -218,17 +250,21 @@ const toggleTabStorageValue = (
   key: string,
   options: { enableTab?: boolean } = {},
 ): void => {
-  chrome.storage.local.get([key]).then((prefs) => {
-    if (!isCurrentInstance()) return;
+  Promise.all([chrome.storage.local.get([key]), isToolkitCaptured()]).then(
+    ([prefs, captured]) => {
+      if (!isCurrentInstance()) return;
 
-    const values: Record<string, boolean> = {
-      [key]: !prefs[key],
-    };
-    if (options.enableTab) {
-      values[STORAGE_KEYS.tabEnabled(tabId)] = true;
-    }
-    chrome.storage.local.set(values);
-  });
+      const values = resolveShortcutToggle({
+        key,
+        currentValue: prefs[key],
+        enabledKey: STORAGE_KEYS.tabEnabled(tabId),
+        enableTab: options.enableTab === true,
+        isToolkitCaptured: captured,
+      });
+      if (!values) return;
+      chrome.storage.local.set(values);
+    },
+  );
 };
 
 document.addEventListener(

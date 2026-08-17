@@ -55,6 +55,21 @@ export const createRuntimeMessageHandler = ({
     const tabId = sender.tab?.id;
     if (tabId == null) return;
 
+    if (request.method === RUNTIME_MESSAGES.IS_TOOLKIT_CAPTURED) {
+      chrome.storage.session.get(
+        STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
+        (stored) => {
+          const capturedTabIds = Array.isArray(
+            stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS],
+          )
+            ? stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]
+            : [];
+          response(capturedTabIds.includes(tabId));
+        },
+      );
+      return true;
+    }
+
     if (request.method === RUNTIME_MESSAGES.SPECTRUM_FRAME) {
       chrome.storage.local.set({
         [STORAGE_KEYS.tabSpectrum(tabId)]: request.payload,
