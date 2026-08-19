@@ -181,6 +181,7 @@ afterEach(() => {
 describe("createToolkitWindowController spectrum", () => {
   test("bypasses filters without stopping captured audio when disabled", async () => {
     const storage = createChromeStorage();
+    storage.localValues[STORAGE_KEYS.tabGain(123)] = 6;
     const setEnableButtonClass = vi.fn();
 
     vi.stubGlobal("window", {
@@ -201,11 +202,13 @@ describe("createToolkitWindowController spectrum", () => {
 
     const { controller, audioContext } = createController({
       setEnableButtonClass,
+      getGainValue: () => 6,
     });
 
     await controller.startTabCapture();
     const filteredPreamp = audioContext.createdSource
       ?.connections[0] as FakeGainNode;
+    expect(filteredPreamp.gain.value).toBeCloseTo(dbToGain(6));
     expect(filteredPreamp.connections[0]).toBeInstanceOf(FakeBiquadFilterNode);
     expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
 
@@ -213,6 +216,7 @@ describe("createToolkitWindowController spectrum", () => {
 
     const bypassPreamp = audioContext.createdSource
       ?.connections[0] as FakeGainNode;
+    expect(bypassPreamp.gain.value).toBe(1);
     expect(bypassPreamp.connections).toContain(audioContext.destination);
     expect(
       bypassPreamp.connections.some(
@@ -221,6 +225,11 @@ describe("createToolkitWindowController spectrum", () => {
     ).toBe(false);
     expect(setEnableButtonClass).toHaveBeenLastCalledWith(false);
 
+    controller.setCaptureMuted(123, true);
+    expect(bypassPreamp.gain.value).toBe(0);
+    controller.setCaptureMuted(123, false);
+    expect(bypassPreamp.gain.value).toBe(1);
+
     setEnableButtonClass.mockClear();
     await controller.loadTabSettings(123);
     expect(setEnableButtonClass).toHaveBeenCalledWith(false);
@@ -228,6 +237,7 @@ describe("createToolkitWindowController spectrum", () => {
     controller.toggleEqualizer();
     const restoredPreamp = audioContext.createdSource
       ?.connections[0] as FakeGainNode;
+    expect(restoredPreamp.gain.value).toBeCloseTo(dbToGain(6));
     expect(restoredPreamp.connections[0]).toBeInstanceOf(FakeBiquadFilterNode);
     expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
   });

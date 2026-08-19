@@ -194,6 +194,11 @@ export const createToolkitWindowController = (deps: {
     return deps.getFilters();
   };
 
+  const getCaptureGain = (capture: ToolkitCapture): number => {
+    if (capture.muted) return 0;
+    return capture.enabled ? dbToGain(capture.gainValue) : 1;
+  };
+
   const applyCaptureSettings = (
     tabId: number | string | null = activeTabId,
   ): void => {
@@ -204,7 +209,7 @@ export const createToolkitWindowController = (deps: {
       capture.gainValue = deps.getGainValue();
       capture.muted = deps.isMuted();
     }
-    capture.preamp.gain.value = capture.muted ? 0 : dbToGain(capture.gainValue);
+    capture.preamp.gain.value = getCaptureGain(capture);
 
     const filterSettings = getCaptureFilterSettings(tabId);
     capture.filterSettings = filterSettings;
@@ -233,7 +238,7 @@ export const createToolkitWindowController = (deps: {
 
     capture.output = previousNode;
     capture.output.connect(deps.audioContext.destination);
-    capture.preamp.gain.value = capture.muted ? 0 : dbToGain(capture.gainValue);
+    capture.preamp.gain.value = getCaptureGain(capture);
 
     if (spectrumEnabled && Number(tabId) === activeTabId) {
       startSpectrum(tabId);
@@ -571,7 +576,7 @@ export const createToolkitWindowController = (deps: {
     if (!capture?.preamp) return;
 
     capture.muted = muted;
-    capture.preamp.gain.value = muted ? 0 : dbToGain(capture.gainValue);
+    capture.preamp.gain.value = getCaptureGain(capture);
   };
 
   window.addEventListener("beforeunload", stopTabCapture);
