@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { dbToGain } from "../../domains/equalizer/equalizerMath";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import { createToolkitWindowController } from "./createToolkitWindowController";
 
@@ -60,11 +61,15 @@ class FakeAudioContext {
   sampleRate = 44100;
   destination = new FakeAudioNode();
   createdAnalyser: FakeAnalyserNode | null = null;
+  createdSource: FakeAudioNode | null = null;
+  createdSources: FakeAudioNode[] = [];
 
   resume = vi.fn(() => Promise.resolve());
 
   createMediaStreamSource(): FakeAudioNode {
-    return new FakeAudioNode();
+    this.createdSource = new FakeAudioNode();
+    this.createdSources.push(this.createdSource);
+    return this.createdSource;
   }
 
   createGain(): FakeGainNode {
@@ -130,6 +135,7 @@ const createChromeStorage = () => {
         return Promise.resolve();
       }),
     },
+    localValues,
     sessionValues,
   };
 };
@@ -253,14 +259,60 @@ describe("createToolkitWindowController spectrum", () => {
     const { controller } = createController({ setEnableButtonClass });
 
     await controller.startTabCapture();
+    expect(controller.hasCapture(123)).toBe(true);
+    expect(controller.hasCapture(999)).toBe(false);
     controller.toggleEqualizer();
 
     setEnableButtonClass.mockClear();
     await controller.loadTabSettings(456);
     expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
 
+    setEnableButtonClass.mockClear();
+    controller.toggleEqualizer(123);
+    expect(setEnableButtonClass).not.toHaveBeenCalled();
+
     await controller.loadTabSettings(123);
-    expect(setEnableButtonClass).toHaveBeenLastCalledWith(false);
+    expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
+  });
+
+  test("applies mute and gain to the targeted capture without reading active UI", async () => {
+    const storage = createChromeStorage();
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] = {
+      123: "stream-123",
+      456: "stream-456",
+    };
+    storage.localValues[STORAGE_KEYS.tabGain(456)] = 6;
+    storage.localValues[STORAGE_KEYS.tabMute(456)] = true;
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController({
+      getGainValue: () => 0,
+      isMuted: () => false,
+    });
+
+    await controller.startTabCapture();
+    const targetSource = audioContext.createdSources[1];
+    const mutedPreamp = targetSource.connections[0] as FakeGainNode;
+    expect(mutedPreamp.gain.value).toBe(0);
+
+    controller.setCaptureMuted(456, false);
+    const unmutedPreamp = targetSource.connections[0] as FakeGainNode;
+    expect(unmutedPreamp.gain.value).toBeCloseTo(dbToGain(6));
   });
 
   test("emits spectrum meta and frames from the active captured tab", async () => {

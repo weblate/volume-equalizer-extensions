@@ -13,6 +13,8 @@ import {
 
 import {
   RUNTIME_MESSAGES,
+  TOOLKIT_SHORTCUT_ACTIONS,
+  type ToolkitShortcutAction,
   type RuntimeMessage,
 } from "../../infrastructure/chrome/runtimeMessages";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
@@ -250,6 +252,7 @@ chrome.storage.local.get([STORAGE_KEYS.SHORTCUTS], (prefs) => {
 const toggleTabStorageValue = (
   tabId: number,
   key: string,
+  toolkitAction: ToolkitShortcutAction,
   options: { enableTab?: boolean } = {},
 ): void => {
   Promise.all([chrome.storage.local.get([key]), isToolkitCaptured()]).then(
@@ -262,9 +265,16 @@ const toggleTabStorageValue = (
         enabledKey: STORAGE_KEYS.tabEnabled(tabId),
         enableTab: options.enableTab === true,
         isToolkitCaptured: captured,
+        toolkitAction,
       });
-      if (!values) return;
-      chrome.storage.local.set(values);
+      if ("toolkitAction" in values) {
+        chrome.runtime.sendMessage({
+          method: RUNTIME_MESSAGES.TOOLKIT_SHORTCUT,
+          payload: { action: values.toolkitAction },
+        });
+        return;
+      }
+      chrome.storage.local.set(values.storageValues);
     },
   );
 };
@@ -280,9 +290,12 @@ document.addEventListener(
       event.preventDefault();
       event.stopPropagation();
       withTabId((tabId) => {
-        toggleTabStorageValue(tabId, STORAGE_KEYS.tabMute(tabId), {
-          enableTab: true,
-        });
+        toggleTabStorageValue(
+          tabId,
+          STORAGE_KEYS.tabMute(tabId),
+          TOOLKIT_SHORTCUT_ACTIONS.MUTE,
+          { enableTab: true },
+        );
       });
       return;
     }
@@ -291,7 +304,11 @@ document.addEventListener(
       event.preventDefault();
       event.stopPropagation();
       withTabId((tabId) => {
-        toggleTabStorageValue(tabId, STORAGE_KEYS.tabEnabled(tabId));
+        toggleTabStorageValue(
+          tabId,
+          STORAGE_KEYS.tabEnabled(tabId),
+          TOOLKIT_SHORTCUT_ACTIONS.TOGGLE_EQ,
+        );
       });
     }
   },

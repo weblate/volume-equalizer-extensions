@@ -5,6 +5,7 @@ export const RUNTIME_MESSAGES = {
   SPECTRUM_FRAME: "spectrum-frame",
   GET_TAB_ID: "getTabId",
   IS_TOOLKIT_CAPTURED: "isToolkitCaptured",
+  TOOLKIT_SHORTCUT: "toolkitShortcut",
   PAGE_STARTED: "pageStarted",
   CONNECTED: "connected",
   DISCONNECTED: "disconnected",
@@ -19,3 +20,11 @@ export interface RuntimeMessage {
   method: RuntimeMessageMethod;
   payload?: unknown;
 }
+
+export const TOOLKIT_SHORTCUT_ACTIONS = {
+  MUTE: "mute",
+  TOGGLE_EQ: "toggleEq",
+} as const;
+
+export type ToolkitShortcutAction =
+  (typeof TOOLKIT_SHORTCUT_ACTIONS)[keyof typeof TOOLKIT_SHORTCUT_ACTIONS];

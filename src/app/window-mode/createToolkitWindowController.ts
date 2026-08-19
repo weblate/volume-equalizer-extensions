@@ -14,6 +14,9 @@ interface ToolkitCapture {
   streamId: string;
   stream: MediaStream;
   source: MediaStreamAudioSourceNode;
+  enabled: boolean;
+  gainValue: number;
+  muted: boolean;
   preamp: GainNode | null;
   filters: BiquadFilterNode[];
   output: AudioNode | null;
@@ -197,7 +200,11 @@ export const createToolkitWindowController = (deps: {
     const capture = captures.get(String(tabId));
     if (!capture?.preamp) return;
 
-    capture.preamp.gain.value = deps.isMuted() ? 0 : dbToGain(deps.getGainValue());
+    if (Number(tabId) === activeTabId) {
+      capture.gainValue = deps.getGainValue();
+      capture.muted = deps.isMuted();
+    }
+    capture.preamp.gain.value = capture.muted ? 0 : dbToGain(capture.gainValue);
 
     const filterSettings = getCaptureFilterSettings(tabId);
     capture.filterSettings = filterSettings;
@@ -226,7 +233,7 @@ export const createToolkitWindowController = (deps: {
 
     capture.output = previousNode;
     capture.output.connect(deps.audioContext.destination);
-    applyCaptureSettings(tabId);
+    capture.preamp.gain.value = capture.muted ? 0 : dbToGain(capture.gainValue);
 
     if (spectrumEnabled && Number(tabId) === activeTabId) {
       startSpectrum(tabId);
@@ -348,6 +355,23 @@ export const createToolkitWindowController = (deps: {
     }
 
     const gain = result[STORAGE_KEYS.tabGain(tabId)];
+    const capture = captures.get(String(tabId));
+    if (capture) {
+      capture.filterSettings = tabFilters?.length
+        ? tabFilters
+        : defaultFilters?.length
+          ? defaultFilters
+          : capture.filterSettings;
+      capture.gainValue =
+        typeof gain === "string" || typeof gain === "number" ? Number(gain) : 0;
+      capture.muted = result[STORAGE_KEYS.tabMute(tabId)] === true;
+    }
+
+    if (activeTabId !== tabId) {
+      refreshCaptureFilters(tabId);
+      return;
+    }
+
     deps.resize();
     deps.setEnableButtonClass(result[STORAGE_KEYS.tabEnabled(tabId)] === true);
     deps.setMuteButtonClass(result[STORAGE_KEYS.tabMute(tabId)] === true);
@@ -404,15 +428,38 @@ export const createToolkitWindowController = (deps: {
             video: false,
           });
           const source = deps.audioContext.createMediaStreamSource(stream);
+          const settings = await chrome.storage.local.get([
+            STORAGE_KEYS.FILTERS,
+            STORAGE_KEYS.tabFilters(Number(tabId)),
+            STORAGE_KEYS.tabGain(Number(tabId)),
+            STORAGE_KEYS.tabMute(Number(tabId)),
+          ]);
+          const tabFilters = settings[
+            STORAGE_KEYS.tabFilters(Number(tabId))
+          ] as EqualizerPersistedFilter[] | undefined;
+          const defaultFilters = settings[STORAGE_KEYS.FILTERS] as
+            | EqualizerPersistedFilter[]
+            | undefined;
+          const gain = settings[STORAGE_KEYS.tabGain(Number(tabId))];
           const capture: ToolkitCapture = {
             streamId,
             stream,
             source,
+            enabled: true,
+            gainValue:
+              typeof gain === "string" || typeof gain === "number"
+                ? Number(gain)
+                : 0,
+            muted: settings[STORAGE_KEYS.tabMute(Number(tabId))] === true,
             preamp: null,
             filters: [],
             output: null,
             analyser: null,
-            filterSettings: [],
+            filterSettings: tabFilters?.length
+              ? tabFilters
+              : defaultFilters?.length
+                ? defaultFilters
+                : deps.getFilters(),
           };
           captures.set(tabId, capture);
           buildCaptureGraph(tabId);
@@ -504,6 +551,29 @@ export const createToolkitWindowController = (deps: {
     });
   };
 
+  const toggleEqualizer = (targetTabId: number | null = activeTabId): void => {
+    if (targetTabId == null) return;
+
+    const capture = captures.get(String(targetTabId));
+    if (!capture) return;
+
+    capture.enabled = !capture.enabled;
+    buildCaptureGraph(targetTabId);
+    if (targetTabId === activeTabId) {
+      deps.setEnableButtonClass(capture.enabled);
+    }
+  };
+
+  const hasCapture = (tabId: number): boolean => captures.has(String(tabId));
+
+  const setCaptureMuted = (tabId: number, muted: boolean): void => {
+    const capture = captures.get(String(tabId));
+    if (!capture?.preamp) return;
+
+    capture.muted = muted;
+    capture.preamp.gain.value = muted ? 0 : dbToGain(capture.gainValue);
+  };
+
   window.addEventListener("beforeunload", stopTabCapture);
 
   return {
@@ -516,6 +586,9 @@ export const createToolkitWindowController = (deps: {
     renderCapturedTabs,
     refreshCaptureFilters,
     applyCaptureSettings,
+    hasCapture,
+    setCaptureMuted,
+    toggleEqualizer,
     stopCapturedTabCapture,
     stopTabCapture,
     handleStorageChange: async (

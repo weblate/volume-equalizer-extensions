@@ -1,3 +1,5 @@
+import type { ToolkitShortcutAction } from "../../infrastructure/chrome/runtimeMessages";
+
 export const resolveTabEnabled = (
   requestedEnabled: boolean,
   isToolkitCaptured: boolean,
@@ -11,18 +13,22 @@ export const resolveShortcutToggle = ({
   enabledKey,
   enableTab,
   isToolkitCaptured,
+  toolkitAction,
 }: {
   key: string;
   currentValue: unknown;
   enabledKey: string;
   enableTab: boolean;
   isToolkitCaptured: boolean;
-}): Record<string, boolean> | null => {
-  if (isToolkitCaptured && key === enabledKey) return null;
+  toolkitAction: ToolkitShortcutAction;
+}):
+  | { toolkitAction: ToolkitShortcutAction }
+  | { storageValues: Record<string, boolean> } => {
+  if (isToolkitCaptured) return { toolkitAction };
 
   const values = { [key]: !currentValue };
   if (enableTab && !isToolkitCaptured) {
     values[enabledKey] = true;
   }
-  return values;
+  return { storageValues: values };
 };

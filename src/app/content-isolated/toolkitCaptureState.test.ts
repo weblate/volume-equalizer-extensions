@@ -18,7 +18,7 @@ describe("resolveTabEnabled", () => {
 });
 
 describe("resolveShortcutToggle", () => {
-  test("does not toggle the page equalizer while captured", () => {
+  test("routes equalizer toggling to the toolkit while captured", () => {
     expect(
       resolveShortcutToggle({
         key: STORAGE_KEYS.tabEnabled(123),
@@ -26,11 +26,12 @@ describe("resolveShortcutToggle", () => {
         enabledKey: STORAGE_KEYS.tabEnabled(123),
         enableTab: false,
         isToolkitCaptured: true,
+        toolkitAction: "toggleEq",
       }),
-    ).toBeNull();
+    ).toEqual({ toolkitAction: "toggleEq" });
   });
 
-  test("toggles mute without enabling the page equalizer while captured", () => {
+  test("routes mute to the toolkit while captured", () => {
     expect(
       resolveShortcutToggle({
         key: STORAGE_KEYS.tabMute(123),
@@ -38,7 +39,26 @@ describe("resolveShortcutToggle", () => {
         enabledKey: STORAGE_KEYS.tabEnabled(123),
         enableTab: true,
         isToolkitCaptured: true,
+        toolkitAction: "mute",
       }),
-    ).toEqual({ [STORAGE_KEYS.tabMute(123)]: true });
+    ).toEqual({ toolkitAction: "mute" });
+  });
+
+  test("keeps storage-based shortcut behavior outside toolkit capture", () => {
+    expect(
+      resolveShortcutToggle({
+        key: STORAGE_KEYS.tabMute(123),
+        currentValue: false,
+        enabledKey: STORAGE_KEYS.tabEnabled(123),
+        enableTab: true,
+        isToolkitCaptured: false,
+        toolkitAction: "mute",
+      }),
+    ).toEqual({
+      storageValues: {
+        [STORAGE_KEYS.tabMute(123)]: true,
+        [STORAGE_KEYS.tabEnabled(123)]: true,
+      },
+    });
   });
 });

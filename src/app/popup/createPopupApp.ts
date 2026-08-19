@@ -35,6 +35,10 @@ import { createOnboardingGuideView } from "../../ui/popup/onboardingGuideView";
 import { createPresetsView } from "../../ui/popup/presetsView";
 import { createSettingsView } from "../../ui/popup/settingsView";
 import { ensureContentScripts } from "./ensureContentScripts";
+import {
+  applyToolkitShortcutMessage,
+  resolveToolkitShortcutMessage,
+} from "./toolkitShortcutMessage";
 
 export interface PopupAppDependencies {
   elements: PopupElements;
@@ -191,24 +195,6 @@ export const createPopupApp = ({
     await chrome.storage.local.set(values);
   };
 
-  const toggleCurrentTabStorageValue = async (
-    key: "mute" | "enabled",
-    options: { enableTab?: boolean } = {},
-  ): Promise<void> => {
-    const tabId = await getCurrentTabId();
-    if (tabId == null) return;
-
-    const storageKey = `${key}.${tabId}`;
-    const values = await chrome.storage.local.get([storageKey]);
-    const nextValues: Record<string, unknown> = {
-      [storageKey]: !values[storageKey],
-    };
-    if (options.enableTab && !toolkitController.isToolkitWindow) {
-      nextValues[STORAGE_KEYS.tabEnabled(tabId)] = true;
-    }
-    await chrome.storage.local.set(nextValues);
-  };
-
   const refreshPresetDropdown = async (): Promise<void> => {
     const stored = await chrome.storage.local.get([
       STORAGE_KEYS.PRESET_NAMES,
@@ -229,9 +215,9 @@ export const createPopupApp = ({
     await refreshPresetDropdown();
   };
 
-  const onToggleEqualizer = async (): Promise<void> => {
+  const onToggleEqualizer = async (targetTabId?: number): Promise<void> => {
     if (toolkitController.isToolkitWindow) {
-      toolkitController.toggleEqualizer();
+      toolkitController.toggleEqualizer(targetTabId);
       return;
     }
 
@@ -278,8 +264,8 @@ export const createPopupApp = ({
     await chrome.storage.local.set(values);
   };
 
-  const onToggleMute = async (): Promise<void> => {
-    const tabId = await getCurrentTabId();
+  const onToggleMute = async (targetTabId?: number): Promise<void> => {
+    const tabId = targetTabId ?? (await getCurrentTabId());
     if (tabId == null) return;
 
     if (!toolkitController.isToolkitWindow) {
@@ -287,10 +273,36 @@ export const createPopupApp = ({
     }
 
     const result = await chrome.storage.local.get([STORAGE_KEYS.tabMute(tabId)]);
+    const muted = !result[STORAGE_KEYS.tabMute(tabId)];
+    if (toolkitController.isToolkitWindow) {
+      toolkitController.setCaptureMuted(tabId, muted);
+    }
     await chrome.storage.local.set({
-      [STORAGE_KEYS.tabMute(tabId)]: !result[STORAGE_KEYS.tabMute(tabId)],
+      [STORAGE_KEYS.tabMute(tabId)]: muted,
     });
   };
+
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    const shortcut = resolveToolkitShortcutMessage(
+      message,
+      sender,
+      toolkitController.isToolkitWindow,
+    );
+    if (!shortcut) return;
+
+    void applyToolkitShortcutMessage(shortcut, {
+      hasCapture: toolkitController.hasCapture,
+      selectTab: async (tabId) => {
+        await toolkitController.loadTabSettings(tabId);
+        await chrome.storage.session.set({
+          [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: tabId,
+        });
+        await toolkitController.renderCapturedTabs();
+      },
+      toggleMute: onToggleMute,
+      toggleEqualizer: onToggleEqualizer,
+    });
+  });
 
   const onWindowMode = async (): Promise<void> => {
     const tabId = await getCurrentTabId();
@@ -439,7 +451,7 @@ export const createPopupApp = ({
       if (matchesShortcut(event, shortcuts[SHORTCUT_ACTION_MUTE_NAME])) {
         event.preventDefault();
         event.stopPropagation();
-        await toggleCurrentTabStorageValue("mute", { enableTab: true });
+        await onToggleMute();
         return;
       }
 
@@ -447,11 +459,9 @@ export const createPopupApp = ({
         event,
         shortcuts[SHORTCUT_ACTION_TOGGLE_EQ_NAME],
       )) {
-        if (toolkitController.isToolkitWindow) return;
-
         event.preventDefault();
         event.stopPropagation();
-        await toggleCurrentTabStorageValue("enabled");
+        await onToggleEqualizer();
       }
     })();
   });
