@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "This shortcut is already used by another command."
   },
+  "shortcut_q_factor_label": {
+    "message": "Adjust Q factor"
+  },
+  "q_factor_shift_hint": {
+    "message": "Hold Shift and drag points on the canvas to adjust the Q factor."
+  },
   "global_controls_title": {
     "message": "Global Controls"
   },

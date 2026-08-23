@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Questa scorciatoia è già usata da un altro comando."
   },
+  "shortcut_q_factor_label": {
+    "message": "Regola il fattore Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "Tieni premuto Shift e trascina i punti sul canvas per regolare il fattore Q."
+  },
   "global_controls_title": {
     "message": "Controlli globali"
   },

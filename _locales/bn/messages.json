@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "এই শর্টকাটটি ইতিমধ্যে অন্য কমান্ডে ব্যবহৃত হচ্ছে।"
   },
+  "shortcut_q_factor_label": {
+    "message": "Q প্যারামিটার পরিবর্তন"
+  },
+  "q_factor_shift_hint": {
+    "message": "Shift চেপে ধরে ক্যানভাসের পয়েন্ট টেনে Q প্যারামিটার পরিবর্তন করুন।"
+  },
   "global_controls_title": {
     "message": "সামগ্রিক নিয়ন্ত্রণ"
   },

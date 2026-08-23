@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "此快捷键已被另一个命令使用。"
   },
+  "shortcut_q_factor_label": {
+    "message": "调整 Q 值"
+  },
+  "q_factor_shift_hint": {
+    "message": "按住 Shift 并拖动画布上的控制点以调整 Q 值。"
+  },
   "global_controls_title": {
     "message": "全局控制"
   },

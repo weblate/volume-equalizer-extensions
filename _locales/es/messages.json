@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Este atajo ya lo usa otro comando."
   },
+  "shortcut_q_factor_label": {
+    "message": "Ajustar factor Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "Mantén pulsada Shift y arrastra los puntos del lienzo para ajustar el factor Q."
+  },
   "global_controls_title": {
     "message": "Controles globales"
   },

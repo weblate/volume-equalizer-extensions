@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Bu kısayol zaten başka bir komut tarafından kullanılıyor."
   },
+  "shortcut_q_factor_label": {
+    "message": "Q parametresini ayarla"
+  },
+  "q_factor_shift_hint": {
+    "message": "Q parametresini ayarlamak için Shift tuşunu basılı tutup tuvaldeki noktaları sürükleyin."
+  },
   "global_controls_title": {
     "message": "Genel kontroller"
   },

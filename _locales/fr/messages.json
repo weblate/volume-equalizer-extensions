@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Ce raccourci est déjà utilisé par une autre commande."
   },
+  "shortcut_q_factor_label": {
+    "message": "Régler le facteur Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "Maintenez Shift enfoncée et faites glisser les points sur le canevas pour régler le facteur Q."
+  },
   "global_controls_title": {
     "message": "Commandes globales"
   },

@@ -11,6 +11,9 @@ test("contains the accessible onboarding overlay", () => {
   expect(markup).toContain('aria-modal="true"');
   expect(markup).toContain('data-guide-action="skip"');
   expect(markup).toMatch(
+    /<input[^>]*id="shortcut-q-factor"[^>]*value="Shift\+Drag"[^>]*disabled>/,
+  );
+  expect(markup).toMatch(
     /<section id="preset-controls-card" class="control-card">\s*<h2 id="preset-controls-title"[^>]*>/,
   );
 });

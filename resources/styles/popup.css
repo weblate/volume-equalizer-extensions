@@ -730,6 +730,12 @@ button:disabled:active {
   outline: 1px solid #ff4d4d;
 }
 
+.shortcut-input:disabled {
+  color: var(--text);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .settings-error {
   display: none;
   margin-top: 8px;

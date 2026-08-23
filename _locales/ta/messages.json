@@ -146,6 +146,12 @@
   "extName": {
     "message": "EQ Toolkit - ஆடியோ சமநிலைப்படுத்தி"
   },
+  "shortcut_q_factor_label": {
+    "message": "Q அளவுருவை மாற்று"
+  },
+  "q_factor_shift_hint": {
+    "message": "Q அளவுருவை மாற்ற Shift விசையை அழுத்திப் பிடித்தபடி கேன்வாஸில் உள்ள புள்ளிகளை இழுக்கவும்."
+  },
   "global_controls_title": {
     "message": "உலகளாவிய கட்டுப்பாடுகள்"
   },

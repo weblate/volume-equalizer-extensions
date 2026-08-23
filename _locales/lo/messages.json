@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "ປຸ່ມລັດນີ້ຖືກໃຊ້ໂດຍຄຳສັ່ງອື່ນແລ້ວ."
   },
+  "shortcut_q_factor_label": {
+    "message": "ປັບຄ່າ Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "ກົດ Shift ຄ້າງໄວ້ ແລະ ລາກຈຸດເທິງແຄນວາສເພື່ອປັບຄ່າ Q."
+  },
   "global_controls_title": {
     "message": "ການຄວບຄຸມທົ່ວໄປ"
   },

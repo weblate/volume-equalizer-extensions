@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Это сочетание уже используется другой командой."
   },
+  "shortcut_q_factor_label": {
+    "message": "Изменение параметра Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "Зажмите Shift и перетаскивайте точки на canvas, чтобы изменить параметр Q."
+  },
   "global_controls_title": {
     "message": "Общие настройки"
   },

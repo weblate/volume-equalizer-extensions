@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Deze sneltoets wordt al door een andere opdracht gebruikt."
   },
+  "shortcut_q_factor_label": {
+    "message": "Q-factor aanpassen"
+  },
+  "q_factor_shift_hint": {
+    "message": "Houd Shift ingedrukt en sleep punten op het canvas om de Q-factor aan te passen."
+  },
   "global_controls_title": {
     "message": "Algemene bediening"
   },

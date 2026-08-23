@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Dieses Tastenkürzel wird bereits von einem anderen Befehl verwendet."
   },
+  "shortcut_q_factor_label": {
+    "message": "Q-Faktor anpassen"
+  },
+  "q_factor_shift_hint": {
+    "message": "Halte Shift gedrückt und ziehe Punkte auf dem Canvas, um den Q-Faktor anzupassen."
+  },
   "global_controls_title": {
     "message": "Globale Steuerelemente"
   },

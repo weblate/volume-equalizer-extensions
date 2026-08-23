@@ -13,9 +13,16 @@ export interface GuideScreen {
   kind: "language" | "appearance" | "shortcuts" | "spotlight";
   titleKey: string;
   messageKey?: string;
+  additionalMessageKey?: string;
   target?: GuideTarget;
   substep?: readonly [number, number];
 }
+
+export const GUIDE_SHORTCUTS = [
+  ["shortcut_mute_label", "Alt+M"],
+  ["shortcut_toggle_eq_label", "Alt+K"],
+  ["shortcut_q_factor_label", "Shift+Drag"],
+] as const;
 
 export const GUIDE_SCREENS: readonly GuideScreen[] = [
   { stage: 1, kind: "language", titleKey: "language_setting_option" },
@@ -67,6 +74,7 @@ export const GUIDE_SCREENS: readonly GuideScreen[] = [
     target: "equalizer",
     titleKey: "extName",
     messageKey: "guide_canvas_hint",
+    additionalMessageKey: "q_factor_shift_hint",
   },
   {
     stage: 7,
@@ -256,16 +264,17 @@ export const createOnboardingGuideView = (deps: {
         row.append(label, shortcut);
         return row;
       };
-      content.append(
-        createShortcut("shortcut_mute_label", "Alt+M"),
-        createShortcut("shortcut_toggle_eq_label", "Alt+K"),
-      );
+      content.append(...GUIDE_SHORTCUTS.map(([label, keys]) => (
+        createShortcut(label, keys)
+      )));
     }
-    if (screen.messageKey) {
+    [screen.messageKey, screen.additionalMessageKey].forEach((messageKey) => {
+      if (!messageKey) return;
+
       const message = document.createElement("p");
-      message.textContent = deps.getMessage(screen.messageKey);
+      message.textContent = deps.getMessage(messageKey);
       content.append(message);
-    }
+    });
   };
 
   const positionSpotlight = (target: HTMLElement): void => {

@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Phím tắt này đã được lệnh khác sử dụng."
   },
+  "shortcut_q_factor_label": {
+    "message": "Điều chỉnh tham số Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "Giữ Shift và kéo các điểm trên canvas để điều chỉnh tham số Q."
+  },
   "global_controls_title": {
     "message": "Điều khiển chung"
   },

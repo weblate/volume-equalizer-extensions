@@ -10,6 +10,8 @@ const requiredKeys = [
   "guide_theme_light",
   "guide_shortcuts_hint",
   "guide_canvas_hint",
+  "q_factor_shift_hint",
+  "shortcut_q_factor_label",
   "guide_volume_hint",
   "guide_presets_hint",
   "donation_reminder_title",

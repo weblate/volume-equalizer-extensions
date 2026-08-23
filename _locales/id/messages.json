@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Pintasan ini sudah digunakan oleh perintah lain."
   },
+  "shortcut_q_factor_label": {
+    "message": "Sesuaikan parameter Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "Tahan Shift dan seret titik pada kanvas untuk menyesuaikan parameter Q."
+  },
   "global_controls_title": {
     "message": "Kontrol Global"
   },

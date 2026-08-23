@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "このショートカットは別のコマンドですでに使用されています。"
   },
+  "shortcut_q_factor_label": {
+    "message": "Q値を調整"
+  },
+  "q_factor_shift_hint": {
+    "message": "Shiftキーを押しながらキャンバス上のポイントをドラッグすると、Q値を調整できます。"
+  },
   "global_controls_title": {
     "message": "グローバルコントロール"
   },

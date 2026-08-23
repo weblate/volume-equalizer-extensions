@@ -1,5 +1,6 @@
 import {
   GUIDE_SCREENS,
+  GUIDE_SHORTCUTS,
   getGuideNavigation,
   getNextFocusIndex,
   getSpotlightPanels,
@@ -18,6 +19,20 @@ describe("onboarding guide navigation", () => {
     });
     expect(getGuideNavigation(3).canSkip).toBe(true);
     expect(getGuideNavigation(GUIDE_SCREENS.length - 1).isLast).toBe(true);
+  });
+
+  test("shows the fixed Q-factor gesture with the other shortcuts", () => {
+    expect(GUIDE_SHORTCUTS).toEqual([
+      ["shortcut_mute_label", "Alt+M"],
+      ["shortcut_toggle_eq_label", "Alt+K"],
+      ["shortcut_q_factor_label", "Shift+Drag"],
+    ]);
+  });
+
+  test("keeps the Q-factor explanation on the equalizer screen", () => {
+    expect(GUIDE_SCREENS.find(({ target }) => target === "equalizer")).toMatchObject({
+      additionalMessageKey: "q_factor_shift_hint",
+    });
   });
 });
 

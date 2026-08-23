@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "ปุ่มลัดนี้ถูกใช้โดยคำสั่งอื่นแล้ว"
   },
+  "shortcut_q_factor_label": {
+    "message": "ปรับค่า Q"
+  },
+  "q_factor_shift_hint": {
+    "message": "กด Shift ค้างไว้แล้วลากจุดบนแคนวาสเพื่อปรับค่า Q"
+  },
   "global_controls_title": {
     "message": "การควบคุมส่วนกลาง"
   },
