@@ -229,12 +229,17 @@ export const createToolkitWindowController = (deps: {
 
     let previousNode: AudioNode = capture.preamp;
     const filterSettings = getCaptureFilterSettings(tabId);
-    capture.filters = filterSettings.map((filter) => {
-      const biquadFilter = createBiquadFilter(deps.audioContext, toBiquadInput(filter));
-      previousNode.connect(biquadFilter);
-      previousNode = biquadFilter;
-      return biquadFilter;
-    });
+    capture.filters = capture.enabled
+      ? filterSettings.map((filter) => {
+          const biquadFilter = createBiquadFilter(
+            deps.audioContext,
+            toBiquadInput(filter),
+          );
+          previousNode.connect(biquadFilter);
+          previousNode = biquadFilter;
+          return biquadFilter;
+        })
+      : [];
 
     capture.output = previousNode;
     capture.output.connect(deps.audioContext.destination);
@@ -339,7 +344,6 @@ export const createToolkitWindowController = (deps: {
       STORAGE_KEYS.FILTERS,
       STORAGE_KEYS.tabFilters(tabId),
       STORAGE_KEYS.tabGain(tabId),
-      STORAGE_KEYS.tabEnabled(tabId),
       STORAGE_KEYS.tabMute(tabId),
       STORAGE_KEYS.tabCaptureError(tabId),
     ]);
@@ -378,7 +382,9 @@ export const createToolkitWindowController = (deps: {
     }
 
     deps.resize();
-    deps.setEnableButtonClass(result[STORAGE_KEYS.tabEnabled(tabId)] === true);
+    deps.setEnableButtonClass(
+      captures.get(String(tabId))?.enabled === true,
+    );
     deps.setMuteButtonClass(result[STORAGE_KEYS.tabMute(tabId)] === true);
 
     deps.setGainValue(typeof gain === "string" || typeof gain === "number" ? Number(gain) : 0);
@@ -473,6 +479,9 @@ export const createToolkitWindowController = (deps: {
       );
 
       deps.renderCaptureError(null);
+      deps.setEnableButtonClass(
+        captures.get(String(activeTabId))?.enabled === true,
+      );
       if (spectrumEnabled) {
         startSpectrum(activeTabId);
       } else {
