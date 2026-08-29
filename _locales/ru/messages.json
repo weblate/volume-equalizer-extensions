@@ -147,10 +147,10 @@
     "message": "Это сочетание уже используется другой командой."
   },
   "shortcut_q_factor_label": {
-    "message": "Изменение параметра Q"
+    "message": "Изменение ширины фильтра (Q-factor)"
   },
   "q_factor_shift_hint": {
-    "message": "Зажмите Shift и перетаскивайте точки на canvas, чтобы изменить параметр Q."
+    "message": "Перетаскивайте точки с зажатой клавишей Shift, чтобы изменить ширину фильтра (Q-factor)."
   },
   "global_controls_title": {
     "message": "Общие настройки"
