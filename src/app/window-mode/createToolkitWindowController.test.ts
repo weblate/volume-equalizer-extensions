@@ -179,6 +179,41 @@ afterEach(() => {
 });
 
 describe("createToolkitWindowController spectrum", () => {
+  test("does not add disabled crossover filters to the capture graph", async () => {
+    const storage = createChromeStorage();
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController({
+      getFilters: () => [
+        { type: "highpass", freq: 20, gain: 0, q: 0.5, enabled: false },
+        { type: "peaking", freq: 1000, gain: 3, q: 0.5 },
+        { type: "lowpass", freq: 20000, gain: 0, q: 0.5, enabled: false },
+      ],
+    });
+
+    await controller.startTabCapture();
+
+    const preamp = audioContext.createdSource?.connections[0] as FakeGainNode;
+    const filter = preamp.connections[0] as FakeBiquadFilterNode;
+    expect(filter.type).toBe("peaking");
+    expect(filter.connections).toContain(audioContext.destination);
+  });
+
   test("bypasses filters without stopping captured audio when disabled", async () => {
     const storage = createChromeStorage();
     storage.localValues[STORAGE_KEYS.tabGain(123)] = 6;

@@ -8,6 +8,7 @@ import {
   xToFrequency,
   yToDb,
 } from "./equalizerMath";
+import { isEqualizerFilterEnabled } from "./defaultFilters";
 
 export interface EqualizerCanvasDimensions {
   canvasWidth: number;
@@ -28,7 +29,7 @@ export type EqualizerDragTarget =
   | { type: "lowpass" };
 
 export type EqualizerPersistedFilter = Partial<
-  Omit<EqualizerFilter, "type" | "freq" | "gain" | "q">
+  Omit<EqualizerFilter, "type" | "freq" | "gain" | "q" | "enabled">
 > & {
   type?: EqualizerFilterType;
   freq?: unknown;
@@ -36,6 +37,7 @@ export type EqualizerPersistedFilter = Partial<
   q?: unknown;
   x?: unknown;
   y?: unknown;
+  enabled?: unknown;
 };
 
 export type EqualizerCanvasFilter = EqualizerFilter & {
@@ -158,6 +160,8 @@ export const createEqualizerState = (): EqualizerState => {
   let points: EqualizerCanvasPoint[] = [];
   let highpassPoint: EqualizerCanvasPoint | null = null;
   let lowpassPoint: EqualizerCanvasPoint | null = null;
+  let highpassEnabled = false;
+  let lowpassEnabled = false;
   let dragTarget: EqualizerDragTarget | null = null;
   let dragMode: EqualizerDragMode | null = null;
 
@@ -197,6 +201,8 @@ export const createEqualizerState = (): EqualizerState => {
       points = createPeakingFilterPoints(pointCount, dimensions);
       highpassPoint = createDefaultHighpassPoint(dimensions);
       lowpassPoint = createDefaultLowpassPoint(dimensions);
+      highpassEnabled = false;
+      lowpassEnabled = false;
     },
 
     setPoints: (filters, dimensions, options = {}) => {
@@ -210,6 +216,12 @@ export const createEqualizerState = (): EqualizerState => {
       options.onPointCountChange?.(pointCount);
       highpassPoint = createDefaultHighpassPoint(dimensions, highpassFilter);
       lowpassPoint = createDefaultLowpassPoint(dimensions, lowpassFilter);
+      highpassEnabled = highpassFilter
+        ? isEqualizerFilterEnabled(highpassFilter as Partial<EqualizerFilter>)
+        : false;
+      lowpassEnabled = lowpassFilter
+        ? isEqualizerFilterEnabled(lowpassFilter as Partial<EqualizerFilter>)
+        : false;
       points = peakingFilters.map((filter, index) => {
         const centeredPoint = createPeakingFilterPoint(index, pointCount, dimensions);
         const freq = finiteNumberOrNull(filter.freq);
@@ -235,6 +247,7 @@ export const createEqualizerState = (): EqualizerState => {
       if (highpassPoint) {
         filters.push({
           type: "highpass",
+          enabled: highpassEnabled,
           freq: xToFrequency(highpassPoint.x, canvasWidth),
           gain: 0,
           q: ensureQFactor(highpassPoint.q),
@@ -257,6 +270,7 @@ export const createEqualizerState = (): EqualizerState => {
       if (lowpassPoint) {
         filters.push({
           type: "lowpass",
+          enabled: lowpassEnabled,
           freq: xToFrequency(lowpassPoint.x, canvasWidth),
           gain: 0,
           q: ensureQFactor(lowpassPoint.q),
@@ -307,11 +321,13 @@ export const createEqualizerState = (): EqualizerState => {
 
       if (dragTarget.type === "highpass") {
         highpassPoint = clonePoint(point);
+        if (dragMode === "point") highpassEnabled = true;
         return;
       }
 
       if (dragTarget.type === "lowpass") {
         lowpassPoint = clonePoint(point);
+        if (dragMode === "point") lowpassEnabled = true;
         return;
       }
 
@@ -339,11 +355,13 @@ export const createEqualizerState = (): EqualizerState => {
 
       if (target.type === "highpass") {
         highpassPoint = createDefaultHighpassPoint(dimensions);
+        highpassEnabled = false;
         return;
       }
 
       if (target.type === "lowpass") {
         lowpassPoint = createDefaultLowpassPoint(dimensions);
+        lowpassEnabled = false;
         return;
       }
 

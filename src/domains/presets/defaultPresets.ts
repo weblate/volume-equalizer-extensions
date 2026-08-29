@@ -13,7 +13,7 @@ const createPresetFilters = (
   const freqs = [64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
   return [
-    { type: "highpass", freq: 20, gain: 0, q: 0.5 },
+    { type: "highpass", freq: 20, gain: 0, q: 0.5, enabled: false },
     ...freqs.map((freq, index): EqualizerPersistedFilter => {
       return {
         type: "peaking",
@@ -22,7 +22,7 @@ const createPresetFilters = (
         q: 0.5,
       };
     }),
-    { type: "lowpass", freq: 20000, gain: 0, q: 0.5 },
+    { type: "lowpass", freq: 20000, gain: 0, q: 0.5, enabled: false },
   ];
 };
 

@@ -5,4 +5,5 @@ export interface EqualizerFilter {
   gain: number;
   q: number;
   type: EqualizerFilterType;
+  enabled?: boolean;
 }

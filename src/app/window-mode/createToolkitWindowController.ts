@@ -2,11 +2,13 @@ import type {
   EqualizerPersistedFilter,
   EqualizerState,
 } from "../../domains/equalizer/equalizerState";
+import type { EqualizerFilter } from "../../domains/equalizer/types";
 import {
   applyBiquadSettings,
   createBiquadFilter,
 } from "../../domains/audio/biquadChain";
 import { dbToGain } from "../../domains/equalizer/equalizerMath";
+import { isEqualizerFilterEnabled } from "../../domains/equalizer/defaultFilters";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import { createCapturedTabsView } from "../../ui/popup/capturedTabsView";
 
@@ -182,16 +184,19 @@ export const createToolkitWindowController = (deps: {
   const getCaptureFilterSettings = (
     tabId: number | string | null = activeTabId,
   ): EqualizerPersistedFilter[] => {
+    let filters: EqualizerPersistedFilter[];
     if (tabId != null && Number(tabId) === activeTabId) {
-      return deps.getFilters();
+      filters = deps.getFilters();
+    } else {
+      const capture = captures.get(String(tabId));
+      filters = capture?.filterSettings?.length
+        ? capture.filterSettings
+        : deps.getFilters();
     }
 
-    const capture = captures.get(String(tabId));
-    if (capture?.filterSettings?.length) {
-      return capture.filterSettings;
-    }
-
-    return deps.getFilters();
+    return filters.filter((filter) => {
+      return isEqualizerFilterEnabled(filter as Partial<EqualizerFilter>);
+    });
   };
 
   const getCaptureGain = (capture: ToolkitCapture): number => {

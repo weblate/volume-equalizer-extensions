@@ -8,6 +8,13 @@ import {
 } from "./defaultPresets";
 
 describe("default presets", () => {
+  test("keeps untouched crossover filters disabled", () => {
+    DEFAULT_PRESETS.forEach((preset) => {
+      expect(preset.filters[0].enabled).toBe(false);
+      expect(preset.filters.at(-1)?.enabled).toBe(false);
+    });
+  });
+
   test("keeps user preset names before default preset names", () => {
     const names = getAvailablePresetNames(["Custom", DEFAULT_PRESETS[0].name]);
 

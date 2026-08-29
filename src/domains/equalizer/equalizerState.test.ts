@@ -77,6 +77,7 @@ describe("createEqualizerState", () => {
     expect(filters).toHaveLength(3);
     expect(filters[0]).toEqual({
       type: "highpass",
+      enabled: false,
       freq: expect.closeTo(20, 10),
       gain: 0,
       q: 0.5,
@@ -93,12 +94,35 @@ describe("createEqualizerState", () => {
     });
     expect(filters[2]).toEqual({
       type: "lowpass",
+      enabled: false,
       freq: expect.closeTo(20000, 10),
       gain: 0,
       q: 0.5,
       x: frequencyToX(20000, 490),
       y: 100,
     });
+  });
+
+  test("enables a crossover after a position drag and disables it on reset", () => {
+    const state = createEqualizerState();
+
+    state.initPoints(5, dimensions);
+    state.setDragTarget({ type: "highpass" }, "q");
+    state.setDraggedPoint({
+      ...(state.getDraggedPoint() as NonNullable<ReturnType<typeof state.getDraggedPoint>>),
+      q: 2,
+    });
+    expect(state.getFilters(dimensions)[0].enabled).toBe(false);
+
+    state.setDragTarget({ type: "highpass" }, "point");
+    state.setDraggedPoint({
+      ...(state.getDraggedPoint() as NonNullable<ReturnType<typeof state.getDraggedPoint>>),
+      x: 100,
+    });
+    expect(state.getFilters(dimensions)[0].enabled).toBe(true);
+
+    state.resetPoint({ type: "highpass" }, dimensions);
+    expect(state.getFilters(dimensions)[0].enabled).toBe(false);
   });
 
   test("tracks drag target, drag mode, and reset behavior", () => {
