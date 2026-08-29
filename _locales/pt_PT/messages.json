@@ -147,10 +147,10 @@
     "message": "Este atalho já está a ser utilizado por outro comando."
   },
   "shortcut_q_factor_label": {
-    "message": "Ajustar fator Q"
+    "message": "Ajustar o fator Q"
   },
   "q_factor_shift_hint": {
-    "message": "Mantenha Shift premida e arraste os pontos no canvas para ajustar o fator Q."
+    "message": "Mantenha Shift premido e arraste pontos no canvas para ajustar o fator Q."
   },
   "global_controls_title": {
     "message": "Controlos Globais"
