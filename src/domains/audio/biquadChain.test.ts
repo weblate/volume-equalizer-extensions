@@ -3,21 +3,63 @@ import { describe, expect, test } from "vitest";
 import {
   applyBiquadSettings,
   createBiquadFilter,
+  getBiquadHeadroomGain,
   getBiquadFilterCount,
   getLastBiquadFilter,
 } from "./biquadChain";
 
 import type { EqualizerFilter } from "../equalizer/types";
 
-const createFakeBiquadFilter = (): BiquadFilterNode =>
+const createFakeBiquadFilter = (magnitude = 1): BiquadFilterNode =>
   ({
     type: "lowpass",
     gain: { value: 99 },
     frequency: { value: 99 },
     Q: { value: 99 },
+    getFrequencyResponse: (
+      _frequencies: Float32Array,
+      magnitudes: Float32Array,
+      phases: Float32Array,
+    ) => {
+      magnitudes.fill(magnitude);
+      phases.fill(0);
+    },
   }) as BiquadFilterNode;
 
 describe("biquadChain", () => {
+  test("does not compensate a combined response below 13 decibels", () => {
+    expect(
+      getBiquadHeadroomGain(
+        [createFakeBiquadFilter(1.7782794100389228)],
+        48000,
+      ),
+    ).toBe(1);
+  });
+
+  test("does not compensate a combined response at 13 decibels", () => {
+    expect(
+      getBiquadHeadroomGain(
+        [createFakeBiquadFilter(4.466835921509632)],
+        48000,
+      ),
+    ).toBe(1);
+  });
+
+  test("compensates only the combined response above 13 decibels", () => {
+    expect(
+      getBiquadHeadroomGain(
+        [createFakeBiquadFilter(5.623413251903491)],
+        48000,
+      ),
+    ).toBeCloseTo(0.7943282347242815, 6);
+  });
+
+  test("ignores floating-point noise around a neutral response", () => {
+    expect(
+      getBiquadHeadroomGain([createFakeBiquadFilter(1.0000001)], 48000),
+    ).toBe(1);
+  });
+
   test("counts contiguous numeric filter slots", () => {
     expect(getBiquadFilterCount({ 0: createFakeBiquadFilter(), 2: createFakeBiquadFilter() })).toBe(1);
   });

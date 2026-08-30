@@ -50,6 +50,15 @@ class FakeBiquadFilterNode extends FakeAudioNode {
   gain = { value: 0 };
   frequency = { value: 0 };
   Q = { value: 0 };
+
+  getFrequencyResponse(
+    _frequencies: Float32Array,
+    magnitudes: Float32Array,
+    phases: Float32Array,
+  ): void {
+    magnitudes.fill(this.gain.value > 0 ? 2 : 1);
+    phases.fill(0);
+  }
 }
 
 class FakeGainNode extends FakeAudioNode {
@@ -268,6 +277,21 @@ describe("contentMain spectrum state", () => {
       source.connections.some((connection) => connection instanceof FakeGainNode),
     ).toBe(true);
     expect(source.connections).toContain(pageAnalyser);
+  });
+
+  test("does not reduce preamp below the headroom threshold", async () => {
+    const port = new FakePort();
+    port.dataset.freqs = JSON.stringify([
+      { freq: 1000, gain: 6, q: 0.5, type: "peaking" },
+    ]);
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "source");
+
+    source.connect(context.destination);
+
+    const preamp = source.connections[0] as FakeGainNode;
+    expect(preamp.gain.value).toBe(1);
   });
 
   test("marks the reusable main bridge as ready", async () => {

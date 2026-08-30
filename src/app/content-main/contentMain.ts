@@ -1,6 +1,7 @@
 import {
   applyBiquadSettings,
   createBiquadFilter,
+  getBiquadHeadroomGain,
   getBiquadFilterCount,
   getLastBiquadFilter,
 } from "../../domains/audio/biquadChain";
@@ -51,6 +52,23 @@ const readFilterSettings = (): EqualizerFilter[] =>
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error && error.message ? error.message : fallback;
 
+const applyGraphGain = (filters: EqualizerNodeChain): void => {
+  const preampValue = isNaN(Number(port.dataset.preamp))
+    ? 1
+    : Number(port.dataset.preamp);
+  const biquadFilters = Array.from(
+    { length: getBiquadFilterCount(filters) },
+    (_, index) => filters[index] as BiquadFilterNode,
+  );
+  const headroomGain = getBiquadHeadroomGain(
+    biquadFilters,
+    filters.preamp.context.sampleRate,
+  );
+  filters.preamp.gain.value = port.dataset.mute === "true"
+    ? 0
+    : preampValue * headroomGain;
+};
+
 const rebuildBiquadChain = (
   source: AudioNode,
   filters: EqualizerNodeChain,
@@ -74,6 +92,7 @@ const rebuildBiquadChain = (
   });
 
   connectToDestination(previousNode, context.destination);
+  applyGraphGain(filters);
 };
 
 const startSpectrum = (): void => {
@@ -141,10 +160,6 @@ const attach = (source: AudioNode): AudioNode => {
     preamp: context.createGain(),
     balance: context.createStereoPanner(),
   };
-  const preampValue = isNaN(Number(port.dataset.preamp))
-    ? 1
-    : Number(port.dataset.preamp);
-  filters.preamp.gain.value = port.dataset.mute === "true" ? 0 : preampValue;
   source.connect(filters.preamp);
   filters.balance.pan.value = 0;
   filters.preamp.connect(filters.balance);
@@ -236,6 +251,7 @@ const reattach = (): void => {
       const lastFilter = getLastBiquadFilter(filters, filters.balance);
       lastFilter.disconnect();
       connectToDestination(lastFilter, getAudioContext(source).destination);
+      applyGraphGain(filters);
     }
 
     if (port.dataset.enableSpectrum === "true") {
@@ -406,12 +422,13 @@ port.addEventListener("filters-changed", () => {
     filterSettings.forEach((filter, i) => {
       applyBiquadSettings(filters[i] as BiquadFilterNode, filter);
     });
+    applyGraphGain(filters);
   });
 });
 
 port.addEventListener("preamp-changed", () => {
   equalizerGraphs.forEach((filters) => {
-    filters.preamp.gain.value = Number(port.dataset.preamp);
+    applyGraphGain(filters);
   });
 });
 
@@ -423,7 +440,7 @@ port.addEventListener("mute-enabled", () => {
 
 port.addEventListener("mute-disabled", () => {
   equalizerGraphs.forEach((filters) => {
-    filters.preamp.gain.value = Number(port.dataset.preamp);
+    applyGraphGain(filters);
   });
 });
 

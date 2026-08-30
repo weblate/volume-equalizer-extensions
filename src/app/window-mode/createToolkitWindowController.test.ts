@@ -44,6 +44,15 @@ class FakeBiquadFilterNode extends FakeAudioNode {
   gain = { value: 0 };
   frequency = { value: 0 };
   Q = { value: 0 };
+
+  getFrequencyResponse(
+    _frequencies: Float32Array,
+    magnitudes: Float32Array,
+    phases: Float32Array,
+  ): void {
+    magnitudes.fill(this.gain.value > 0 ? 2 : 1);
+    phases.fill(0);
+  }
 }
 
 class FakeAnalyserNode extends FakeAudioNode {
@@ -179,6 +188,39 @@ afterEach(() => {
 });
 
 describe("createToolkitWindowController spectrum", () => {
+  test("keeps manual gain unchanged below the headroom threshold", async () => {
+    const storage = createChromeStorage();
+    storage.localValues[STORAGE_KEYS.tabGain(123)] = 6;
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController({
+      getGainValue: () => 6,
+      getFilters: () => [
+        { type: "peaking", freq: 1000, gain: 6, q: 0.5 },
+      ],
+    });
+
+    await controller.startTabCapture();
+
+    const preamp = audioContext.createdSource?.connections[0] as FakeGainNode;
+    expect(preamp.gain.value).toBeCloseTo(1.973822685184001, 10);
+  });
+
   test("does not add disabled crossover filters to the capture graph", async () => {
     const storage = createChromeStorage();
 

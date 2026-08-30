@@ -6,6 +6,7 @@ import type { EqualizerFilter } from "../../domains/equalizer/types";
 import {
   applyBiquadSettings,
   createBiquadFilter,
+  getBiquadHeadroomGain,
 } from "../../domains/audio/biquadChain";
 import { dbToGain } from "../../domains/equalizer/equalizerMath";
 import { isEqualizerFilterEnabled } from "../../domains/equalizer/defaultFilters";
@@ -201,7 +202,12 @@ export const createToolkitWindowController = (deps: {
 
   const getCaptureGain = (capture: ToolkitCapture): number => {
     if (capture.muted) return 0;
-    return capture.enabled ? dbToGain(capture.gainValue) : 1;
+    if (!capture.enabled) return 1;
+
+    return dbToGain(capture.gainValue) * getBiquadHeadroomGain(
+      capture.filters,
+      deps.audioContext.sampleRate,
+    );
   };
 
   const applyCaptureSettings = (
@@ -214,14 +220,13 @@ export const createToolkitWindowController = (deps: {
       capture.gainValue = deps.getGainValue();
       capture.muted = deps.isMuted();
     }
-    capture.preamp.gain.value = getCaptureGain(capture);
-
     const filterSettings = getCaptureFilterSettings(tabId);
     capture.filterSettings = filterSettings;
     filterSettings.forEach((filter, index) => {
       if (!capture.filters[index]) return;
       applyBiquadSettings(capture.filters[index], toBiquadInput(filter));
     });
+    capture.preamp.gain.value = getCaptureGain(capture);
   };
 
   const buildCaptureGraph = (tabId: number | string): void => {
