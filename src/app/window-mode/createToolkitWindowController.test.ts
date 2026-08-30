@@ -60,9 +60,14 @@ class FakeAnalyserNode extends FakeAudioNode {
   minDecibels = -100;
   maxDecibels = -30;
   frequencyBinCount = 8;
+  peakAmplitude = 0;
 
   getFloatFrequencyData(buffer: Float32Array): void {
     buffer.fill(-37);
+  }
+
+  getFloatTimeDomainData(buffer: Float32Array): void {
+    buffer.fill(this.peakAmplitude);
   }
 }
 
@@ -70,6 +75,7 @@ class FakeAudioContext {
   sampleRate = 44100;
   destination = new FakeAudioNode();
   createdAnalyser: FakeAnalyserNode | null = null;
+  analyserPeaks: number[] = [];
   createdSource: FakeAudioNode | null = null;
   createdSources: FakeAudioNode[] = [];
 
@@ -91,6 +97,7 @@ class FakeAudioContext {
 
   createAnalyser(): FakeAnalyserNode {
     this.createdAnalyser = new FakeAnalyserNode();
+    this.createdAnalyser.peakAmplitude = this.analyserPeaks.shift() ?? 0;
     return this.createdAnalyser;
   }
 }
@@ -443,6 +450,56 @@ describe("createToolkitWindowController spectrum", () => {
       frequencyBinCount: 8,
     });
     expect(spectrumFrames.at(-1)?.[0]).toBe(-37);
+  });
+
+  test("reports clipping only for the active captured tab", async () => {
+    const clippingStates: Array<boolean | undefined> = [];
+    const storage = createChromeStorage();
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] = {
+      123: "stream-123",
+      456: "stream-456",
+    };
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", {
+      storage,
+      runtime: {
+        sendMessage: vi.fn(() => Promise.resolve({ tabs: [], activeTabId: 456 })),
+      },
+    });
+    vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
+      callback();
+      return 1;
+    }));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController({
+      onSpectrumFrame: (_buffer, clipping) => clippingStates.push(clipping),
+    });
+    audioContext.analyserPeaks.push(0.2, 0.95);
+
+    await controller.startTabCapture();
+    expect(clippingStates.at(-1)).toBe(false);
+
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: {
+        oldValue: 123,
+        newValue: 456,
+      },
+    });
+
+    expect(clippingStates.slice(-2)).toEqual([false, true]);
   });
 
   test("clears spectrum frames when spectrum is disabled", async () => {

@@ -214,5 +214,8 @@
   },
   "donation_reminder_link": {
     "message": "Поддержать разработку"
+  },
+  "clipping_indicator_label": {
+    "message": "CLIP"
   }
 }

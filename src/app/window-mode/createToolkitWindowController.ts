@@ -8,6 +8,7 @@ import {
   createBiquadFilter,
   getBiquadHeadroomGain,
 } from "../../domains/audio/biquadChain";
+import { hasClippingSample } from "../../domains/audio/clipping";
 import { dbToGain } from "../../domains/equalizer/equalizerMath";
 import { isEqualizerFilterEnabled } from "../../domains/equalizer/defaultFilters";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
@@ -62,7 +63,7 @@ export const createToolkitWindowController = (deps: {
   isMuted(): boolean;
   getMessage(messageName: string): string;
   onSpectrumMeta?(meta: ToolkitSpectrumMeta): void;
-  onSpectrumFrame?(buffer: Float32Array | null): void;
+  onSpectrumFrame?(buffer: Float32Array | null, clipping?: boolean): void;
 }) => {
   const isToolkitWindow = new URLSearchParams(window.location.search).get("mode") === "window";
   let activeTabId: number | null = null;
@@ -327,6 +328,9 @@ export const createToolkitWindowController = (deps: {
     if (spectrumTimer) {
       clearInterval(spectrumTimer);
     }
+    if (spectrumTabId && spectrumTabId !== nextSpectrumTabId) {
+      deps.onSpectrumFrame?.(null, false);
+    }
 
     spectrumTabId = nextSpectrumTabId;
     spectrumAnalyser = analyser;
@@ -339,10 +343,12 @@ export const createToolkitWindowController = (deps: {
       frequencyBinCount: analyser.frequencyBinCount,
     });
 
+    const timeDomainBuffer = new Float32Array(analyser.fftSize);
     spectrumTimer = setInterval(() => {
       const buffer = new Float32Array(analyser.frequencyBinCount);
       analyser.getFloatFrequencyData(buffer);
-      deps.onSpectrumFrame?.(buffer);
+      analyser.getFloatTimeDomainData(timeDomainBuffer);
+      deps.onSpectrumFrame?.(buffer, hasClippingSample(timeDomainBuffer));
     }, 50);
   }
 

@@ -1,10 +1,13 @@
 export const formatGainValue = (value: number): string => `${value.toFixed(1)} dB`;
 
+const CLIPPING_HOLD_MS = 1500;
+
 export const createControlsView = (deps: {
   changeEqButton: HTMLImageElement;
   resetButton: HTMLButtonElement;
   masterVolume: HTMLInputElement;
   masterVolumeValue: HTMLOutputElement;
+  clippingIndicator: HTMLElement;
   volumeMuteButton: HTMLElement;
   windowModeButton: HTMLElement;
   getMessage(messageName: string): string;
@@ -15,6 +18,22 @@ export const createControlsView = (deps: {
   onWindowMode(): Promise<void>;
   onMuteStateApplied(): void;
 }) => {
+  let clippingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const resetClipping = (): void => {
+    if (clippingTimeout) clearTimeout(clippingTimeout);
+    clippingTimeout = null;
+    deps.clippingIndicator.classList.toggle("clipping-indicator-active", false);
+  };
+
+  const setClipping = (clipping: boolean): void => {
+    if (!clipping) return;
+
+    if (clippingTimeout) clearTimeout(clippingTimeout);
+    deps.clippingIndicator.classList.toggle("clipping-indicator-active", true);
+    clippingTimeout = setTimeout(resetClipping, CLIPPING_HOLD_MS);
+  };
+
   deps.changeEqButton.addEventListener("click", () => {
     void deps.onToggleEqualizer();
   });
@@ -38,6 +57,9 @@ export const createControlsView = (deps: {
   });
 
   return {
+    setClipping,
+    resetClipping,
+
     setEnableButtonClass: (enabled: boolean) => {
       deps.changeEqButton.classList.toggle("change-eq-active", enabled);
     },

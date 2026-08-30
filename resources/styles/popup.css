@@ -348,6 +348,25 @@ body {
   justify-content: space-between;
 }
 
+.gain-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.clipping-indicator {
+  color: var(--text-placeholder);
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.45;
+}
+
+.clipping-indicator-active {
+  color: var(--reset-btn-active);
+  opacity: 1;
+  text-shadow: 0 0 7px var(--reset-btn-active);
+}
+
 label {
   color: var(--text);
   font-weight: bold;

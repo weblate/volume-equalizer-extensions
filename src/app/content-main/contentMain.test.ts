@@ -79,6 +79,10 @@ class FakeAnalyserNode extends FakeAudioNode {
   getFloatFrequencyData(buffer: Float32Array): void {
     buffer.fill(this.context.spectrumDb);
   }
+
+  getFloatTimeDomainData(buffer: Float32Array): void {
+    buffer.fill(this.context.peakAmplitude);
+  }
 }
 
 class FakeHTMLMediaElement {
@@ -96,9 +100,11 @@ class FakeAudioContext {
   sampleRate = 48000;
   destination = new FakeAudioDestinationNode(this, "destination");
   spectrumDb: number;
+  peakAmplitude: number;
 
-  constructor(spectrumDb: number) {
+  constructor(spectrumDb: number, peakAmplitude = 0) {
     this.spectrumDb = spectrumDb;
+    this.peakAmplitude = peakAmplitude;
   }
 
   createGain(): FakeGainNode {
@@ -167,14 +173,15 @@ afterEach(() => {
 describe("contentMain spectrum state", () => {
   const getLastSpectrumFrame = (
     frames: unknown[],
-  ): { buffer?: Float32Array | null } | undefined => {
+  ): { buffer?: Float32Array | null; clipping?: boolean } | undefined => {
     for (let i = frames.length - 1; i >= 0; i--) {
       const frame = frames[i] as {
         type?: string;
         buffer?: Float32Array | null;
+        clipping?: boolean;
       };
       if (frame.type === "spectrum") {
-        return { buffer: frame.buffer };
+        return { buffer: frame.buffer, clipping: frame.clipping };
       }
     }
 
@@ -193,7 +200,7 @@ describe("contentMain spectrum state", () => {
     const oldSource = new FakeAudioNode(oldContext, "old-source");
     oldSource.connect(oldContext.destination);
 
-    const activeContext = new FakeAudioContext(-42);
+    const activeContext = new FakeAudioContext(-42, 0.89);
     const activeSource = new FakeAudioNode(activeContext, "active-source");
     activeSource.connect(activeContext.destination);
 
@@ -206,6 +213,25 @@ describe("contentMain spectrum state", () => {
       throw new Error("Expected a spectrum frame with a buffer");
     }
     expect(spectrumFrame.buffer[0]).toBe(-42);
+    expect(spectrumFrame.clipping).toBe(false);
+  });
+
+  test("reports a sample peak above -1 dBFS as clipping", async () => {
+    const port = new FakePort();
+    const frames: unknown[] = [];
+    port.addEventListener("spectrum-frame", (event) => {
+      frames.push((event as CustomEvent).detail);
+    });
+    await loadContentMain(port);
+
+    const context = new FakeAudioContext(-42, 0.9);
+    const source = new FakeAudioNode(context, "active-source");
+    source.connect(context.destination);
+
+    port.dataset.enableSpectrum = "true";
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+
+    expect(getLastSpectrumFrame(frames)?.clipping).toBe(true);
   });
 
   test("emits a clear spectrum frame when spectrum is stopped", async () => {

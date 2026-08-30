@@ -214,5 +214,8 @@
   },
   "donation_reminder_link": {
     "message": "உருவாக்கத்தை ஆதரிக்கவும்"
+  },
+  "clipping_indicator_label": {
+    "message": "CLIP"
   }
 }

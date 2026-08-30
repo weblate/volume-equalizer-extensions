@@ -15,6 +15,7 @@ export interface PopupElements {
   masterVolumeLabel: HTMLLabelElement;
   masterVolume: HTMLInputElement;
   masterVolumeValue: HTMLOutputElement;
+  clippingIndicator: HTMLElement;
   resetButton: HTMLButtonElement;
   changeEqButton: HTMLImageElement;
   presets: HTMLDivElement;
@@ -129,6 +130,11 @@ export const getPopupElements = (document: Document): PopupElements => ({
     document,
     "master-volume-value",
     HTMLOutputElement,
+  ),
+  clippingIndicator: getRequiredElement(
+    document,
+    "clipping-indicator",
+    HTMLElement,
   ),
   resetButton: getRequiredElement(document, "reset", HTMLButtonElement),
   changeEqButton: getRequiredElement(

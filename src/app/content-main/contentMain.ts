@@ -5,6 +5,7 @@ import {
   getBiquadFilterCount,
   getLastBiquadFilter,
 } from "../../domains/audio/biquadChain";
+import { hasClippingSample } from "../../domains/audio/clipping";
 
 import type { EqualizerFilter } from "../../domains/equalizer/types";
 
@@ -121,15 +122,18 @@ const startSpectrum = (): void => {
   );
 
   if (spectrumTimer) clearInterval(spectrumTimer);
+  const timeDomainBuffer = new Float32Array(currentAnalyser.fftSize);
   spectrumTimer = setInterval(() => {
     if (!currentAnalyser) return;
 
     const buffer = new Float32Array(currentAnalyser.frequencyBinCount);
     currentAnalyser.getFloatFrequencyData(buffer);
+    currentAnalyser.getFloatTimeDomainData(timeDomainBuffer);
 
     payload = {
       type: "spectrum",
       buffer,
+      clipping: hasClippingSample(timeDomainBuffer),
     };
     port.dispatchEvent(
       new CustomEvent("spectrum-frame", {

@@ -37,7 +37,10 @@
         <div class="volume-control">
           <div class="gain-value-row">
             <label for="master-volume" id="master-volume-label" data-i18n="gain_slider_label">Gain:</label>
-            <output id="master-volume-value" for="master-volume">0.0 dB</output>
+            <div class="gain-status">
+              <span id="clipping-indicator" class="clipping-indicator" data-i18n="clipping_indicator_label" aria-live="polite">CLIP</span>
+              <output id="master-volume-value" for="master-volume">0.0 dB</output>
+            </div>
           </div>
           <input type="range" class="master-volume" id="master-volume" name="master-volume" min="-24" max="24" value="0">
         </div>

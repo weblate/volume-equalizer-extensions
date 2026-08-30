@@ -5,7 +5,7 @@ type BiquadFilterInput = Pick<EqualizerFilter, "freq"> &
   Partial<Pick<EqualizerFilter, "gain" | "q" | "type">>;
 
 const RESPONSE_POINT_COUNT = 512;
-const HEADROOM_THRESHOLD_GAIN = Math.fround(10 ** (13 / 20));
+const HEADROOM_THRESHOLD_GAIN = Math.fround(10 ** (18 / 20));
 
 export const getBiquadHeadroomGain = (
   filters: BiquadFilterNode[],

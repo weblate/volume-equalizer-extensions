@@ -51,6 +51,7 @@ export interface PopupAppDependencies {
 interface SpectrumStorageMessage extends Partial<SpectrumMeta> {
   type?: "meta" | "spectrum";
   buffer?: SpectrumBuffer | null;
+  clipping?: boolean;
 }
 
 export const createPopupApp = ({
@@ -154,7 +155,11 @@ export const createPopupApp = ({
     isMuted: () => elements.volumeMuteButton.className === "volume-mute-active",
     getMessage: localization.getMessage,
     onSpectrumMeta: (meta) => spectrumRenderer.setMeta(meta),
-    onSpectrumFrame: (buffer) => spectrumRenderer.scheduleDraw(buffer),
+    onSpectrumFrame: (buffer, clipping) => {
+      spectrumRenderer.scheduleDraw(buffer);
+      if (buffer === null) controlsView?.resetClipping();
+      else controlsView?.setClipping(clipping === true);
+    },
   });
 
   const getCurrentTabId = (): Promise<number | null> => {
@@ -320,6 +325,7 @@ export const createPopupApp = ({
     resetButton: elements.resetButton,
     masterVolume: elements.masterVolume,
     masterVolumeValue: elements.masterVolumeValue,
+    clippingIndicator: elements.clippingIndicator,
     volumeMuteButton: elements.volumeMuteButton,
     windowModeButton: elements.windowModeButton,
     getMessage: localization.getMessage,
@@ -500,6 +506,8 @@ export const createPopupApp = ({
         }
         if (message?.type === "spectrum") {
           spectrumRenderer.scheduleDraw(message.buffer);
+          if (message.buffer == null) controlsView.resetClipping();
+          else controlsView.setClipping(message.clipping === true);
         }
       }
 
