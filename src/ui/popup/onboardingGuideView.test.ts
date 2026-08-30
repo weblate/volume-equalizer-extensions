@@ -1,11 +1,121 @@
 import {
   GUIDE_SCREENS,
   GUIDE_SHORTCUTS,
+  createOnboardingGuideView,
   getGuideNavigation,
   getNextFocusIndex,
   getSpotlightPanels,
   shouldCompleteGuide,
 } from "./onboardingGuideView";
+
+class FakeElement extends EventTarget {
+  children: FakeElement[] = [];
+  classList = { toggle: vi.fn() };
+  className = "";
+  hidden = false;
+  inert = false;
+  parts = new Map<string, FakeElement>();
+  style: Record<string, string> = {};
+  textContent = "";
+  value = "";
+
+  append(...children: FakeElement[]): void {
+    this.children.push(...children);
+  }
+
+  cloneNode(): FakeElement {
+    const clone = new FakeElement();
+    clone.value = this.value;
+    return clone;
+  }
+
+  focus(): void {}
+
+  getBoundingClientRect(): DOMRect {
+    return { left: 20, top: 20, right: 120, bottom: 120, width: 100, height: 100 } as DOMRect;
+  }
+
+  querySelectorAll(): FakeElement[] {
+    return [];
+  }
+
+  querySelector(selector: string): FakeElement | null {
+    return this.parts.get(selector) ?? null;
+  }
+
+  removeAttribute(): void {}
+
+  replaceChildren(): void {
+    this.children = [];
+  }
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+test("keeps rendered guide content intact when the popup resizes", async () => {
+  const root = new FakeElement();
+  const content = new FakeElement();
+  const nextButton = new FakeElement();
+  [
+    "#guide-title",
+    ".guide-card",
+    ".guide-spotlight",
+    "[data-guide-action='back']",
+    "[data-guide-action='skip']",
+    "[data-guide-panel='top']",
+    "[data-guide-panel='left']",
+    "[data-guide-panel='right']",
+    "[data-guide-panel='bottom']",
+  ].forEach((selector) => root.parts.set(selector, new FakeElement()));
+  root.parts.set(".guide-content", content);
+  root.parts.set("[data-guide-action='next']", nextButton);
+
+  const fakeWindow = Object.assign(new EventTarget(), {
+    innerWidth: 640,
+    innerHeight: 600,
+  });
+  vi.stubGlobal("window", fakeWindow);
+  vi.stubGlobal("document", {
+    activeElement: null,
+    createElement: () => new FakeElement(),
+  });
+
+  const target = new FakeElement();
+  const view = createOnboardingGuideView({
+    root: root as unknown as HTMLElement,
+    inertElements: [],
+    targets: {
+      volumeMute: target,
+      changeEq: target,
+      settings: target,
+      autostart: target,
+      windowMode: target,
+      equalizer: target,
+      volume: target,
+      presets: target,
+    } as unknown as Parameters<typeof createOnboardingGuideView>[0]["targets"],
+    sourceLanguageSelect: new FakeElement() as unknown as HTMLSelectElement,
+    sourceThemeSelect: new FakeElement() as unknown as HTMLSelectElement,
+    sourcePointCountSelect: new FakeElement() as unknown as HTMLSelectElement,
+    getMessage: (name) => name,
+    setLanguage: async () => undefined,
+    setTheme: async () => undefined,
+    setPointCount: async () => undefined,
+    onComplete: async () => undefined,
+  });
+
+  await view.start();
+  for (let index = 0; index < 8; index += 1) {
+    nextButton.dispatchEvent(new Event("click"));
+  }
+  const firstMessage = content.children[0];
+
+  fakeWindow.dispatchEvent(new Event("resize"));
+
+  expect(content.children[0]).toBe(firstMessage);
+});
 
 describe("onboarding guide navigation", () => {
   test("keeps button explanations inside stages 4 and 5", () => {

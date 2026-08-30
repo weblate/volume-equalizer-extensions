@@ -271,7 +271,7 @@ export const createOnboardingGuideView = (deps: {
     [screen.messageKey, screen.additionalMessageKey].forEach((messageKey) => {
       if (!messageKey) return;
 
-      const message = document.createElement("p");
+      const message = document.createElement("span");
       message.textContent = deps.getMessage(messageKey);
       content.append(message);
     });
@@ -323,6 +323,13 @@ export const createOnboardingGuideView = (deps: {
     card.style.transform = "translateX(-50%)";
   };
 
+  const positionCurrentSpotlight = (): void => {
+    const screen = GUIDE_SCREENS[currentIndex];
+    if (screen.kind === "spotlight" && screen.target) {
+      positionSpotlight(deps.targets[screen.target]);
+    }
+  };
+
   const render = (): void => {
     const screen = GUIDE_SCREENS[currentIndex];
     const navigation = getGuideNavigation(currentIndex);
@@ -340,9 +347,7 @@ export const createOnboardingGuideView = (deps: {
     card.style.left = "";
     card.style.top = "";
     card.style.transform = "";
-    if (screen.kind === "spotlight" && screen.target) {
-      positionSpotlight(deps.targets[screen.target]);
-    }
+    positionCurrentSpotlight();
     title.focus();
   };
 
@@ -351,7 +356,7 @@ export const createOnboardingGuideView = (deps: {
     deps.inertElements.forEach((element) => {
       element.inert = false;
     });
-    window.removeEventListener("resize", render);
+    window.removeEventListener("resize", positionCurrentSpotlight);
     started = false;
   };
 
@@ -400,7 +405,7 @@ export const createOnboardingGuideView = (deps: {
       });
       deps.root.hidden = false;
       render();
-      window.addEventListener("resize", render);
+      window.addEventListener("resize", positionCurrentSpotlight);
     },
   };
 };
