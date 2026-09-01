@@ -217,5 +217,8 @@
   },
   "clipping_indicator_label": {
     "message": "CLIP"
+  },
+  "guide_spectrum_visualization_hint": {
+    "message": "এছাড়াও, সেটিংসে স্পেকট্রাম ভিজ্যুয়ালাইজেশন চালু করতে পারেন।"
   }
 }

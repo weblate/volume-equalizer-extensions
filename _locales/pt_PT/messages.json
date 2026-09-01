@@ -217,5 +217,8 @@
   },
   "clipping_indicator_label": {
     "message": "CLIP"
+  },
+  "guide_spectrum_visualization_hint": {
+    "message": "Também pode ativar a visualização do espectro nas Definições."
   }
 }

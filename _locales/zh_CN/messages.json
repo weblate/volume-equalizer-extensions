@@ -189,5 +189,6 @@
   "donation_reminder_title": { "message": "支持开发者" },
   "donation_reminder_message": { "message": "如果这个扩展对您有帮助，您可以支持它的开发。" },
   "donation_reminder_link": { "message": "支持开发" },
-  "clipping_indicator_label": { "message": "CLIP" }
+  "clipping_indicator_label": { "message": "CLIP" },
+  "guide_spectrum_visualization_hint": { "message": "您还可以在设置中启用频谱可视化。" }
 }

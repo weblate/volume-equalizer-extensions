@@ -54,7 +54,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("keeps rendered guide content intact when the popup resizes", async () => {
+test("renders every equalizer hint and keeps them intact when the popup resizes", async () => {
   const root = new FakeElement();
   const content = new FakeElement();
   const nextButton = new FakeElement();
@@ -112,6 +112,12 @@ test("keeps rendered guide content intact when the popup resizes", async () => {
   }
   const firstMessage = content.children[0];
 
+  expect(content.children.map(({ textContent }) => textContent)).toEqual([
+    "guide_canvas_hint",
+    "q_factor_shift_hint",
+    "guide_spectrum_visualization_hint",
+  ]);
+
   fakeWindow.dispatchEvent(new Event("resize"));
 
   expect(content.children[0]).toBe(firstMessage);
@@ -141,7 +147,10 @@ describe("onboarding guide navigation", () => {
 
   test("keeps the Q-factor explanation on the equalizer screen", () => {
     expect(GUIDE_SCREENS.find(({ target }) => target === "equalizer")).toMatchObject({
-      additionalMessageKey: "q_factor_shift_hint",
+      additionalMessageKeys: [
+        "q_factor_shift_hint",
+        "guide_spectrum_visualization_hint",
+      ],
     });
   });
 });

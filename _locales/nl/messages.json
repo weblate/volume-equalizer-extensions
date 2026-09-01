@@ -217,5 +217,8 @@
   },
   "clipping_indicator_label": {
     "message": "CLIP"
+  },
+  "guide_spectrum_visualization_hint": {
+    "message": "Je kunt in de instellingen ook spectrumvisualisatie inschakelen."
   }
 }

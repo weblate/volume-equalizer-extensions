@@ -13,7 +13,7 @@ export interface GuideScreen {
   kind: "language" | "appearance" | "shortcuts" | "spotlight";
   titleKey: string;
   messageKey?: string;
-  additionalMessageKey?: string;
+  additionalMessageKeys?: readonly string[];
   target?: GuideTarget;
   substep?: readonly [number, number];
 }
@@ -74,7 +74,10 @@ export const GUIDE_SCREENS: readonly GuideScreen[] = [
     target: "equalizer",
     titleKey: "extName",
     messageKey: "guide_canvas_hint",
-    additionalMessageKey: "q_factor_shift_hint",
+    additionalMessageKeys: [
+      "q_factor_shift_hint",
+      "guide_spectrum_visualization_hint",
+    ],
   },
   {
     stage: 7,
@@ -268,7 +271,10 @@ export const createOnboardingGuideView = (deps: {
         createShortcut(label, keys)
       )));
     }
-    [screen.messageKey, screen.additionalMessageKey].forEach((messageKey) => {
+    [
+      screen.messageKey,
+      ...(screen.additionalMessageKeys ?? []),
+    ].forEach((messageKey) => {
       if (!messageKey) return;
 
       const message = document.createElement("span");

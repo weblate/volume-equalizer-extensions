@@ -11,6 +11,7 @@ const requiredKeys = [
   "guide_shortcuts_hint",
   "guide_canvas_hint",
   "q_factor_shift_hint",
+  "guide_spectrum_visualization_hint",
   "shortcut_q_factor_label",
   "guide_volume_hint",
   "guide_presets_hint",
