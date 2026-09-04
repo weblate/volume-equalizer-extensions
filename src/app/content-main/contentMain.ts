@@ -145,8 +145,76 @@ const startSpectrum = (): void => {
   }, 50);
 };
 
+const getSpectrumPriority = (source: AudioNode): number => {
+  if (!(source instanceof MediaElementAudioSourceNode)) return 0;
+  if (source.mediaElement.paused || source.mediaElement.ended) return -1;
+  return source.mediaElement.isConnected ? 2 : 1;
+};
+
+const selectSpectrumGraph = (
+  preferredSource: AudioNode | null = currentGraphSource,
+  forceRestart = false,
+): void => {
+  if (
+    port.dataset.enableSpectrum !== "true" ||
+    port.dataset.enabled !== "true"
+  ) {
+    stopSpectrum();
+    return;
+  }
+
+  let selectedSource: AudioNode | null = null;
+  let selectedPriority = -1;
+  equalizerGraphs.forEach((_filters, source) => {
+    const priority = getSpectrumPriority(source);
+    if (priority < 0) return;
+
+    if (
+      priority > selectedPriority ||
+      (
+        priority === selectedPriority &&
+        (source === preferredSource || selectedSource !== preferredSource)
+      )
+    ) {
+      selectedSource = source;
+      selectedPriority = priority;
+    }
+  });
+
+  if (!selectedSource) {
+    currentGraphSource = null;
+    currentAudioCtx = null;
+    currentSourceNode = null;
+    analyser = null;
+    stopSpectrum();
+    return;
+  }
+
+  if (
+    !forceRestart &&
+    selectedSource === currentGraphSource &&
+    analyser &&
+    spectrumTimer
+  ) {
+    return;
+  }
+
+  const filters = equalizerGraphs.get(selectedSource);
+  if (!filters) return;
+
+  currentGraphSource = selectedSource;
+  currentAudioCtx = getAudioContext(selectedSource);
+  currentSourceNode = getLastBiquadFilter(filters, filters.balance);
+  analyser = null;
+  startSpectrum();
+};
+
 const attach = (source: AudioNode): AudioNode => {
   const context = getAudioContext(source);
+
+  if (source instanceof MediaElementAudioSourceNode) {
+    mediaSources.set(source.mediaElement, { context, source });
+  }
 
   if (port.dataset.enabled === "false") {
     bypassedSources.add(source);
@@ -168,30 +236,16 @@ const attach = (source: AudioNode): AudioNode => {
   filters.balance.pan.value = 0;
   filters.preamp.connect(filters.balance);
   equalizerGraphs.set(source, filters);
-  currentGraphSource = source;
 
   const filterSettings = readFilterSettings();
   rebuildBiquadChain(source, filters, filterSettings);
 
   if (port.dataset.enableSpectrum === "true") {
-    setCurrentAudioGraph(
-      context,
-      getLastBiquadFilter(filters, filters.balance),
-    );
-    startSpectrum();
+    selectSpectrumGraph(source);
   }
 
   port.dispatchEvent(new Event("connected"));
   return context.destination;
-};
-
-const setCurrentAudioGraph = (
-  audioCtx: AudioContext,
-  sourceNode: AudioNode,
-): void => {
-  currentAudioCtx = audioCtx;
-  currentSourceNode = sourceNode;
-  analyser = null;
 };
 
 const createMediaSource = (
@@ -200,7 +254,6 @@ const createMediaSource = (
   new Promise((resolve, reject) => {
     const existing = mediaSources.get(target);
     if (existing) {
-      setCurrentAudioGraph(existing.context, existing.source);
       resolve(existing.source);
       return;
     }
@@ -211,7 +264,6 @@ const createMediaSource = (
       try {
         const source = context.createMediaElementSource(target);
         mediaSources.set(target, { context, source });
-        setCurrentAudioGraph(context, source);
         resolve(source);
       } catch (error) {
         reject(error);
@@ -261,11 +313,6 @@ const reattach = (): void => {
       applyGraphGain(filters);
     }
 
-    if (port.dataset.enableSpectrum === "true") {
-      currentSourceNode = getLastBiquadFilter(filters, filters.balance);
-      analyser = null;
-      startSpectrum();
-    }
     port.dispatchEvent(new Event("connected"));
   });
   if (equalizerGraphs.size) {
@@ -276,50 +323,14 @@ const reattach = (): void => {
     source.disconnect(getAudioContext(source).destination);
     attach(source);
   });
+
+  if (port.dataset.enableSpectrum === "true") {
+    selectSpectrumGraph();
+  }
 };
 
 const updateSpectrumState = (): void => {
-  if (
-    port.dataset.enableSpectrum !== "true" ||
-    port.dataset.enabled !== "true"
-  ) {
-    stopSpectrum();
-    return;
-  }
-
-  const source =
-    currentGraphSource && equalizerGraphs.has(currentGraphSource)
-      ? currentGraphSource
-      : Array.from(equalizerGraphs.keys()).at(-1) ?? null;
-  if (!source) {
-    return;
-  }
-
-  const filters = equalizerGraphs.get(source);
-  if (!filters) {
-    return;
-  }
-
-  currentGraphSource = source;
-  refreshSpectrumForGraph(source, filters);
-};
-
-const refreshSpectrumForGraph = (
-  source: AudioNode,
-  filters: EqualizerNodeChain,
-): void => {
-  if (
-    port.dataset.enableSpectrum !== "true" ||
-    port.dataset.enabled !== "true"
-  ) {
-    stopSpectrum();
-    return;
-  }
-
-  currentAudioCtx = getAudioContext(source);
-  currentSourceNode = getLastBiquadFilter(filters, filters.balance);
-  analyser = null;
-  startSpectrum();
+  selectSpectrumGraph();
 };
 
 port.addEventListener("spectrum-state-changed", updateSpectrumState);
@@ -365,6 +376,7 @@ const convert = async (target: EventTarget | null): Promise<void> => {
       attach(sourceNode);
     } else {
       port.dispatchEvent(new Event("connected"));
+      selectSpectrumGraph(sourceNode);
     }
     console.log("[contentMain] Media captured");
   } catch (error) {
@@ -389,6 +401,8 @@ const convert = async (target: EventTarget | null): Promise<void> => {
 };
 
 window.addEventListener("playing", (event) => void convert(event.target), true);
+window.addEventListener("pause", () => selectSpectrumGraph(), true);
+window.addEventListener("ended", () => selectSpectrumGraph(), true);
 const existingMedia = document.querySelectorAll("audio, video");
 console.log("[contentMain] Loaded", {
   media: existingMedia.length,
@@ -425,12 +439,12 @@ HTMLMediaElement.prototype.play = new Proxy(HTMLMediaElement.prototype.play, {
 });
 
 port.addEventListener("filters-changed", () => {
+  let graphRebuilt = false;
   equalizerGraphs.forEach((filters, source) => {
     const filterSettings = readFilterSettings();
     if (getBiquadFilterCount(filters) !== filterSettings.length) {
       rebuildBiquadChain(source, filters, filterSettings);
-      currentGraphSource = source;
-      refreshSpectrumForGraph(source, filters);
+      graphRebuilt = true;
       port.dispatchEvent(new Event("connected"));
       return;
     }
@@ -440,6 +454,10 @@ port.addEventListener("filters-changed", () => {
     });
     applyGraphGain(filters);
   });
+
+  if (graphRebuilt) {
+    selectSpectrumGraph(currentGraphSource, true);
+  }
 });
 
 port.addEventListener("preamp-changed", () => {

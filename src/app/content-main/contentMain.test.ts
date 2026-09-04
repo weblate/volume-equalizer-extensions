@@ -89,12 +89,25 @@ class FakeHTMLMediaElement {
   captured = false;
   alreadyConnected = false;
   isConnected = true;
+  paused = false;
+  ended = false;
+  currentSrc = "https://www.youtube.com/watch?v=test";
+  readyState = 4;
 
   play(): Promise<void> {
     return Promise.resolve();
   }
 
   setAttribute(): void {}
+}
+
+class FakeMediaElementAudioSourceNode extends FakeAudioNode {
+  readonly mediaElement: FakeHTMLMediaElement;
+
+  constructor(context: FakeAudioContext, mediaElement: FakeHTMLMediaElement) {
+    super(context, "media");
+    this.mediaElement = mediaElement;
+  }
 }
 
 class FakeAudioContext {
@@ -126,7 +139,7 @@ class FakeAudioContext {
 
   createMediaElementSource(
     target: FakeHTMLMediaElement,
-  ): FakeAudioNode {
+  ): FakeMediaElementAudioSourceNode {
     if (target.alreadyConnected) {
       throw new DOMException(
         "HTMLMediaElement already connected previously to a different MediaElementSourceNode.",
@@ -135,7 +148,7 @@ class FakeAudioContext {
     }
 
     target.captured = true;
-    return new FakeAudioNode(this, "media");
+    return new FakeMediaElementAudioSourceNode(this, target);
   }
 }
 
@@ -170,6 +183,7 @@ const loadContentMain = async (
   vi.stubGlobal("AudioDestinationNode", FakeAudioDestinationNode);
   vi.stubGlobal("BiquadFilterNode", FakeBiquadFilterNode);
   vi.stubGlobal("HTMLMediaElement", FakeHTMLMediaElement);
+  vi.stubGlobal("MediaElementAudioSourceNode", FakeMediaElementAudioSourceNode);
   vi.stubGlobal("AudioContext", FakeAudioContext);
   vi.stubGlobal("setTimeout", vi.fn((callback: () => void) => {
     callback();
@@ -233,6 +247,90 @@ describe("contentMain spectrum state", () => {
     }
     expect(spectrumFrame.buffer[0]).toBe(-42);
     expect(spectrumFrame.clipping).toBe(false);
+  });
+
+  test("keeps spectrum on playing video when paused service media attach later", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    const frames: unknown[] = [];
+    port.addEventListener("spectrum-frame", (event) => {
+      frames.push((event as CustomEvent).detail);
+    });
+    await loadContentMain(port);
+
+    const videoContext = new FakeAudioContext(-42);
+    const video = new FakeHTMLMediaElement();
+    videoContext.createMediaElementSource(video).connect(videoContext.destination);
+
+    [-90, -91, -92, -93].forEach((spectrumDb) => {
+      const serviceContext = new FakeAudioContext(spectrumDb);
+      const serviceMedia = new FakeHTMLMediaElement();
+      serviceMedia.isConnected = false;
+      serviceMedia.paused = true;
+      serviceContext.createMediaElementSource(serviceMedia).connect(
+        serviceContext.destination,
+      );
+    });
+
+    expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
+
+    port.dataset.enabled = "false";
+    port.dispatchEvent(new Event("enabled-changed"));
+    port.dataset.enabled = "true";
+    port.dispatchEvent(new Event("enabled-changed"));
+
+    expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
+  });
+
+  test("prefers connected playing media over detached playing media", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    const frames: unknown[] = [];
+    port.addEventListener("spectrum-frame", (event) => {
+      frames.push((event as CustomEvent).detail);
+    });
+    await loadContentMain(port);
+
+    const connectedContext = new FakeAudioContext(-42);
+    const connectedMedia = new FakeHTMLMediaElement();
+    connectedContext.createMediaElementSource(connectedMedia).connect(
+      connectedContext.destination,
+    );
+
+    const detachedContext = new FakeAudioContext(-70);
+    const detachedMedia = new FakeHTMLMediaElement();
+    detachedMedia.isConnected = false;
+    detachedContext.createMediaElementSource(detachedMedia).connect(
+      detachedContext.destination,
+    );
+
+    expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
+  });
+
+  test("clears spectrum when every media source is paused or ended", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    const frames: unknown[] = [];
+    port.addEventListener("spectrum-frame", (event) => {
+      frames.push((event as CustomEvent).detail);
+    });
+    await loadContentMain(port);
+
+    const pausedContext = new FakeAudioContext(-90);
+    const pausedMedia = new FakeHTMLMediaElement();
+    pausedMedia.paused = true;
+    pausedContext.createMediaElementSource(pausedMedia).connect(
+      pausedContext.destination,
+    );
+
+    const endedContext = new FakeAudioContext(-91);
+    const endedMedia = new FakeHTMLMediaElement();
+    endedMedia.ended = true;
+    endedContext.createMediaElementSource(endedMedia).connect(
+      endedContext.destination,
+    );
+
+    expect(getLastSpectrumFrame(frames)?.buffer).toBeNull();
   });
 
   test("starts spectrum for a page-owned audio graph", async () => {
