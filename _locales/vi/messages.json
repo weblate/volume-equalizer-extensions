@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Phím tắt này đã được lệnh khác sử dụng."
   },
+  "shortcut_reset_point_label": {
+    "message": "Đặt lại điểm"
+  },
+  "point_double_click_hint": {
+    "message": "Nhấp đúp vào một điểm để đặt lại."
+  },
   "shortcut_q_factor_label": {
     "message": "Điều chỉnh tham số Q"
   },

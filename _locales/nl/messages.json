@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Deze sneltoets wordt al door een andere opdracht gebruikt."
   },
+  "shortcut_reset_point_label": {
+    "message": "Punt resetten"
+  },
+  "point_double_click_hint": {
+    "message": "Dubbelklik op een punt om het te resetten."
+  },
   "shortcut_q_factor_label": {
     "message": "Q-factor aanpassen"
   },

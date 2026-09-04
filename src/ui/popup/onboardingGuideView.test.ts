@@ -115,6 +115,7 @@ test("renders every equalizer hint and keeps them intact when the popup resizes"
   expect(content.children.map(({ textContent }) => textContent)).toEqual([
     "guide_canvas_hint",
     "q_factor_shift_hint",
+    "point_double_click_hint",
     "guide_spectrum_visualization_hint",
   ]);
 
@@ -142,6 +143,7 @@ describe("onboarding guide navigation", () => {
       ["shortcut_mute_label", "Alt+M"],
       ["shortcut_toggle_eq_label", "Alt+K"],
       ["shortcut_q_factor_label", "Shift+Drag"],
+      ["shortcut_reset_point_label", "Double-click"],
     ]);
   });
 
@@ -149,6 +151,7 @@ describe("onboarding guide navigation", () => {
     expect(GUIDE_SCREENS.find(({ target }) => target === "equalizer")).toMatchObject({
       additionalMessageKeys: [
         "q_factor_shift_hint",
+        "point_double_click_hint",
         "guide_spectrum_visualization_hint",
       ],
     });

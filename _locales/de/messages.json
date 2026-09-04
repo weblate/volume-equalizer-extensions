@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Dieses Tastenkürzel wird bereits von einem anderen Befehl verwendet."
   },
+  "shortcut_reset_point_label": {
+    "message": "Punkt zurücksetzen"
+  },
+  "point_double_click_hint": {
+    "message": "Doppelklicke auf einen Punkt, um ihn zurückzusetzen."
+  },
   "shortcut_q_factor_label": {
     "message": "Q-Faktor anpassen"
   },

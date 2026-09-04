@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "এই শর্টকাটটি ইতিমধ্যে অন্য কমান্ডে ব্যবহৃত হচ্ছে।"
   },
+  "shortcut_reset_point_label": {
+    "message": "পয়েন্ট রিসেট করুন"
+  },
+  "point_double_click_hint": {
+    "message": "একটি পয়েন্টের অবস্থা রিসেট করতে সেটিতে ডাবল-ক্লিক করুন।"
+  },
   "shortcut_q_factor_label": {
     "message": "Q প্যারামিটার পরিবর্তন"
   },

@@ -146,6 +146,12 @@
   "extName": {
     "message": "EQ Toolkit - ஆடியோ சமநிலைப்படுத்தி"
   },
+  "shortcut_reset_point_label": {
+    "message": "புள்ளியை மீட்டமை"
+  },
+  "point_double_click_hint": {
+    "message": "ஒரு புள்ளியை மீட்டமைக்க அதை இருமுறை கிளிக் செய்யவும்."
+  },
   "shortcut_q_factor_label": {
     "message": "Q அளவுருவை மாற்று"
   },

@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Ce raccourci est déjà utilisé par une autre commande."
   },
+  "shortcut_reset_point_label": {
+    "message": "Réinitialiser le point"
+  },
+  "point_double_click_hint": {
+    "message": "Double-cliquez sur un point pour le réinitialiser."
+  },
   "shortcut_q_factor_label": {
     "message": "Régler le facteur Q"
   },

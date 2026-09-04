@@ -14,6 +14,9 @@ test("contains the accessible onboarding overlay", () => {
     /<input[^>]*id="shortcut-q-factor"[^>]*value="Shift\+Drag"[^>]*disabled>/,
   );
   expect(markup).toMatch(
+    /<input[^>]*id="shortcut-reset-point"[^>]*value="Double-click"[^>]*disabled>/,
+  );
+  expect(markup).toMatch(
     /<section id="preset-controls-card" class="control-card">\s*<h2 id="preset-controls-title"[^>]*>/,
   );
 });

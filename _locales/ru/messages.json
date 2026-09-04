@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Это сочетание уже используется другой командой."
   },
+  "shortcut_reset_point_label": {
+    "message": "Сброс состояния точки"
+  },
+  "point_double_click_hint": {
+    "message": "Дважды нажмите на точку, чтобы сбросить её состояние."
+  },
   "shortcut_q_factor_label": {
     "message": "Изменение ширины фильтра (Q-factor)"
   },

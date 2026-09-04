@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "이 단축키는 이미 다른 명령에서 사용 중입니다."
   },
+  "shortcut_reset_point_label": {
+    "message": "포인트 재설정"
+  },
+  "point_double_click_hint": {
+    "message": "포인트를 두 번 클릭하여 재설정하세요."
+  },
   "shortcut_q_factor_label": {
     "message": "Q 값 조절"
   },

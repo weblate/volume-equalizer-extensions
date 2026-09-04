@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "此快捷键已被另一个命令使用。"
   },
+  "shortcut_reset_point_label": {
+    "message": "重置控制点"
+  },
+  "point_double_click_hint": {
+    "message": "双击控制点即可将其重置。"
+  },
   "shortcut_q_factor_label": {
     "message": "调整 Q 值"
   },

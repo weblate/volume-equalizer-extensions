@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Bu kısayol zaten başka bir komut tarafından kullanılıyor."
   },
+  "shortcut_reset_point_label": {
+    "message": "Noktayı sıfırla"
+  },
+  "point_double_click_hint": {
+    "message": "Bir noktayı sıfırlamak için çift tıklayın."
+  },
   "shortcut_q_factor_label": {
     "message": "Q parametresini ayarla"
   },

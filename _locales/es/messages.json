@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Este atajo ya lo usa otro comando."
   },
+  "shortcut_reset_point_label": {
+    "message": "Restablecer punto"
+  },
+  "point_double_click_hint": {
+    "message": "Haz doble clic en un punto para restablecerlo."
+  },
   "shortcut_q_factor_label": {
     "message": "Ajustar factor Q"
   },

@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Este atalho já está a ser utilizado por outro comando."
   },
+  "shortcut_reset_point_label": {
+    "message": "Repor ponto"
+  },
+  "point_double_click_hint": {
+    "message": "Faça duplo clique num ponto para o repor."
+  },
   "shortcut_q_factor_label": {
     "message": "Ajustar o fator Q"
   },

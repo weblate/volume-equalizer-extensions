@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "このショートカットは別のコマンドですでに使用されています。"
   },
+  "shortcut_reset_point_label": {
+    "message": "ポイントをリセット"
+  },
+  "point_double_click_hint": {
+    "message": "ポイントをダブルクリックするとリセットできます。"
+  },
   "shortcut_q_factor_label": {
     "message": "Q値を調整"
   },

@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Pintasan ini sudah digunakan oleh perintah lain."
   },
+  "shortcut_reset_point_label": {
+    "message": "Atur ulang titik"
+  },
+  "point_double_click_hint": {
+    "message": "Klik dua kali titik untuk mengatur ulangnya."
+  },
   "shortcut_q_factor_label": {
     "message": "Sesuaikan parameter Q"
   },

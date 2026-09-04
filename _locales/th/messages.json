@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "ปุ่มลัดนี้ถูกใช้โดยคำสั่งอื่นแล้ว"
   },
+  "shortcut_reset_point_label": {
+    "message": "รีเซ็ตจุด"
+  },
+  "point_double_click_hint": {
+    "message": "ดับเบิลคลิกจุดเพื่อรีเซ็ต"
+  },
   "shortcut_q_factor_label": {
     "message": "ปรับค่า Q"
   },

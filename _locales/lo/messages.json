@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "ປຸ່ມລັດນີ້ຖືກໃຊ້ໂດຍຄຳສັ່ງອື່ນແລ້ວ."
   },
+  "shortcut_reset_point_label": {
+    "message": "ຣີເຊັດຈຸດ"
+  },
+  "point_double_click_hint": {
+    "message": "ຄລິກສອງເທື່ອໃສ່ຈຸດເພື່ອຣີເຊັດມັນ."
+  },
   "shortcut_q_factor_label": {
     "message": "ປັບຄ່າ Q"
   },

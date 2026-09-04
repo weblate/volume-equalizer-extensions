@@ -146,6 +146,12 @@
   "shortcut_duplicate_error": {
     "message": "Questa scorciatoia è già usata da un altro comando."
   },
+  "shortcut_reset_point_label": {
+    "message": "Reimposta punto"
+  },
+  "point_double_click_hint": {
+    "message": "Fai doppio clic su un punto per reimpostarlo."
+  },
   "shortcut_q_factor_label": {
     "message": "Regola il fattore Q"
   },
