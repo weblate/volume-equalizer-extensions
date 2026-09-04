@@ -27,7 +27,7 @@ const createFakeBiquadFilter = (magnitude = 1): BiquadFilterNode =>
   }) as BiquadFilterNode;
 
 describe("biquadChain", () => {
-  test("does not compensate a combined response below 13 decibels", () => {
+  test("does not compensate a combined response below 18 decibels", () => {
     expect(
       getBiquadHeadroomGain(
         [createFakeBiquadFilter(1.7782794100389228)],
@@ -36,7 +36,7 @@ describe("biquadChain", () => {
     ).toBe(1);
   });
 
-  test("does not compensate a combined response at 13 decibels", () => {
+  test("does not compensate a combined response at 18 decibels", () => {
     expect(
       getBiquadHeadroomGain(
         [createFakeBiquadFilter(4.466835921509632)],
@@ -45,10 +45,10 @@ describe("biquadChain", () => {
     ).toBe(1);
   });
 
-  test("compensates only the combined response above 13 decibels", () => {
+  test("compensates only the combined response above 18 decibels", () => {
     expect(
       getBiquadHeadroomGain(
-        [createFakeBiquadFilter(5.623413251903491)],
+        [createFakeBiquadFilter(10)],
         48000,
       ),
     ).toBeCloseTo(0.7943282347242815, 6);
