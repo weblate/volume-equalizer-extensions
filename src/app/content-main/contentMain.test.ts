@@ -87,6 +87,7 @@ class FakeAnalyserNode extends FakeAudioNode {
 
 class FakeHTMLMediaElement {
   captured = false;
+  alreadyConnected = false;
   isConnected = true;
 
   play(): Promise<void> {
@@ -126,16 +127,32 @@ class FakeAudioContext {
   createMediaElementSource(
     target: FakeHTMLMediaElement,
   ): FakeAudioNode {
+    if (target.alreadyConnected) {
+      throw new DOMException(
+        "HTMLMediaElement already connected previously to a different MediaElementSourceNode.",
+        "InvalidStateError",
+      );
+    }
+
     target.captured = true;
     return new FakeAudioNode(this, "media");
   }
 }
+
+let playingListener: EventListener | null = null;
+
+const dispatchPlaying = (media: FakeHTMLMediaElement): void => {
+  if (!playingListener) throw new Error("Playing listener was not registered");
+
+  playingListener({ target: media } as unknown as Event);
+};
 
 const loadContentMain = async (
   port: FakePort,
   media: FakeHTMLMediaElement[] = [],
 ): Promise<void> => {
   vi.resetModules();
+  playingListener = null;
   FakeAudioNode.prototype.connect = nativeFakeConnect;
 
   vi.stubGlobal("document", {
@@ -143,7 +160,9 @@ const loadContentMain = async (
     querySelectorAll: () => media,
   });
   vi.stubGlobal("window", {
-    addEventListener: vi.fn(),
+    addEventListener: vi.fn((type: string, listener: EventListener) => {
+      if (type === "playing") playingListener = listener;
+    }),
     Audio: class {},
   });
   vi.stubGlobal("self", globalThis.window);
@@ -214,6 +233,48 @@ describe("contentMain spectrum state", () => {
     }
     expect(spectrumFrame.buffer[0]).toBe(-42);
     expect(spectrumFrame.clipping).toBe(false);
+  });
+
+  test("starts spectrum for a page-owned audio graph", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    const frames: unknown[] = [];
+    port.addEventListener("spectrum-frame", (event) => {
+      frames.push((event as CustomEvent).detail);
+    });
+    await loadContentMain(port);
+
+    const context = new FakeAudioContext(-42);
+    const pageSource = new FakeAudioNode(context, "page-source");
+    pageSource.connect(context.destination);
+
+    expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
+  });
+
+  test("reports duplicate media capture as connected when the page graph is active", async () => {
+    const port = new FakePort();
+    const captureErrors: unknown[] = [];
+    let connectedCount = 0;
+    port.addEventListener("capture-error", (event) => {
+      captureErrors.push((event as CustomEvent).detail);
+    });
+    port.addEventListener("connected", () => {
+      connectedCount++;
+    });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    await loadContentMain(port);
+
+    const context = new FakeAudioContext(-42);
+    const pageSource = new FakeAudioNode(context, "page-source");
+    pageSource.connect(context.destination);
+
+    const media = new FakeHTMLMediaElement();
+    media.alreadyConnected = true;
+    dispatchPlaying(media);
+    await Promise.resolve();
+
+    expect(captureErrors).toEqual([]);
+    expect(connectedCount).toBe(2);
   });
 
   test("reports a sample peak above -1 dBFS as clipping", async () => {

@@ -174,7 +174,10 @@ const attach = (source: AudioNode): AudioNode => {
   rebuildBiquadChain(source, filters, filterSettings);
 
   if (port.dataset.enableSpectrum === "true") {
-    currentSourceNode = getLastBiquadFilter(filters, filters.balance);
+    setCurrentAudioGraph(
+      context,
+      getLastBiquadFilter(filters, filters.balance),
+    );
     startSpectrum();
   }
 
@@ -365,6 +368,15 @@ const convert = async (target: EventTarget | null): Promise<void> => {
     }
     console.log("[contentMain] Media captured");
   } catch (error) {
+    if (
+      error instanceof DOMException &&
+      error.name === "InvalidStateError" &&
+      equalizerGraphs.size > 0
+    ) {
+      port.dispatchEvent(new Event("connected"));
+      return;
+    }
+
     console.error("[contentMain] Media capture failed", error);
     port.dispatchEvent(
       new CustomEvent("capture-error", {
