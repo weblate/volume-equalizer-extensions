@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import {
   addTabIdToToolkitWindowStore,
+  toggleWindowMode,
   removeTabIdFromToolkitWindowStore,
 } from "./windowModeCoordinator";
 
@@ -108,5 +109,51 @@ describe("removeTabIdFromToolkitWindowStore", () => {
         12: "stream-12",
       },
     });
+  });
+});
+
+
+describe("capture transaction", () => {
+  const setupCapture = () => {
+    const state: Record<string, unknown> = {
+      toolkitWindowId: 5, toolkitWindowTabIds: [12, 13],
+      toolkitWindowActiveTabId: 12, toolkitWindowCaptureStreamIds: { 12: "old-12", 13: "old-13" },
+    };
+    let resolveStream!: (value: string) => void;
+    const stream = new Promise<string>(resolve => { resolveStream = resolve; });
+    const set = vi.fn(async (values: Record<string, unknown>) => { Object.assign(state, values); });
+    const getMediaStreamId = vi.fn(() => stream);
+    const localSet = vi.fn(async () => {});
+    vi.stubGlobal("chrome", {
+      storage: { local: { set: localSet }, session: {
+        get: vi.fn(async () => structuredClone(state)), set,
+      } },
+      tabCapture: { getMediaStreamId },
+      windows: { get: vi.fn(async () => ({ id: 5, state: "normal" })), update: vi.fn(async () => {}) },
+    });
+    return { state, set, resolveStream, getMediaStreamId, localSet };
+  };
+
+  test("does not restore a tab closed while capture acquisition is pending", async () => {
+    const { state, resolveStream, getMediaStreamId } = setupCapture();
+    const capture = toggleWindowMode(13);
+    await vi.waitFor(() => expect(getMediaStreamId).toHaveBeenCalled());
+    const removed = removeTabIdFromToolkitWindowStore(13);
+    resolveStream("new-13");
+    await Promise.all([capture, removed]);
+    expect(state.toolkitWindowTabIds).toEqual([12]);
+    expect(state.toolkitWindowActiveTabId).toBe(12);
+    expect(state.toolkitWindowCaptureStreamIds).toEqual({ 12: "old-12" });
+  });
+
+  test("propagates session failures without relabeling them as capture errors", async () => {
+    const { set, resolveStream, localSet } = setupCapture();
+    const failure = new Error("session write failed");
+    set.mockRejectedValueOnce(failure);
+    const capture = toggleWindowMode(13);
+    const rejection = expect(capture).rejects.toBe(failure);
+    resolveStream("new-13");
+    await rejection;
+    expect(localSet).not.toHaveBeenCalledWith(expect.objectContaining({ "captureError.13": expect.anything() }));
   });
 });

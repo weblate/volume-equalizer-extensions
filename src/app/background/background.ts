@@ -54,8 +54,8 @@ let tabRemovalQueue = Promise.resolve();
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabRemovalQueue = tabRemovalQueue
     .then(async () => {
-      await clearTabStorage(tabId);
       await removeTabIdFromToolkitWindowStore(tabId);
+      await clearTabStorage(tabId);
     })
     .catch((error) => {
       console.error("Failed to clean up closed tab state", error);
