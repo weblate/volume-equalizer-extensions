@@ -90,11 +90,8 @@ describe("createRuntimeMessageHandler", () => {
     expect(response).toHaveBeenCalledWith({ tabs: [], activeTabId: null });
   });
 
-  test("stores sender tab id and responds synchronously", () => {
+  test("responds with the sender tab id without registering it", () => {
     const chromeMock = createChromeMock();
-    chromeMock.sessionGet.mockImplementation((_keys, callback) => {
-      callback({ [STORAGE_KEYS.REGISTERED_TAB_IDS]: [3] });
-    });
     const response = vi.fn();
     const handler = createRuntimeMessageHandler({
       applyAutostartForTab: vi.fn(),
@@ -110,9 +107,8 @@ describe("createRuntimeMessageHandler", () => {
     );
 
     expect(result).toBeUndefined();
-    expect(chromeMock.sessionSet).toHaveBeenCalledWith({
-      [STORAGE_KEYS.REGISTERED_TAB_IDS]: [3, 7],
-    });
+    expect(chromeMock.sessionGet).not.toHaveBeenCalled();
+    expect(chromeMock.sessionSet).not.toHaveBeenCalled();
     expect(response).toHaveBeenCalledWith(7);
   });
 

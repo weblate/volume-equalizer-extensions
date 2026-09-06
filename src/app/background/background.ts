@@ -2,13 +2,16 @@ import { applyAutostartForTab } from "./autostartOnTab";
 import { prepareInstallUpdateNotice } from "./installUpdateNotice";
 import { createRuntimeMessageHandler } from "./messageRouter";
 import { registerContentScripts } from "./registerContentScripts";
-import { clearUnusedStorage } from "./storageCleanup";
+import { clearTabStorage, clearUnusedStorage } from "./storageCleanup";
 import {
   clearToolkitWindowState,
   getCapturedTabs,
   getToolkitWindowId,
+  removeTabIdFromToolkitWindowStore,
   toggleWindowMode,
 } from "./windowModeCoordinator";
+
+void chrome.storage.session.remove("tabs");
 
 chrome.runtime.onStartup.addListener(registerContentScripts);
 chrome.runtime.onInstalled.addListener(async (details) => {
@@ -45,6 +48,18 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!changeInfo.url) return;
   void applyAutostartForTab(tabId, tab.url);
+});
+
+let tabRemovalQueue = Promise.resolve();
+chrome.tabs.onRemoved.addListener((tabId) => {
+  tabRemovalQueue = tabRemovalQueue
+    .then(async () => {
+      await clearTabStorage(tabId);
+      await removeTabIdFromToolkitWindowStore(tabId);
+    })
+    .catch((error) => {
+      console.error("Failed to clean up closed tab state", error);
+    });
 });
 
 chrome.windows.onRemoved.addListener(async (windowId) => {

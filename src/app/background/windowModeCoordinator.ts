@@ -15,6 +15,17 @@ export interface CapturedTabsResult {
 
 type CaptureStreamIds = Record<string, string>;
 
+let captureSessionQueue: Promise<void> = Promise.resolve();
+
+const updateCaptureSession = <T>(update: () => Promise<T>): Promise<T> => {
+  const result = captureSessionQueue.then(update);
+  captureSessionQueue = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  return result;
+};
+
 interface WindowUpdateInfo {
   focused?: boolean;
   state?: chrome.windows.WindowState;
@@ -64,19 +75,80 @@ export const addTabIdToToolkitWindowStore = async (
 ): Promise<void> => {
   if (tabId == null) return;
 
-  const stored = await chrome.storage.session.get(
-    STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS
-  );
-  const tabIds = Array.isArray(stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS])
-    ? stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]
-    : [];
+  await updateCaptureSession(async () => {
+    const stored = await chrome.storage.session.get(
+      STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS
+    );
+    const tabIds = Array.isArray(stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS])
+      ? stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]
+      : [];
 
-  if (!tabIds.includes(tabId)) {
-    tabIds.push(tabId);
+    if (!tabIds.includes(tabId)) {
+      tabIds.push(tabId);
+      await chrome.storage.session.set({
+        [STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]: tabIds,
+      });
+    }
+  });
+};
+
+const updateCaptureStreamId = async (
+  tabId: number,
+  streamId: string | null,
+): Promise<void> => {
+  await updateCaptureSession(async () => {
+    const stored = await chrome.storage.session.get(
+      STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS
+    );
+    const streamIds = {
+      ...((stored[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as
+        | CaptureStreamIds
+        | undefined) ?? {}),
+    };
+    if (streamId == null) {
+      delete streamIds[tabId];
+    } else {
+      streamIds[tabId] = streamId;
+    }
+    await chrome.storage.session.set({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: tabId,
+      [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: streamIds,
+    });
+  });
+};
+
+export const removeTabIdFromToolkitWindowStore = async (
+  tabId: number,
+): Promise<void> => {
+  await updateCaptureSession(async () => {
+    const stored = await chrome.storage.session.get([
+      STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
+      STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID,
+      STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS,
+    ]);
+    const tabIds = Array.isArray(stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS])
+      ? (stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS] as number[]).filter(
+          (storedTabId) => storedTabId !== tabId,
+        )
+      : [];
+    const streamIds = {
+      ...((stored[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as
+        | CaptureStreamIds
+        | undefined) ?? {}),
+    };
+    delete streamIds[tabId];
+    const storedActiveTabId =
+      (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ??
+      null;
+    const activeTabId =
+      storedActiveTabId === tabId ? (tabIds[0] ?? null) : storedActiveTabId;
+
     await chrome.storage.session.set({
       [STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]: tabIds,
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: activeTabId,
+      [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: streamIds,
     });
-  }
+  });
 };
 
 export const getCapturedTabs = async (): Promise<CapturedTabsResult> => {
@@ -124,12 +196,14 @@ export const focusToolkitWindow = async (
 };
 
 export const clearToolkitWindowState = async (): Promise<void> => {
-  await chrome.storage.session.remove([
-    STORAGE_KEYS.TOOLKIT_WINDOW_ID,
-    STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
-    STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID,
-    STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS,
-  ]);
+  await updateCaptureSession(() =>
+    chrome.storage.session.remove([
+      STORAGE_KEYS.TOOLKIT_WINDOW_ID,
+      STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
+      STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID,
+      STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS,
+    ]),
+  );
 };
 
 export const prepareTabCapture = async (
@@ -145,31 +219,9 @@ export const prepareTabCapture = async (
     const streamId = await chrome.tabCapture.getMediaStreamId({
       targetTabId: tabId,
     });
-    const stored = await chrome.storage.session.get(
-      STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS
-    );
-    const streamIds =
-      (stored[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as
-        | CaptureStreamIds
-        | undefined) ?? {};
-    streamIds[tabId] = streamId;
-    await chrome.storage.session.set({
-      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: tabId,
-      [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: streamIds,
-    });
+    await updateCaptureStreamId(tabId, streamId);
   } catch (e) {
-    const stored = await chrome.storage.session.get(
-      STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS
-    );
-    const streamIds =
-      (stored[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as
-        | CaptureStreamIds
-        | undefined) ?? {};
-    delete streamIds[tabId];
-    await chrome.storage.session.set({
-      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: tabId,
-      [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: streamIds,
-    });
+    await updateCaptureStreamId(tabId, null);
     await chrome.storage.local.set({
       [STORAGE_KEYS.tabCaptureError(tabId)]:
         e instanceof Error ? e.message : "Tab audio capture failed",
@@ -193,6 +245,6 @@ export const createToolkitWindow = async (
   if (tabId != null) {
     storageValues[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS] = [tabId];
   }
-  await chrome.storage.session.set(storageValues);
+  await updateCaptureSession(() => chrome.storage.session.set(storageValues));
   return window!.id;
 };

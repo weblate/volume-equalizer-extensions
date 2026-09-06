@@ -17,7 +17,6 @@ export const STORAGE_KEYS = {
   TOOLKIT_WINDOW_TAB_IDS: "toolkitWindowTabIds",
   TOOLKIT_WINDOW_ACTIVE_TAB_ID: "toolkitWindowActiveTabId",
   TOOLKIT_WINDOW_CAPTURE_STREAM_IDS: "toolkitWindowCaptureStreamIds",
-  REGISTERED_TAB_IDS: "tabs",
   POINT_COUNT: "pointCount",
   SKIP_POINTS_CONFIRM: "skipPointsResetConfirm",
   tabFilters: (tabId: DynamicStorageKeyPart) => `filters.${tabId}`,

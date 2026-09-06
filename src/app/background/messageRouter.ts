@@ -75,17 +75,6 @@ export const createRuntimeMessageHandler = ({
         [STORAGE_KEYS.tabSpectrum(tabId)]: request.payload,
       });
     } else if (request.method === RUNTIME_MESSAGES.GET_TAB_ID) {
-      chrome.storage.session.get([STORAGE_KEYS.REGISTERED_TAB_IDS], (prefs) => {
-        const tabs = Array.isArray(prefs?.[STORAGE_KEYS.REGISTERED_TAB_IDS])
-          ? prefs[STORAGE_KEYS.REGISTERED_TAB_IDS]
-          : [];
-        if (!tabs.includes(tabId)) {
-          tabs.push(tabId);
-          chrome.storage.session.set({
-            [STORAGE_KEYS.REGISTERED_TAB_IDS]: tabs,
-          });
-        }
-      });
       response(tabId);
     } else if (request.method === RUNTIME_MESSAGES.PAGE_STARTED) {
       applyAutostartForTab(tabId, sender.tab?.url, { resetWhenNoMatch: true });

@@ -1,43 +1,38 @@
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 
-const CONSTANT_STORAGE_KEYS = [
-  STORAGE_KEYS.PRESETS,
-  STORAGE_KEYS.PRESET_NAMES,
-  STORAGE_KEYS.AUTOSTART_RULES,
-  STORAGE_KEYS.GAIN,
-  STORAGE_KEYS.FILTERS,
-  STORAGE_KEYS.ENABLE_SPECTRUM,
-  STORAGE_KEYS.THEME,
-  STORAGE_KEYS.UI_LANGUAGE,
-  STORAGE_KEYS.SHORTCUTS,
-  STORAGE_KEYS.INSTALL_UPDATE_NOTICE,
-  STORAGE_KEYS.DONATION_REMINDER_AT,
-  STORAGE_KEYS.POINT_COUNT,
-] as const;
+export const parseTabStorageKey = (key: string): number | null => {
+  const match =
+    /^(?:filters|enabled|mute|gain|volume|pan|captureError|spectrum)\.(\d+)$/.exec(
+      key,
+    );
+  return match && Number.isSafeInteger(Number(match[1]))
+    ? Number(match[1])
+    : null;
+};
+
+export const clearTabStorage = async (tabId: number): Promise<void> => {
+  await chrome.storage.local.remove([
+    STORAGE_KEYS.tabFilters(tabId),
+    STORAGE_KEYS.tabEnabled(tabId),
+    STORAGE_KEYS.tabMute(tabId),
+    STORAGE_KEYS.tabGain(tabId),
+    STORAGE_KEYS.tabVolume(tabId),
+    STORAGE_KEYS.tabPan(tabId),
+    STORAGE_KEYS.tabCaptureError(tabId),
+    STORAGE_KEYS.tabSpectrum(tabId),
+  ]);
+};
 
 export const clearUnusedStorage = async (): Promise<void> => {
-  const stored = await chrome.storage.session.get([
-    STORAGE_KEYS.REGISTERED_TAB_IDS,
-  ]);
-  const tabIds = Array.isArray(stored[STORAGE_KEYS.REGISTERED_TAB_IDS])
-    ? stored[STORAGE_KEYS.REGISTERED_TAB_IDS]
-    : [];
-
-  chrome.storage.local.getKeys((keys) =>
-    keys.forEach((key) => {
-      const keyParts = key.split(".");
-      const isRegisteredTabValue =
-        keyParts.length === 2 &&
-        tabIds.includes(Number.parseInt(keyParts[1], 10));
-
-      if (
-        !CONSTANT_STORAGE_KEYS.includes(
-          key as (typeof CONSTANT_STORAGE_KEYS)[number]
-        ) &&
-        !isRegisteredTabValue
-      ) {
-        chrome.storage.local.remove(key);
-      }
-    })
+  const keys = await chrome.storage.local.getKeys();
+  const tabs = await chrome.tabs.query({});
+  const tabIds = new Set(
+    tabs.flatMap(({ id }) => (id == null ? [] : [id])),
   );
+  const unusedKeys = keys.filter((key) => {
+    const tabId = parseTabStorageKey(key);
+    return tabId != null && !tabIds.has(tabId);
+  });
+
+  if (unusedKeys.length > 0) await chrome.storage.local.remove(unusedKeys);
 };
