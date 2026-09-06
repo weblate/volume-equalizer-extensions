@@ -12,7 +12,7 @@ import {
   type ShortcutMap,
   validateShortcutConfig,
 } from "../../domains/shortcuts/shortcuts";
-import { isDefaultPresetName } from "../../domains/presets/defaultPresets";
+import { parsePresetImport } from "../../domains/presets/presetImport";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 
 type ThemeName = "dark" | "light";
@@ -266,36 +266,49 @@ export const createSettingsView = (deps: {
     if (!file) return;
 
     const reader = new FileReader();
+    const showImportError = (messageName: string): void => {
+      alert(deps.localization.getMessage(messageName));
+    };
+    reader.onerror = () => {
+      showImportError("preset_import_read_error");
+      deps.importInput.value = "";
+    };
     reader.onload = () => {
       void (async () => {
-        if (typeof reader.result !== "string") return;
-
-        const presetsInfo = JSON.parse(reader.result) as {
-          presets?: Record<string, unknown>;
-          presetNames?: string[];
-        };
-        const prefs = await chrome.storage.local.get([
-          STORAGE_KEYS.PRESETS,
-          STORAGE_KEYS.PRESET_NAMES,
-        ]);
-        const presets = (prefs[STORAGE_KEYS.PRESETS] ?? {}) as Record<string, unknown>;
-        const presetNames = [...((prefs[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[])];
-
-        (presetsInfo.presetNames ?? []).forEach((name) => {
-          if (isDefaultPresetName(name)) return;
-
-          const needAdd = !presetNames.includes(name);
-          if (!needAdd) return;
-
-          presetNames.push(name);
-          deps.addPresetToDropdown(name);
-          presets[name] = presetsInfo.presets?.[name];
-        });
-
-        await chrome.storage.local.set({
-          [STORAGE_KEYS.PRESETS]: presets,
-          [STORAGE_KEYS.PRESET_NAMES]: presetNames,
-        });
+        try {
+          if (typeof reader.result !== "string") {
+            showImportError("preset_import_read_error");
+            return;
+          }
+          const parsed = parsePresetImport(reader.result);
+          if (!parsed.ok) {
+            showImportError(`preset_import_${parsed.error}_error`);
+            return;
+          }
+          const prefs = await chrome.storage.local.get([
+            STORAGE_KEYS.PRESETS,
+            STORAGE_KEYS.PRESET_NAMES,
+          ]);
+          const presets = (prefs[STORAGE_KEYS.PRESETS] ?? {}) as Record<string, unknown>;
+          const presetNames = [...((prefs[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[])];
+          const namesToAdd = parsed.presetNames.filter((name) => {
+            return !presetNames.includes(name);
+          });
+          namesToAdd.forEach((name) => {
+            presetNames.push(name);
+            presets[name] = parsed.presets[name];
+          });
+          await chrome.storage.local.set({
+            [STORAGE_KEYS.PRESETS]: presets,
+            [STORAGE_KEYS.PRESET_NAMES]: presetNames,
+          });
+          namesToAdd.forEach((name) => deps.addPresetToDropdown(name));
+          await deps.refreshDynamicContent();
+        } catch {
+          showImportError("preset_import_save_error");
+        } finally {
+          deps.importInput.value = "";
+        }
       })();
     };
     reader.readAsText(file, "utf-8");

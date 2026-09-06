@@ -226,5 +226,23 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Anda juga dapat mengaktifkan visualisasi spektrum di Pengaturan."
+  },
+  "preset_import_syntax_error": {
+    "message": "File berisi JSON yang tidak valid."
+  },
+  "preset_import_structure_error": {
+    "message": "File preset memiliki struktur yang tidak valid."
+  },
+  "preset_import_name_error": {
+    "message": "File preset berisi nama yang tidak valid."
+  },
+  "preset_import_filter_error": {
+    "message": "File preset berisi filter yang tidak valid."
+  },
+  "preset_import_read_error": {
+    "message": "File preset tidak dapat dibaca."
+  },
+  "preset_import_save_error": {
+    "message": "Preset yang diimpor tidak dapat disimpan."
   }
 }

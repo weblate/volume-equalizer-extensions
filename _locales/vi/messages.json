@@ -226,5 +226,23 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Bạn cũng có thể bật trực quan hóa phổ trong phần Cài đặt."
+  },
+  "preset_import_syntax_error": {
+    "message": "Tệp chứa JSON không hợp lệ."
+  },
+  "preset_import_structure_error": {
+    "message": "Tệp cài đặt sẵn có cấu trúc không hợp lệ."
+  },
+  "preset_import_name_error": {
+    "message": "Tệp cài đặt sẵn chứa tên không hợp lệ."
+  },
+  "preset_import_filter_error": {
+    "message": "Tệp cài đặt sẵn chứa bộ lọc không hợp lệ."
+  },
+  "preset_import_read_error": {
+    "message": "Không thể đọc tệp cài đặt sẵn."
+  },
+  "preset_import_save_error": {
+    "message": "Không thể lưu các cài đặt sẵn đã nhập."
   }
 }

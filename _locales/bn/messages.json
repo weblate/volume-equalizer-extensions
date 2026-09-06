@@ -226,5 +226,23 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "এছাড়াও, সেটিংসে স্পেকট্রাম ভিজ্যুয়ালাইজেশন চালু করতে পারেন।"
+  },
+  "preset_import_syntax_error": {
+    "message": "ফাইলটিতে অবৈধ JSON রয়েছে।"
+  },
+  "preset_import_structure_error": {
+    "message": "প্রিসেট ফাইলটির গঠন অবৈধ।"
+  },
+  "preset_import_name_error": {
+    "message": "প্রিসেট ফাইলটিতে একটি অবৈধ নাম রয়েছে।"
+  },
+  "preset_import_filter_error": {
+    "message": "প্রিসেট ফাইলটিতে একটি অবৈধ ফিল্টার রয়েছে।"
+  },
+  "preset_import_read_error": {
+    "message": "প্রিসেট ফাইলটি পড়া যায়নি।"
+  },
+  "preset_import_save_error": {
+    "message": "ইমপোর্ট করা প্রিসেটগুলো সংরক্ষণ করা যায়নি।"
   }
 }

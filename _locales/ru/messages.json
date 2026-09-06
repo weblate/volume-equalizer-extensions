@@ -226,5 +226,23 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Также в настройках можно включить визуализацию АЧХ"
+  },
+  "preset_import_syntax_error": {
+    "message": "Файл содержит некорректный JSON."
+  },
+  "preset_import_structure_error": {
+    "message": "Файл пресетов имеет некорректную структуру."
+  },
+  "preset_import_name_error": {
+    "message": "Файл пресетов содержит недопустимое имя."
+  },
+  "preset_import_filter_error": {
+    "message": "Файл пресетов содержит недопустимый фильтр."
+  },
+  "preset_import_read_error": {
+    "message": "Не удалось прочитать файл пресетов."
+  },
+  "preset_import_save_error": {
+    "message": "Не удалось сохранить импортированные пресеты."
   }
 }

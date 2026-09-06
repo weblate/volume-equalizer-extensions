@@ -1,0 +1,211 @@
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
+import { createSettingsView } from "./settingsView";
+
+class FakeElement extends EventTarget {
+  style = { display: "" };
+  value = "";
+  checked = false;
+  files: FileList | null = null;
+  classList = {
+    add: vi.fn(),
+    remove: vi.fn(),
+    toggle: vi.fn(),
+  };
+  click = vi.fn();
+}
+
+class FakeFileReader {
+  result: string | null = null;
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+
+  readAsText(file: Blob): void {
+    const source = file as Blob & { contents: string; readError?: boolean };
+    if (source.readError) {
+      this.onerror?.();
+      return;
+    }
+    this.result = source.contents;
+    this.onload?.();
+  }
+}
+
+const flushImport = async (importInput: FakeElement): Promise<void> => {
+  await vi.waitFor(() => expect(importInput.value).toBe(""));
+};
+
+const setup = (options: {
+  contents: string;
+  readError?: boolean;
+  rejectSet?: boolean;
+  storedPresetNames?: string[];
+  storedPresets?: Record<string, unknown>;
+}) => {
+  const importInput = new FakeElement();
+  const file = {
+    contents: options.contents,
+    readError: options.readError,
+  } as unknown as File;
+  importInput.files = [file] as unknown as FileList;
+  importInput.value = "C:\\fakepath\\presets.json";
+
+  const storage = {
+    get: vi.fn(async () => ({
+      [STORAGE_KEYS.PRESETS]: options.storedPresets ?? {},
+      [STORAGE_KEYS.PRESET_NAMES]: options.storedPresetNames ?? [],
+    })),
+    set: options.rejectSet
+      ? vi.fn(async () => Promise.reject(new Error("storage unavailable")))
+      : vi.fn(async () => undefined),
+  };
+  const alert = vi.fn();
+  const addPresetToDropdown = vi.fn();
+  const refreshDynamicContent = vi.fn(async () => undefined);
+
+  vi.stubGlobal("window", new EventTarget());
+  vi.stubGlobal("chrome", { storage: { local: storage } });
+  vi.stubGlobal("alert", alert);
+  vi.stubGlobal("FileReader", FakeFileReader);
+
+  createSettingsView({
+    settingsModal: new FakeElement() as unknown as HTMLElement,
+    settingsButton: new FakeElement() as unknown as HTMLElement,
+    closeSettingsButton: new FakeElement() as unknown as HTMLElement,
+    themeSelect: new FakeElement() as unknown as HTMLSelectElement,
+    pointsCount: new FakeElement() as unknown as HTMLSelectElement,
+    pointsResetModal: new FakeElement() as unknown as HTMLElement,
+    pointsResetConfirm: new FakeElement() as unknown as HTMLButtonElement,
+    pointsResetCancel: new FakeElement() as unknown as HTMLButtonElement,
+    skipResetConfirm: new FakeElement() as unknown as HTMLInputElement,
+    exportPresetsButton: new FakeElement() as unknown as HTMLButtonElement,
+    importPresetsButton: new FakeElement() as unknown as HTMLButtonElement,
+    importInput: importInput as unknown as HTMLInputElement,
+    enableSpectrum: new FakeElement() as unknown as HTMLInputElement,
+    hideDefaultPresets: new FakeElement() as unknown as HTMLInputElement,
+    languageSelect: new FakeElement() as unknown as HTMLSelectElement,
+    shortcutMute: new FakeElement() as unknown as HTMLInputElement,
+    shortcutToggleEq: new FakeElement() as unknown as HTMLInputElement,
+    shortcutsError: new FakeElement() as unknown as HTMLElement,
+    localization: {
+      getMessage: (name: string) => name,
+    } as never,
+    addPresetToDropdown,
+    initPoints: vi.fn(),
+    redraw: vi.fn(),
+    refreshToolkitCaptureFilters: vi.fn(),
+    saveCurrentFilters: vi.fn(async () => undefined),
+    refreshDynamicContent,
+  });
+
+  return {
+    addPresetToDropdown,
+    alert,
+    file,
+    importInput,
+    refreshDynamicContent,
+    storage,
+  };
+};
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("preset import settings", () => {
+  test("a file read failure shows an error without reading storage", async () => {
+    const { alert, importInput, storage } = setup({
+      contents: "",
+      readError: true,
+    });
+
+    importInput.dispatchEvent(new Event("change"));
+    await flushImport(importInput);
+
+    expect(storage.get).not.toHaveBeenCalled();
+    expect(storage.set).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith("preset_import_read_error");
+  });
+
+  test("invalid JSON does not write storage", async () => {
+    const { alert, importInput, storage } = setup({ contents: "{" });
+
+    importInput.dispatchEvent(new Event("change"));
+    await flushImport(importInput);
+
+    expect(storage.get).not.toHaveBeenCalled();
+    expect(storage.set).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith("preset_import_syntax_error");
+  });
+
+  test("persists normalized new presets without overwriting existing ones", async () => {
+    const existingFilters = [{ freq: 500, gain: 7 }];
+    const contents = JSON.stringify({
+      presetNames: ["Existing", "New"],
+      presets: {
+        Existing: [{ freq: 500, gain: -12 }],
+        New: [{ freq: "1000", gain: "2" }],
+      },
+    });
+    const {
+      addPresetToDropdown,
+      importInput,
+      refreshDynamicContent,
+      storage,
+    } = setup({
+      contents,
+      storedPresetNames: ["Existing"],
+      storedPresets: { Existing: existingFilters },
+    });
+
+    importInput.dispatchEvent(new Event("change"));
+    await flushImport(importInput);
+
+    expect(storage.set).toHaveBeenCalledWith({
+      [STORAGE_KEYS.PRESETS]: {
+        Existing: existingFilters,
+        New: [{ freq: 1000, gain: 2, q: 0.5, type: "peaking" }],
+      },
+      [STORAGE_KEYS.PRESET_NAMES]: ["Existing", "New"],
+    });
+    expect(addPresetToDropdown).toHaveBeenCalledWith("New");
+    expect(refreshDynamicContent).toHaveBeenCalledOnce();
+  });
+
+  test("a rejected storage write leaves the dropdown unchanged", async () => {
+    const contents = JSON.stringify({
+      presetNames: ["Mine"],
+      presets: { Mine: [{ freq: 1000, gain: 2 }] },
+    });
+    const {
+      addPresetToDropdown,
+      alert,
+      importInput,
+      refreshDynamicContent,
+      storage,
+    } = setup({ contents, rejectSet: true });
+
+    importInput.dispatchEvent(new Event("change"));
+    await flushImport(importInput);
+
+    expect(storage.set).toHaveBeenCalledOnce();
+    expect(addPresetToDropdown).not.toHaveBeenCalled();
+    expect(refreshDynamicContent).not.toHaveBeenCalled();
+    expect(alert).toHaveBeenCalledWith("preset_import_save_error");
+  });
+
+  test("resets the file input so the same file can be selected again", async () => {
+    const { alert, file, importInput } = setup({ contents: "{" });
+
+    importInput.dispatchEvent(new Event("change"));
+    await flushImport(importInput);
+
+    importInput.files = [file] as unknown as FileList;
+    importInput.value = "C:\\fakepath\\presets.json";
+    importInput.dispatchEvent(new Event("change"));
+    await flushImport(importInput);
+
+    expect(alert).toHaveBeenCalledTimes(2);
+  });
+});

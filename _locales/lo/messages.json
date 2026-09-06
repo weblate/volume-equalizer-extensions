@@ -226,5 +226,23 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "ທ່ານຍັງສາມາດເປີດການສະແດງພາບສະເປັກຕຣຳໄດ້ໃນການຕັ້ງຄ່າ."
+  },
+  "preset_import_syntax_error": {
+    "message": "ໄຟລ໌ມີ JSON ທີ່ບໍ່ຖືກຕ້ອງ."
+  },
+  "preset_import_structure_error": {
+    "message": "ໂຄງສ້າງຂອງໄຟລ໌ພຣີເຊັດບໍ່ຖືກຕ້ອງ."
+  },
+  "preset_import_name_error": {
+    "message": "ໄຟລ໌ພຣີເຊັດມີຊື່ທີ່ບໍ່ຖືກຕ້ອງ."
+  },
+  "preset_import_filter_error": {
+    "message": "ໄຟລ໌ພຣີເຊັດມີຕົວກອງທີ່ບໍ່ຖືກຕ້ອງ."
+  },
+  "preset_import_read_error": {
+    "message": "ບໍ່ສາມາດອ່ານໄຟລ໌ພຣີເຊັດໄດ້."
+  },
+  "preset_import_save_error": {
+    "message": "ບໍ່ສາມາດບັນທຶກພຣີເຊັດທີ່ນຳເຂົ້າໄດ້."
   }
 }

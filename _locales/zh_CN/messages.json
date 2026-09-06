@@ -196,5 +196,11 @@
   "donation_reminder_message": { "message": "如果这个扩展对您有帮助，您可以支持它的开发。" },
   "donation_reminder_link": { "message": "支持开发" },
   "clipping_indicator_label": { "message": "CLIP" },
-  "guide_spectrum_visualization_hint": { "message": "您还可以在设置中启用频谱可视化。" }
+  "guide_spectrum_visualization_hint": { "message": "您还可以在设置中启用频谱可视化。" },
+  "preset_import_syntax_error": { "message": "文件包含无效的 JSON。" },
+  "preset_import_structure_error": { "message": "预设文件的结构无效。" },
+  "preset_import_name_error": { "message": "预设文件包含无效的名称。" },
+  "preset_import_filter_error": { "message": "预设文件包含无效的滤波器。" },
+  "preset_import_read_error": { "message": "无法读取预设文件。" },
+  "preset_import_save_error": { "message": "无法保存导入的预设。" }
 }
