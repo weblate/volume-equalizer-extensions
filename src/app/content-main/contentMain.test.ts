@@ -101,6 +101,8 @@ class FakeHTMLMediaElement {
   setAttribute(): void {}
 }
 
+const nativeFakePlay = FakeHTMLMediaElement.prototype.play;
+
 class FakeMediaElementAudioSourceNode extends FakeAudioNode {
   readonly mediaElement: FakeHTMLMediaElement;
 
@@ -115,6 +117,7 @@ class FakeAudioContext {
   destination = new FakeAudioDestinationNode(this, "destination");
   spectrumDb: number;
   peakAmplitude: number;
+  closed = false;
 
   constructor(spectrumDb: number, peakAmplitude = 0) {
     this.spectrumDb = spectrumDb;
@@ -150,14 +153,33 @@ class FakeAudioContext {
     target.captured = true;
     return new FakeMediaElementAudioSourceNode(this, target);
   }
+
+  close(): Promise<void> {
+    this.closed = true;
+    return Promise.resolve();
+  }
 }
 
 let playingListener: EventListener | null = null;
+let pauseListener: EventListener | null = null;
+let pagehideListener: EventListener | null = null;
 
 const dispatchPlaying = (media: FakeHTMLMediaElement): void => {
   if (!playingListener) throw new Error("Playing listener was not registered");
 
   playingListener({ target: media } as unknown as Event);
+};
+
+const dispatchPause = (media: FakeHTMLMediaElement): void => {
+  if (!pauseListener) throw new Error("Pause listener was not registered");
+
+  pauseListener({ target: media } as unknown as Event);
+};
+
+const dispatchPagehide = (persisted: boolean): void => {
+  if (!pagehideListener) throw new Error("Pagehide listener was not registered");
+
+  pagehideListener({ persisted } as PageTransitionEvent);
 };
 
 const loadContentMain = async (
@@ -166,7 +188,10 @@ const loadContentMain = async (
 ): Promise<void> => {
   vi.resetModules();
   playingListener = null;
+  pauseListener = null;
+  pagehideListener = null;
   FakeAudioNode.prototype.connect = nativeFakeConnect;
+  FakeHTMLMediaElement.prototype.play = nativeFakePlay;
 
   vi.stubGlobal("document", {
     getElementById: (id: string) => (id === "eq-tools-port" ? port : null),
@@ -175,8 +200,10 @@ const loadContentMain = async (
   vi.stubGlobal("window", {
     addEventListener: vi.fn((type: string, listener: EventListener) => {
       if (type === "playing") playingListener = listener;
+      if (type === "pause") pauseListener = listener;
+      if (type === "pagehide") pagehideListener = listener;
     }),
-    Audio: class {},
+    Audio: FakeHTMLMediaElement,
   });
   vi.stubGlobal("self", globalThis.window);
   vi.stubGlobal("AudioNode", FakeAudioNode);
@@ -486,4 +513,130 @@ describe("contentMain spectrum state", () => {
 
     expect(port.dataset.mainReady).toBe("true");
   });
+  test("disconnects and reuses its analyser when spectrum is toggled", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const createAnalyser = vi.spyOn(context, "createAnalyser");
+    const source = new FakeAudioNode(context, "source");
+    source.connect(context.destination);
+    let output = source;
+    while (!output.connections.includes(context.destination)) {
+      output = output.connections[0] as FakeAudioNode;
+    }
+    const analyser = createAnalyser.mock.results[0].value;
+    expect(output.connections).toContain(analyser);
+    port.dataset.enableSpectrum = "false";
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(output.connections).not.toContain(analyser);
+    expect(output.connections).toContain(context.destination);
+    port.dataset.enableSpectrum = "true";
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(createAnalyser).toHaveBeenCalledTimes(1);
+    expect(output.connections).toContain(analyser);
+  });
+
+  test("uses one owned context for different media elements", async () => {
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
+    await loadContentMain(new FakePort(), [
+      new FakeHTMLMediaElement(),
+      new FakeHTMLMediaElement(),
+    ]);
+    await Promise.resolve();
+    expect(createSource).toHaveBeenCalledTimes(2);
+    expect(createSource.mock.contexts[0]).toBe(createSource.mock.contexts[1]);
+  });
+
+  test("reuses a media source after pause and resume", async () => {
+    const media = new FakeHTMLMediaElement();
+    const createSource = vi.spyOn(
+      FakeAudioContext.prototype,
+      "createMediaElementSource",
+    );
+    await loadContentMain(new FakePort(), [media]);
+    await Promise.resolve();
+
+    media.paused = true;
+    dispatchPause(media);
+    media.paused = false;
+    dispatchPlaying(media);
+    await Promise.resolve();
+
+    expect(createSource).toHaveBeenCalledOnce();
+  });
+
+  test("captures a detached audio created through the Audio constructor", async () => {
+    const createSource = vi.spyOn(
+      FakeAudioContext.prototype,
+      "createMediaElementSource",
+    );
+    await loadContentMain(new FakePort());
+
+    const media = new window.Audio() as unknown as FakeHTMLMediaElement;
+    media.isConnected = false;
+    await Promise.resolve();
+
+    expect(createSource).toHaveBeenCalledOnce();
+  });
+
+  test("reuses the source when a removed video returns", async () => {
+    const media = new FakeHTMLMediaElement();
+    const createSource = vi.spyOn(
+      FakeAudioContext.prototype,
+      "createMediaElementSource",
+    );
+    await loadContentMain(new FakePort(), [media]);
+    await Promise.resolve();
+
+    media.paused = true;
+    media.isConnected = false;
+    dispatchPause(media);
+    media.paused = false;
+    media.isConnected = true;
+    dispatchPlaying(media);
+    await Promise.resolve();
+
+    expect(createSource).toHaveBeenCalledOnce();
+  });
+
+  test("closes only its owned context on final page teardown", async () => {
+    const media = new FakeHTMLMediaElement();
+    const createSource = vi.spyOn(
+      FakeAudioContext.prototype,
+      "createMediaElementSource",
+    );
+    await loadContentMain(new FakePort(), [media]);
+    await Promise.resolve();
+    const ownedContext = createSource.mock.contexts[0] as FakeAudioContext;
+
+    const pageContext = new FakeAudioContext(-42);
+    const pageSource = new FakeAudioNode(pageContext, "page-source");
+    pageSource.connect(pageContext.destination);
+    dispatchPagehide(false);
+
+    expect(ownedContext.closed).toBe(true);
+    expect(pageContext.closed).toBe(false);
+  });
+
+  test("preserves page-owned connections across equalizer toggles", async () => {
+    const port = new FakePort();
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "source");
+    const pageAnalyser = new FakeAnalyserNode(context, "page-analyser");
+    const pageGain = new FakeGainNode(context, "page-gain");
+    source.connect(pageAnalyser);
+    source.connect(pageGain);
+    source.connect(context.destination);
+    port.dataset.enabled = "false";
+    port.dispatchEvent(new Event("enabled-changed"));
+    expect(source.connections).toContain(pageAnalyser);
+    expect(source.connections).toContain(pageGain);
+    port.dataset.enabled = "true";
+    port.dispatchEvent(new Event("enabled-changed"));
+    expect(source.connections).toContain(pageAnalyser);
+    expect(source.connections).toContain(pageGain);
+  });
+
 });
