@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "ইমপোর্ট করা প্রিসেটগুলো সংরক্ষণ করা যায়নি।"
+  },
+  "close": {
+    "message": "বন্ধ করুন"
+  },
+  "help_label": {
+    "message": "সহায়তা"
+  },
+  "tab_label": {
+    "message": "ট্যাব"
+  },
+  "stop_capture_label": {
+    "message": "ক্যাপচার বন্ধ করুন"
   }
 }

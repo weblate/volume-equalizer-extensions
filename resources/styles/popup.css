@@ -518,6 +518,64 @@ button:disabled:active {
   font-weight: bold;
 }
 
+.dropdown-row {
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-row .dropdown-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-menu .dropdown-item {
+  width: 100%;
+  height: auto;
+  text-align: left;
+  background: transparent;
+}
+
+.dropdown-row .close-btn {
+  width: 28px;
+  flex: 0 0 28px;
+  background: transparent;
+}
+
+.header button,
+button.info-btn,
+button.close {
+  height: auto;
+  padding: 0;
+  background: transparent;
+}
+
+.header button img,
+button.info-btn img {
+  display: block;
+  width: 100%;
+}
+
+button.close {
+  width: 28px;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-mid);
+  outline-offset: 2px;
+}
+
+.captured-tab-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+}
+
 .volume-mute,
 .volume-mute-active {
   width: 31px;

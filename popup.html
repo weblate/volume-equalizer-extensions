@@ -13,19 +13,19 @@
   <div class="header">
     <div class="header-left">
       <text>EQ Toolkit</text>
-      <img id="settings-btn" class="settings-btn" src="resources/images/settings.svg">
-      <img id="add-to-autostart-whitelist-btn" class="add-to-autostart-whitelist-btn" src="resources/images/add_to_whitelist.svg">
-      <img id="window-mod" class="window-mod" src="resources/images/window-mod.svg">
+      <button type="button" id="settings-btn" class="settings-btn"><img src="resources/images/settings.svg" alt=""></button>
+      <button type="button" id="add-to-autostart-whitelist-btn" class="add-to-autostart-whitelist-btn"><img src="resources/images/add_to_whitelist.svg" alt=""></button>
+      <button type="button" id="window-mod" class="window-mod"><img src="resources/images/window-mod.svg" alt=""></button>
     </div>
     <div class="header-right">
-      <img id="volume-mute" class="volume-mute" src="resources/images/volume-mute.svg">
-      <img id="change-eq" class="change-eq" src="resources/images/on-off-button.svg">
+      <button type="button" id="volume-mute" class="volume-mute" aria-pressed="false"><img src="resources/images/volume-mute.svg" alt=""></button>
+      <button type="button" id="change-eq" class="change-eq" aria-pressed="false"><img src="resources/images/on-off-button.svg" alt=""></button>
     </div>
   </div>
   <div id="capture-error" class="capture-error"></div>
   <div id="captured-tabs" class="captured-tabs"></div>
   <div id="equalizer-curve-container" class="equalizer-curve-container">
-    <img id="info-btn" class="info-btn" src="resources/images/info.svg">
+    <button type="button" id="info-btn" class="info-btn"><img src="resources/images/info.svg" alt=""></button>
     <canvas class="eq-canvas" id="eq-canvas"></canvas>
     <canvas class="spectrum-canvas" id="spectrum-canvas"></canvas>
     <div class="info-tooltip" id="info-tooltip"></div>
@@ -52,18 +52,18 @@
       <div class="preset-actions">
         <button type="button" id="save-preset" class="save-preset" data-i18n="save_preset_button_label">Save preset</button>
         <div class="dropdown" id="presets">
-          <div class="dropdown-toggle" id="presets-toggle" data-i18n="empty_preset_name">none</div>
+          <button type="button" class="dropdown-toggle" id="presets-toggle" aria-expanded="false" aria-controls="presets-menu" data-i18n="empty_preset_name">none</button>
           <div class="dropdown-menu" id="presets-menu">
-            <div class="dropdown-item" data-value="none" id="none-item" data-i18n="empty_preset_name">none</div>
+            <button type="button" class="dropdown-item" data-value="none" id="none-item" data-i18n="empty_preset_name">none</button>
           </div>
         </div>
       </div>
     </section>
   </div>
 
-  <div id="settings-modal" class="modal">
+  <div id="settings-modal" class="modal" aria-labelledby="settings-header">
     <div class="modal-content">
-      <span id="close-settings" class="close">&times;</span>
+      <button type="button" id="close-settings" class="close" data-i18n-label="close">&times;</button>
       <h2 id="settings-header" data-i18n="settings_title">Settings</h2>
       <label class="settings-row">
         <text id="enable-spectrum-label" data-i18n="enable_spectrum_setting_option">
@@ -140,7 +140,7 @@
         </label>
         <div class="settings-actions">
           <input type="file" id="import-input" hidden>
-          <button type="input" id="import-presets" data-i18n="import_presets_button_label">Import presets</button>
+          <button type="button" id="import-presets" data-i18n="import_presets_button_label">Import presets</button>
           <button type="button" id="export-presets" data-i18n="export_presets_button_label">Export presets</button>
         </div>
       </div>
@@ -174,9 +174,9 @@
     </div>
   </div>
 
-  <div id="autostart-modal" class="modal">
+  <div id="autostart-modal" class="modal" aria-labelledby="autostart-modal-title">
     <div class="modal-content confirm-modal">
-      <span id="autostart-modal-close" class="close">&times;</span>
+      <button type="button" id="autostart-modal-close" class="close" data-i18n-label="close">&times;</button>
       <h3 id="autostart-modal-title" data-i18n="autostart_modal_title">Add to autostart whitelist</h3>
       <div class="autostart-modal-choice-list">
         <label class="checkbox-row">
@@ -206,9 +206,9 @@
     </div>
   </div>
 
-  <div id="preset-save-modal" class="modal">
+  <div id="preset-save-modal" class="modal" aria-labelledby="preset-save-title">
     <form id="preset-save-form" class="modal-content confirm-modal">
-      <span id="preset-save-close" class="close">&times;</span>
+      <button type="button" id="preset-save-close" class="close" data-i18n-label="close">&times;</button>
       <h3 id="preset-save-title" data-i18n="save_preset_modal_title">Save preset</h3>
       <label for="preset-name" id="preset-name-label" data-i18n="preset_name_label">Preset name</label>
       <input type="text" id="preset-name" class="settings-input preset-name-input" autocomplete="off">
@@ -220,7 +220,7 @@
     </form>
   </div>
 
-  <div id="points-reset-modal" class="modal">
+  <div id="points-reset-modal" class="modal" aria-labelledby="points-reset-title">
     <div class="modal-content confirm-modal">
       <h3 id="points-reset-title" data-i18n="points_reset_title">Change points count?</h3>
       <p id="points-reset-message" data-i18n="points_reset_message">
@@ -237,11 +237,11 @@
     </div>
   </div>
 
-  <div id="update-notice-modal" class="modal">
+  <div id="update-notice-modal" class="modal" aria-labelledby="update-notice-title">
     <div class="modal-content notice-modal">
       <button type="button" id="install-update-notice-top-close" class="close notice-close"
-        aria-label="Close">&times;</button>
-      <h3>Patch Notes 2.2.0</h3>
+        data-i18n-label="close">&times;</button>
+      <h3 id="update-notice-title">Patch Notes 2.2.0</h3>
       <div class="notice-message">
         <ul>
           <li>Added clipping indicator</li>
@@ -347,9 +347,8 @@
     </div>
   </div>
 
-  <div id="donation-reminder-modal" class="modal">
-    <section class="modal-content notice-modal" role="dialog" aria-modal="true"
-      aria-labelledby="donation-reminder-title">
+  <div id="donation-reminder-modal" class="modal" aria-labelledby="donation-reminder-title">
+    <section class="modal-content notice-modal">
       <h2 id="donation-reminder-title" data-i18n="donation_reminder_title">Support the developer</h2>
       <p id="donation-reminder-message" class="notice-message" data-i18n="donation_reminder_message">
         If this extension is useful to you, you can support its development.

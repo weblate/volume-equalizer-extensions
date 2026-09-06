@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "The imported presets could not be saved."
+  },
+  "close": {
+    "message": "Close"
+  },
+  "help_label": {
+    "message": "Help"
+  },
+  "tab_label": {
+    "message": "Tab"
+  },
+  "stop_capture_label": {
+    "message": "Stop capture"
   }
 }

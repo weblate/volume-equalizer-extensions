@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "ບໍ່ສາມາດບັນທຶກພຣີເຊັດທີ່ນຳເຂົ້າໄດ້."
+  },
+  "close": {
+    "message": "ປິດ"
+  },
+  "help_label": {
+    "message": "ຊ່ວຍເຫຼືອ"
+  },
+  "tab_label": {
+    "message": "ແຖບ"
+  },
+  "stop_capture_label": {
+    "message": "ຢຸດການຈັບສຽງ"
   }
 }

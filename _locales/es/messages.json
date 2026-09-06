@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "No se pudieron guardar los preajustes importados."
+  },
+  "close": {
+    "message": "Cerrar"
+  },
+  "help_label": {
+    "message": "Ayuda"
+  },
+  "tab_label": {
+    "message": "Pestaña"
+  },
+  "stop_capture_label": {
+    "message": "Detener captura"
   }
 }

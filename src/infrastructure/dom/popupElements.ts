@@ -1,13 +1,13 @@
 import { getRequiredElement } from "./getRequiredElement";
 
 export interface PopupElements {
-  settingsButton: HTMLImageElement;
-  volumeMuteButton: HTMLImageElement;
-  addToAutostartWhitelistButton: HTMLImageElement;
-  windowModeButton: HTMLImageElement;
+  settingsButton: HTMLButtonElement;
+  volumeMuteButton: HTMLButtonElement;
+  addToAutostartWhitelistButton: HTMLButtonElement;
+  windowModeButton: HTMLButtonElement;
   captureError: HTMLDivElement;
   capturedTabs: HTMLDivElement;
-  infoButton: HTMLImageElement;
+  infoButton: HTMLButtonElement;
   equalizerCurveContainer: HTMLDivElement;
   eqCanvas: HTMLCanvasElement;
   spectrumCanvas: HTMLCanvasElement;
@@ -17,22 +17,22 @@ export interface PopupElements {
   masterVolumeValue: HTMLOutputElement;
   clippingIndicator: HTMLElement;
   resetButton: HTMLButtonElement;
-  changeEqButton: HTMLImageElement;
+  changeEqButton: HTMLButtonElement;
   presets: HTMLDivElement;
-  presetsToggle: HTMLDivElement;
+  presetsToggle: HTMLButtonElement;
   presetsMenu: HTMLDivElement;
-  noneItem: HTMLDivElement;
+  noneItem: HTMLButtonElement;
   savePresetButton: HTMLButtonElement;
   presetControlsCard: HTMLElement;
   presetSaveModal: HTMLDivElement;
-  presetSaveClose: HTMLSpanElement;
+  presetSaveClose: HTMLButtonElement;
   presetSaveForm: HTMLFormElement;
   presetName: HTMLInputElement;
   presetSaveError: HTMLDivElement;
   presetSaveCancel: HTMLButtonElement;
   presetSaveConfirm: HTMLButtonElement;
   settingsModal: HTMLDivElement;
-  closeSettingsButton: HTMLSpanElement;
+  closeSettingsButton: HTMLButtonElement;
   settingsHeader: HTMLHeadingElement;
   enableSpectrumLabel: HTMLElement;
   enableSpectrum: HTMLInputElement;
@@ -69,7 +69,7 @@ export interface PopupElements {
   helpWithTranslationLabel: HTMLDivElement;
   sourceCodeLabel: HTMLDivElement;
   autostartModal: HTMLDivElement;
-  autostartModalClose: HTMLSpanElement;
+  autostartModalClose: HTMLButtonElement;
   autostartModalTitle: HTMLHeadingElement;
   autostartModalDomainLabel: HTMLSpanElement;
   autostartModalDomainValue: HTMLElement;
@@ -97,17 +97,17 @@ export interface PopupElements {
 }
 
 export const getPopupElements = (document: Document): PopupElements => ({
-  settingsButton: getRequiredElement(document, "settings-btn", HTMLImageElement),
-  volumeMuteButton: getRequiredElement(document, "volume-mute", HTMLImageElement),
+  settingsButton: getRequiredElement(document, "settings-btn", HTMLButtonElement),
+  volumeMuteButton: getRequiredElement(document, "volume-mute", HTMLButtonElement),
   addToAutostartWhitelistButton: getRequiredElement(
     document,
     "add-to-autostart-whitelist-btn",
-    HTMLImageElement,
+    HTMLButtonElement,
   ),
-  windowModeButton: getRequiredElement(document, "window-mod", HTMLImageElement),
+  windowModeButton: getRequiredElement(document, "window-mod", HTMLButtonElement),
   captureError: getRequiredElement(document, "capture-error", HTMLDivElement),
   capturedTabs: getRequiredElement(document, "captured-tabs", HTMLDivElement),
-  infoButton: getRequiredElement(document, "info-btn", HTMLImageElement),
+  infoButton: getRequiredElement(document, "info-btn", HTMLButtonElement),
   equalizerCurveContainer: getRequiredElement(
     document,
     "equalizer-curve-container",
@@ -140,12 +140,12 @@ export const getPopupElements = (document: Document): PopupElements => ({
   changeEqButton: getRequiredElement(
     document,
     "change-eq",
-    HTMLImageElement,
+    HTMLButtonElement,
   ),
   presets: getRequiredElement(document, "presets", HTMLDivElement),
-  presetsToggle: getRequiredElement(document, "presets-toggle", HTMLDivElement),
+  presetsToggle: getRequiredElement(document, "presets-toggle", HTMLButtonElement),
   presetsMenu: getRequiredElement(document, "presets-menu", HTMLDivElement),
-  noneItem: getRequiredElement(document, "none-item", HTMLDivElement),
+  noneItem: getRequiredElement(document, "none-item", HTMLButtonElement),
   savePresetButton: getRequiredElement(document, "save-preset", HTMLButtonElement),
   presetControlsCard: getRequiredElement(
     document,
@@ -153,7 +153,7 @@ export const getPopupElements = (document: Document): PopupElements => ({
     HTMLElement,
   ),
   presetSaveModal: getRequiredElement(document, "preset-save-modal", HTMLDivElement),
-  presetSaveClose: getRequiredElement(document, "preset-save-close", HTMLSpanElement),
+  presetSaveClose: getRequiredElement(document, "preset-save-close", HTMLButtonElement),
   presetSaveForm: getRequiredElement(document, "preset-save-form", HTMLFormElement),
   presetName: getRequiredElement(document, "preset-name", HTMLInputElement),
   presetSaveError: getRequiredElement(document, "preset-save-error", HTMLDivElement),
@@ -163,7 +163,7 @@ export const getPopupElements = (document: Document): PopupElements => ({
   closeSettingsButton: getRequiredElement(
     document,
     "close-settings",
-    HTMLSpanElement,
+    HTMLButtonElement,
   ),
   settingsHeader: getRequiredElement(document, "settings-header", HTMLHeadingElement),
   enableSpectrumLabel: getRequiredElement(
@@ -284,7 +284,7 @@ export const getPopupElements = (document: Document): PopupElements => ({
   autostartModalClose: getRequiredElement(
     document,
     "autostart-modal-close",
-    HTMLSpanElement,
+    HTMLButtonElement,
   ),
   autostartModalTitle: getRequiredElement(
     document,

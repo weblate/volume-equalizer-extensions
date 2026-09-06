@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "Impossibile salvare i preset importati."
+  },
+  "close": {
+    "message": "Chiudi"
+  },
+  "help_label": {
+    "message": "Aiuto"
+  },
+  "tab_label": {
+    "message": "Scheda"
+  },
+  "stop_capture_label": {
+    "message": "Interrompi acquisizione"
   }
 }

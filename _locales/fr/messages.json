@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "Impossible d’enregistrer les préréglages importés."
+  },
+  "close": {
+    "message": "Fermer"
+  },
+  "help_label": {
+    "message": "Aide"
+  },
+  "tab_label": {
+    "message": "Onglet"
+  },
+  "stop_capture_label": {
+    "message": "Arrêter la capture"
   }
 }

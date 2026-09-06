@@ -106,6 +106,7 @@ test("renders every equalizer hint and keeps them intact when the popup resizes"
     onComplete: async () => undefined,
   });
 
+  vi.stubGlobal("HTMLElement", FakeElement);
   await view.start();
   for (let index = 0; index < 8; index += 1) {
     nextButton.dispatchEvent(new Event("click"));

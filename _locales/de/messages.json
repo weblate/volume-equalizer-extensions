@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "Die importierten Presets konnten nicht gespeichert werden."
+  },
+  "close": {
+    "message": "Schließen"
+  },
+  "help_label": {
+    "message": "Hilfe"
+  },
+  "tab_label": {
+    "message": "Tab"
+  },
+  "stop_capture_label": {
+    "message": "Aufnahme beenden"
   }
 }

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { dbToGain } from "../../domains/equalizer/equalizerMath";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
@@ -14,6 +14,7 @@ class FakeElement {
   disabled = false;
   addEventListener = vi.fn();
   replaceChildren = vi.fn();
+  querySelectorAll = vi.fn(() => []);
 }
 
 class FakeMediaStream {
@@ -828,4 +829,9 @@ describe("selected tab settings", () => {
     expect(effects.setGainValue).not.toHaveBeenCalled();
   });
 
+});
+
+beforeEach(() => {
+  vi.stubGlobal("HTMLElement", FakeElement);
+  vi.stubGlobal("document", { activeElement: null });
 });

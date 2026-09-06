@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "Не удалось сохранить импортированные пресеты."
+  },
+  "close": {
+    "message": "Закрыть"
+  },
+  "help_label": {
+    "message": "Справка"
+  },
+  "tab_label": {
+    "message": "Вкладка"
+  },
+  "stop_capture_label": {
+    "message": "Остановить захват"
   }
 }

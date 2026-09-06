@@ -49,7 +49,7 @@ describe("createPresetsView", () => {
       menu: new FakeElement() as unknown as HTMLElement,
       saveButton: saveButton as unknown as HTMLButtonElement,
       saveModal: saveModal as unknown as HTMLDivElement,
-      saveModalClose: new FakeElement() as unknown as HTMLSpanElement,
+      saveModalClose: new FakeElement() as unknown as HTMLButtonElement,
       saveForm: new FakeElement() as unknown as HTMLFormElement,
       nameInput: nameInput as unknown as HTMLInputElement,
       saveError: saveError as unknown as HTMLDivElement,
@@ -94,7 +94,7 @@ describe("createPresetsView", () => {
       menu: new FakeElement() as unknown as HTMLElement,
       saveButton: new FakeElement() as unknown as HTMLButtonElement,
       saveModal: new FakeElement() as unknown as HTMLDivElement,
-      saveModalClose: new FakeElement() as unknown as HTMLSpanElement,
+      saveModalClose: new FakeElement() as unknown as HTMLButtonElement,
       saveForm: saveForm as unknown as HTMLFormElement,
       nameInput: nameInput as unknown as HTMLInputElement,
       saveError: saveError as unknown as HTMLDivElement,
@@ -117,3 +117,14 @@ describe("createPresetsView", () => {
     expect(storage.set).not.toHaveBeenCalled();
   });
 });
+
+// Modal keyboard/inert behavior is exercised separately; these tests cover view actions.
+vi.mock("./modalFocus", () => ({
+  attachModalFocus: (modal: HTMLElement) => ({
+    open: () => { modal.style.display = "block"; },
+    close: () => {
+      modal.style.display = "none";
+      modal.dispatchEvent(new Event("modal-closed"));
+    },
+  }),
+}));

@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "İçe aktarılan ön ayarlar kaydedilemedi."
+  },
+  "close": {
+    "message": "Kapat"
+  },
+  "help_label": {
+    "message": "Yardım"
+  },
+  "tab_label": {
+    "message": "Sekme"
+  },
+  "stop_capture_label": {
+    "message": "Yakalamayı durdur"
   }
 }

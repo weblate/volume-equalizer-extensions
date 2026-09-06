@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "Preset yang diimpor tidak dapat disimpan."
+  },
+  "close": {
+    "message": "Tutup"
+  },
+  "help_label": {
+    "message": "Bantuan"
+  },
+  "tab_label": {
+    "message": "Tab"
+  },
+  "stop_capture_label": {
+    "message": "Hentikan tangkapan"
   }
 }

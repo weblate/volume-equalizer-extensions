@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "Não foi possível guardar as predefinições importadas."
+  },
+  "close": {
+    "message": "Fechar"
+  },
+  "help_label": {
+    "message": "Ajuda"
+  },
+  "tab_label": {
+    "message": "Separador"
+  },
+  "stop_capture_label": {
+    "message": "Parar captura"
   }
 }

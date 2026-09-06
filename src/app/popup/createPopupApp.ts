@@ -401,12 +401,14 @@ export const createPopupApp = ({
   });
 
   const installUpdateNoticeView = createInstallUpdateNoticeView({
+    returnFocusTo: elements.settingsButton,
     modal: elements.installUpdateNoticeModal,
     topCloseButton: elements.installUpdateNoticeTopClose,
     closeButton: elements.installUpdateNoticeClose,
   });
 
   const donationReminderView = createDonationReminderView({
+    returnFocusTo: elements.settingsButton,
     modal: elements.donationReminderModal,
     closeButton: elements.donationReminderClose,
   });

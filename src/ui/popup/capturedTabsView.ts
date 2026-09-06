@@ -22,9 +22,11 @@ const getCapturedTabs = (): Promise<CapturedTabsResponse> => {
 export const createCapturedTabsView = (deps: {
   root: HTMLElement;
   isToolkitWindow: boolean;
+  getMessage(messageName: string): string;
   onSelectTab(tabId: number): Promise<void>;
   onStopCapture(tabId: number): Promise<void>;
 }) => {
+  deps.root.tabIndex = -1;
   const render = async (): Promise<void> => {
     if (!deps.isToolkitWindow) return;
 
@@ -34,36 +36,51 @@ export const createCapturedTabsView = (deps: {
       return;
     }
 
+    const focused = document.activeElement instanceof HTMLElement && deps.root.contains(document.activeElement)
+      ? document.activeElement : null;
+    const previousId = focused?.closest<HTMLElement>(".captured-tab")?.dataset.tabId;
+    const previousItems = Array.from(deps.root.querySelectorAll<HTMLElement>(".captured-tab"));
+    const previousIndex = previousItems.findIndex((item) => item.dataset.tabId === previousId);
+    const wasStop = focused?.classList.contains("captured-tab-stop");
     deps.root.replaceChildren();
     result.tabs.forEach((tab) => {
       const item = document.createElement("div");
       item.className = "captured-tab";
-      item.role = "button";
-      item.tabIndex = 0;
       if (tab.id === result.activeTabId) item.classList.add("active");
       item.dataset.tabId = String(tab.id);
       item.title = tab.title || tab.url || String(tab.id);
 
+      const selectButton = document.createElement("button");
+      selectButton.type = "button";
+      selectButton.className = "captured-tab-select";
+      selectButton.setAttribute("aria-pressed", String(tab.id === result.activeTabId));
+      item.appendChild(selectButton);
       if (tab.favIconUrl) {
         const icon = document.createElement("img");
         icon.className = "captured-tab-icon";
         icon.src = tab.favIconUrl;
         icon.alt = "";
-        item.appendChild(icon);
+        selectButton.appendChild(icon);
       }
 
       const title = document.createElement("span");
       title.className = "captured-tab-title";
-      title.textContent = tab.title || tab.url || `Tab ${tab.id}`;
-      item.appendChild(title);
+      title.textContent = tab.title || tab.url || `${deps.getMessage("tab_label")} ${tab.id}`;
+      selectButton.appendChild(title);
 
       const stopButton = document.createElement("button");
       stopButton.type = "button";
       stopButton.className = "captured-tab-stop";
+      stopButton.setAttribute("aria-label", `${deps.getMessage("stop_capture_label")}: ${title.textContent}`);
       item.appendChild(stopButton);
 
       deps.root.appendChild(item);
     });
+    if (focused) {
+      const items = Array.from(deps.root.querySelectorAll<HTMLElement>(".captured-tab"));
+      const next = items.find((item) => item.dataset.tabId === previousId) ?? items[Math.min(previousIndex, items.length - 1)];
+      (next?.querySelector<HTMLElement>(wasStop ? ".captured-tab-stop" : ".captured-tab-select") ?? deps.root).focus();
+    }
   };
 
   const getTabId = (item: HTMLElement): number | null => {
@@ -99,20 +116,6 @@ export const createCapturedTabsView = (deps: {
         return;
       }
 
-      await selectTab(item);
-    })();
-  });
-
-  deps.root.addEventListener("keydown", (event) => {
-    void (async () => {
-      if (!(event.target instanceof HTMLElement)) return;
-      if (event.target.closest(".captured-tab-stop")) return;
-      if (event.key !== "Enter" && event.key !== " ") return;
-
-      const item = event.target.closest<HTMLElement>(".captured-tab");
-      if (!item) return;
-
-      event.preventDefault();
       await selectTab(item);
     })();
   });

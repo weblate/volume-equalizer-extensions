@@ -33,7 +33,6 @@ const setElementTooltip = (
 
   const message = getMessage(messageName);
   element.setAttribute("title", message);
-  element.setAttribute("alt", message);
   element.setAttribute("aria-label", message);
 };
 
@@ -77,6 +76,10 @@ export const createLocalizationService = (): LocalizationService => {
       const messageName = element.dataset.i18n;
       if (messageName) element.textContent = getMessage(messageName);
     });
+    root.querySelectorAll<HTMLElement>("[data-i18n-label]").forEach((element) => {
+      const messageName = element.dataset.i18nLabel;
+      if (messageName) element.setAttribute("aria-label", getMessage(messageName));
+    });
 
     setFirstTextNodeContent(root, "translators-label", "translators_label", getMessage, " ");
     setFirstTextNodeContent(root, "donation-label", "support_me", getMessage, " ");
@@ -92,6 +95,8 @@ export const createLocalizationService = (): LocalizationService => {
     setElementTooltip(root, "volume-mute", "volume_mute_button_tooltip", getMessage);
     setElementTooltip(root, "add-to-autostart-whitelist-btn", "add_to_autostart_tooltip", getMessage);
     setElementTooltip(root, "window-mod", "window_mode_button_tooltip", getMessage);
+    setElementTooltip(root, "change-eq", "shortcut_toggle_eq_label", getMessage);
+    setElementTooltip(root, "info-btn", "help_label", getMessage);
   };
 
   const populateLanguageSelect = (root: Document = document): void => {

@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "இறக்குமதி செய்யப்பட்ட முன்னமைவுகளைச் சேமிக்க முடியவில்லை."
+  },
+  "close": {
+    "message": "மூடு"
+  },
+  "help_label": {
+    "message": "உதவி"
+  },
+  "tab_label": {
+    "message": "தாவல்"
+  },
+  "stop_capture_label": {
+    "message": "பிடிப்பை நிறுத்து"
   }
 }

@@ -203,6 +203,8 @@ export const createOnboardingGuideView = (deps: {
   };
   let currentIndex = 0;
   let started = false;
+  const previousInert = new Map<HTMLElement, boolean>();
+  let previousFocus: HTMLElement | null = null;
 
   const setRect = (element: HTMLElement, rect: PositionedRect): void => {
     element.style.left = `${rect.left}px`;
@@ -362,8 +364,10 @@ export const createOnboardingGuideView = (deps: {
   const close = (): void => {
     deps.root.hidden = true;
     deps.inertElements.forEach((element) => {
-      element.inert = false;
+      element.inert = previousInert.get(element) ?? false;
     });
+    previousInert.clear();
+    previousFocus?.focus();
     window.removeEventListener("resize", positionCurrentSpotlight);
     started = false;
   };
@@ -390,6 +394,11 @@ export const createOnboardingGuideView = (deps: {
   });
   deps.root.addEventListener("keydown", (event) => {
     event.stopPropagation();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      void complete();
+      return;
+    }
     if (event.key !== "Tab") return;
     const controls = Array.from(
       deps.root.querySelectorAll<HTMLButtonElement | HTMLSelectElement>(
@@ -408,7 +417,9 @@ export const createOnboardingGuideView = (deps: {
       if (started) return;
       started = true;
       currentIndex = 0;
+      previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       deps.inertElements.forEach((element) => {
+        previousInert.set(element, element.inert);
         element.inert = true;
       });
       deps.root.hidden = false;

@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "De geïmporteerde presets konden niet worden opgeslagen."
+  },
+  "close": {
+    "message": "Sluiten"
+  },
+  "help_label": {
+    "message": "Help"
+  },
+  "tab_label": {
+    "message": "Tabblad"
+  },
+  "stop_capture_label": {
+    "message": "Opname stoppen"
   }
 }

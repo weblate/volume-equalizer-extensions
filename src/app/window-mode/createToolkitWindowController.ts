@@ -531,6 +531,7 @@ export const createToolkitWindowController = (deps: {
   capturedTabsView = createCapturedTabsView({
     root: deps.capturedTabs,
     isToolkitWindow,
+    getMessage: deps.getMessage,
     onSelectTab: selectTab,
     onStopCapture: async (tabId) => {
       await stopCapturedTabCapture(tabId);

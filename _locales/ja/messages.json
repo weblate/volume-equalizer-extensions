@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "インポートしたプリセットを保存できませんでした。"
+  },
+  "close": {
+    "message": "閉じる"
+  },
+  "help_label": {
+    "message": "ヘルプ"
+  },
+  "tab_label": {
+    "message": "タブ"
+  },
+  "stop_capture_label": {
+    "message": "キャプチャを停止"
   }
 }

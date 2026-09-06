@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "ไม่สามารถบันทึกพรีเซ็ตที่นำเข้าได้"
+  },
+  "close": {
+    "message": "ปิด"
+  },
+  "help_label": {
+    "message": "ความช่วยเหลือ"
+  },
+  "tab_label": {
+    "message": "แท็บ"
+  },
+  "stop_capture_label": {
+    "message": "หยุดการจับเสียง"
   }
 }

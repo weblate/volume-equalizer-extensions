@@ -202,5 +202,17 @@
   "preset_import_name_error": { "message": "预设文件包含无效的名称。" },
   "preset_import_filter_error": { "message": "预设文件包含无效的滤波器。" },
   "preset_import_read_error": { "message": "无法读取预设文件。" },
-  "preset_import_save_error": { "message": "无法保存导入的预设。" }
+  "preset_import_save_error": { "message": "无法保存导入的预设。" },
+  "close": {
+    "message": "关闭"
+  },
+  "help_label": {
+    "message": "帮助"
+  },
+  "tab_label": {
+    "message": "标签页"
+  },
+  "stop_capture_label": {
+    "message": "停止捕获"
+  }
 }

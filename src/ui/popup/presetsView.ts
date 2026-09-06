@@ -1,3 +1,5 @@
+import { attachModalFocus } from "./modalFocus";
+import { attachPresetDropdown } from "./presetDropdown";
 import { isPresetUsedInWhitelist } from "../../domains/autostart/autostartRules";
 import type { EqualizerPersistedFilter } from "../../domains/equalizer/equalizerState";
 import {
@@ -15,7 +17,7 @@ export const createPresetsView = (deps: {
   menu: HTMLElement;
   saveButton: HTMLButtonElement;
   saveModal: HTMLDivElement;
-  saveModalClose: HTMLSpanElement;
+  saveModalClose: HTMLButtonElement;
   saveForm: HTMLFormElement;
   nameInput: HTMLInputElement;
   saveError: HTMLDivElement;
@@ -29,18 +31,28 @@ export const createPresetsView = (deps: {
   redraw(): void;
   refreshToolkitCaptureFilters(): void;
 }) => {
+  const saveModalFocus = attachModalFocus(deps.saveModal, deps.saveButton);
+  const dropdown = attachPresetDropdown(deps.dropdown, deps.toggle, deps.menu);
+
   const addPresetToDropdown = (
     name: string,
     options: { deletable?: boolean } = {},
   ): void => {
     const option = document.createElement("div");
-    option.textContent = name;
+    const choice = document.createElement("button");
+    choice.type = "button";
+    choice.textContent = name;
+    choice.className = "dropdown-item";
+    choice.setAttribute("data-value", name);
+    option.appendChild(choice);
     option.setAttribute("data-value", name);
-    option.className = "dropdown-item";
+    option.className = "dropdown-row";
 
     if (options.deletable ?? true) {
-      const closeButton = document.createElement("span");
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
       closeButton.className = "close-btn";
+      closeButton.setAttribute("aria-label", `${deps.getMessage("delete")}: ${name}`);
       closeButton.textContent = "\u00d7";
       closeButton.setAttribute("data-value", name);
       option.appendChild(closeButton);
@@ -53,7 +65,7 @@ export const createPresetsView = (deps: {
     userPresetNames: string[],
     options: { includeDefaultPresets?: boolean } = {},
   ): void => {
-    Array.from(deps.menu.querySelectorAll(".dropdown-item")).forEach((item) => {
+    Array.from(deps.menu.querySelectorAll(".dropdown-row")).forEach((item) => {
       if (item.getAttribute("data-value") !== "none") item.remove();
     });
 
@@ -63,14 +75,13 @@ export const createPresetsView = (deps: {
   };
 
   const closeSaveModal = (): void => {
-    deps.saveModal.style.display = "none";
-    deps.saveButton.focus();
+    saveModalFocus.close();
   };
 
   deps.saveButton.addEventListener("click", () => {
     deps.nameInput.value = "";
     deps.saveError.textContent = "";
-    deps.saveModal.style.display = "block";
+    saveModalFocus.open();
     deps.nameInput.focus();
   });
 
@@ -78,11 +89,6 @@ export const createPresetsView = (deps: {
   deps.saveCancel.addEventListener("click", closeSaveModal);
   deps.saveModal.addEventListener("click", (event) => {
     if (event.target === deps.saveModal) closeSaveModal();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && deps.saveModal.style.display === "block") {
-      closeSaveModal();
-    }
   });
   deps.nameInput.addEventListener("input", () => {
     deps.saveError.textContent = "";
@@ -123,15 +129,6 @@ export const createPresetsView = (deps: {
     })();
   });
 
-  deps.toggle.addEventListener("click", () => {
-    deps.menu.style.display = deps.menu.style.display === "block" ? "none" : "block";
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!(event.target instanceof Node)) return;
-    if (!deps.dropdown.contains(event.target)) deps.menu.style.display = "none";
-  });
-
   deps.menu.addEventListener("click", (event) => {
     void (async () => {
       if (!(event.target instanceof HTMLElement)) return;
@@ -141,7 +138,7 @@ export const createPresetsView = (deps: {
 
       if (choice === "none") {
         deps.toggle.textContent = deps.getMessage("empty_preset_name");
-        deps.menu.style.display = "none";
+        dropdown.close(true);
         return;
       }
 
@@ -159,7 +156,7 @@ export const createPresetsView = (deps: {
           return;
         }
 
-        event.target.parentElement?.remove();
+        const row = event.target.parentElement;
         const presets = (prefs[STORAGE_KEYS.PRESETS] ?? {}) as PresetStorage;
         const presetNames = ((prefs[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[]).filter(
           (name) => name !== choice,
@@ -170,6 +167,10 @@ export const createPresetsView = (deps: {
           [STORAGE_KEYS.PRESETS]: presets,
           [STORAGE_KEYS.PRESET_NAMES]: presetNames,
         });
+        const nextAction = row?.nextElementSibling?.querySelector<HTMLElement>("button") ??
+          row?.previousElementSibling?.querySelector<HTMLElement>("button") ?? deps.toggle;
+        row?.remove();
+        nextAction.focus();
         return;
       }
 
@@ -186,7 +187,7 @@ export const createPresetsView = (deps: {
       await deps.saveLoadedFilters(deps.getCurrentFilters());
       deps.redraw();
       deps.refreshToolkitCaptureFilters();
-      deps.menu.style.display = "none";
+      dropdown.close(true);
     })();
   });
 

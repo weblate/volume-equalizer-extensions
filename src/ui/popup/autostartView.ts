@@ -1,3 +1,4 @@
+import { attachModalFocus } from "./modalFocus";
 import {
   createWhitelistEntry,
   getWhitelistDomain,
@@ -35,6 +36,7 @@ export const createAutostartView = (deps: {
   isToolkitWindow: boolean;
   getMessage(messageName: string): string;
 }) => {
+  const modalFocus = attachModalFocus(deps.modal, deps.addToWhitelistButton);
   const setError = (element: HTMLElement, messageName: string): void => {
     element.textContent = messageName ? deps.getMessage(messageName) : "";
     element.style.display = messageName ? "block" : "none";
@@ -166,7 +168,7 @@ export const createAutostartView = (deps: {
   };
 
   const closeModal = (): void => {
-    deps.modal.style.display = "none";
+    modalFocus.close();
   };
 
   deps.addToWhitelistButton.addEventListener("click", () => {
@@ -178,7 +180,7 @@ export const createAutostartView = (deps: {
       deps.modalUrlValue.textContent = normalizeWhitelistUrl(tab?.url ?? "");
       await refreshPresetSelects();
       setError(deps.modalError, "");
-      deps.modal.style.display = "block";
+      modalFocus.open();
     })();
   });
 

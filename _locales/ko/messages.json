@@ -244,5 +244,17 @@
   },
   "preset_import_save_error": {
     "message": "가져온 프리셋을 저장할 수 없습니다."
+  },
+  "close": {
+    "message": "닫기"
+  },
+  "help_label": {
+    "message": "도움말"
+  },
+  "tab_label": {
+    "message": "탭"
+  },
+  "stop_capture_label": {
+    "message": "캡처 중지"
   }
 }

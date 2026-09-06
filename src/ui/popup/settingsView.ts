@@ -1,3 +1,4 @@
+import { attachModalFocus } from "./modalFocus";
 import { clampPointCount } from "../../domains/equalizer/equalizerMath";
 import { type LocalizationService } from "../../domains/localization/localizationService";
 import {
@@ -63,6 +64,8 @@ export const createSettingsView = (deps: {
   saveCurrentFilters(): Promise<void>;
   refreshDynamicContent(): Promise<void>;
 }) => {
+  const settingsFocus = attachModalFocus(deps.settingsModal, deps.settingsButton);
+  const pointsFocus = attachModalFocus(deps.pointsResetModal, deps.pointsCount);
   let pendingPointCount: number | null = null;
   let shortcutSettings: ShortcutMap = resolveShortcuts(null);
 
@@ -115,7 +118,7 @@ export const createSettingsView = (deps: {
   };
 
   const closePointsResetModal = (): void => {
-    deps.pointsResetModal.style.display = "none";
+    pointsFocus.close();
   };
 
   const resetPointCountSelectFromStorage = async (): Promise<void> => {
@@ -186,16 +189,16 @@ export const createSettingsView = (deps: {
   };
 
   deps.settingsButton.addEventListener("click", () => {
-    deps.settingsModal.style.display = "block";
+    settingsFocus.open();
   });
 
   deps.closeSettingsButton.addEventListener("click", () => {
-    deps.settingsModal.style.display = "none";
+    settingsFocus.close();
   });
 
   window.addEventListener("click", (event) => {
     if (event.target === deps.settingsModal) {
-      deps.settingsModal.style.display = "none";
+      settingsFocus.close();
     }
   });
 
@@ -215,8 +218,14 @@ export const createSettingsView = (deps: {
 
       pendingPointCount = newCount;
       deps.skipResetConfirm.checked = await shouldSkipPointsResetConfirm();
-      deps.pointsResetModal.style.display = "block";
+      pointsFocus.open();
     })();
+  });
+
+  deps.pointsResetModal.addEventListener("modal-closed", () => {
+    if (pendingPointCount == null) return;
+    pendingPointCount = null;
+    void resetPointCountSelectFromStorage();
   });
 
   deps.pointsResetConfirm.addEventListener("click", () => {
