@@ -1,5 +1,5 @@
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "vite";
 
@@ -56,17 +56,24 @@ await Promise.all([
 const scriptEntries = await readdir(resolve(distDir, "scripts"), {
   withFileTypes: true,
 });
-const unexpectedRootScripts = scriptEntries
-  .filter(
-    (entry) =>
-      entry.isFile() &&
-      entry.name.endsWith(".js") &&
-      !expectedEntryFiles.has(entry.name),
-  )
-  .map((entry) => entry.name);
+const missing = [...expectedEntryFiles].filter(
+  (name) => !scriptEntries.some((entry) => entry.isFile() && entry.name === name),
+);
+if (missing.length > 0) {
+  throw new Error(`Missing extension bundles: ${missing.join(", ")}`);
+}
 
-if (unexpectedRootScripts.length > 0) {
+const expectedPaths = new Set(
+  [...expectedEntryFiles].map((name) => `scripts/${name}`),
+);
+const outputEntries = await readdir(distDir, { recursive: true, withFileTypes: true });
+const unexpectedScripts = outputEntries
+  .filter((entry) => entry.isFile() && /\.[cm]?js$/.test(entry.name))
+  .map((entry) => relative(distDir, resolve(entry.parentPath, entry.name)).split(sep).join("/"))
+  .filter((name) => !expectedPaths.has(name));
+
+if (unexpectedScripts.length > 0) {
   throw new Error(
-    `Unexpected top-level script bundles emitted: ${unexpectedRootScripts.join(", ")}`,
+    `Unexpected script bundles emitted: ${unexpectedScripts.join(", ")}`,
   );
 }
