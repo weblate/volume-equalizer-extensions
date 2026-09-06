@@ -7,7 +7,6 @@ import type {
   EqualizerFilter,
   EqualizerFilterType,
 } from "../equalizer/types";
-import { validatePresetName } from "./presetNameValidation";
 
 export type PresetImportResult =
   | {
@@ -90,11 +89,10 @@ export const parsePresetImport = (text: string): PresetImportResult => {
   const presetNames: string[] = [];
   for (const rawName of parsed.presetNames) {
     if (typeof rawName !== "string") return { ok: false, error: "name" };
-    const validation = validatePresetName(rawName, presetNames);
-    if (validation.kind === "error" || unsafeNames.has(validation.name)) {
+    const name = rawName.trim();
+    if (!name || presetNames.includes(name) || unsafeNames.has(name)) {
       return { ok: false, error: "name" };
     }
-    const { name } = validation;
     const filters = parsed.presets[rawName];
     if (!Array.isArray(filters)) return { ok: false, error: "structure" };
     const normalized = filters.map(parseFilter);

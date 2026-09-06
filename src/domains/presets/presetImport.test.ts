@@ -115,11 +115,10 @@ describe("parsePresetImport", () => {
   test.each([
     "",
     "  ",
-    "Bass Boost",
     "__proto__",
     "constructor",
     "prototype",
-  ])("rejects an unsafe, empty, or reserved name %s", (name) => {
+  ])("rejects an unsafe or empty name %s", (name) => {
     const exported = JSON.stringify({
       presetNames: [name],
       presets: { [name]: [] },

@@ -142,8 +142,9 @@ describe("preset import settings", () => {
   test("persists normalized new presets without overwriting existing ones", async () => {
     const existingFilters = [{ freq: 500, gain: 7 }];
     const contents = JSON.stringify({
-      presetNames: ["Existing", "New"],
+      presetNames: ["Bass Boost", "Existing", "New"],
       presets: {
+        "Bass Boost": [{ freq: 1000, gain: -12 }],
         Existing: [{ freq: 500, gain: -12 }],
         New: [{ freq: "1000", gain: "2" }],
       },
@@ -170,6 +171,7 @@ describe("preset import settings", () => {
       [STORAGE_KEYS.PRESET_NAMES]: ["Existing", "New"],
     });
     expect(addPresetToDropdown).toHaveBeenCalledWith("New");
+    expect(addPresetToDropdown).toHaveBeenCalledOnce();
     expect(refreshDynamicContent).toHaveBeenCalledOnce();
   });
 

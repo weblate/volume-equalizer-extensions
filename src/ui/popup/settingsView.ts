@@ -13,6 +13,7 @@ import {
   validateShortcutConfig,
 } from "../../domains/shortcuts/shortcuts";
 import { parsePresetImport } from "../../domains/presets/presetImport";
+import { isDefaultPresetName } from "../../domains/presets/defaultPresets";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 
 type ThemeName = "dark" | "light";
@@ -292,7 +293,7 @@ export const createSettingsView = (deps: {
           const presets = (prefs[STORAGE_KEYS.PRESETS] ?? {}) as Record<string, unknown>;
           const presetNames = [...((prefs[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[])];
           const namesToAdd = parsed.presetNames.filter((name) => {
-            return !presetNames.includes(name);
+            return !isDefaultPresetName(name) && !presetNames.includes(name);
           });
           namesToAdd.forEach((name) => {
             presetNames.push(name);
