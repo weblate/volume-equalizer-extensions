@@ -12,7 +12,7 @@
 
 - `npm ci` (or `npm install`): installs dev dependencies; there is no bundler or transpile step.
 
-- `npm build`: runs build using vite with custom script (`tools/buildExtension.mjs`)
+- `npm run build`: runs build using vite with custom script (`tools/buildExtension.mjs`)
 
 - `lint:locales`: validates length of strings and lines count for some buttons
 
@@ -56,14 +56,19 @@ A correct fix should explain and address the real cause of the bug, not merely h
 
 - Favor double quotes in TS/JS/JSON to stay consistent with current code and locale files.
 
-## Testing Guidelines
-
-- No automated test suite yet; run manual checks after changes: reload the unpacked extension, open the popup, tweak bands, toggle mute/reset, and confirm spectrum drawing updates without console errors.
-
-- Verify localization by switching the browser language and checking visible strings against `_locales` entries; default locale is `en`.
-
-- When touching audio logic, test across multiple tabs and sites to confirm content scripts register via `background.js` and settings persist in `chrome.storage`.
-
 ## Localization
 
 - When adding UI text, create English copy first at the end of `_locales/en/messages.json`, then mirror keys across other locales and translate values; avoid hardcoded strings in markup or scripts.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
