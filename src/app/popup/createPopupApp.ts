@@ -297,13 +297,7 @@ export const createPopupApp = ({
 
     void applyToolkitShortcutMessage(shortcut, {
       hasCapture: toolkitController.hasCapture,
-      selectTab: async (tabId) => {
-        await toolkitController.loadTabSettings(tabId);
-        await chrome.storage.session.set({
-          [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: tabId,
-        });
-        await toolkitController.renderCapturedTabs();
-      },
+      selectTab: toolkitController.selectTab,
       toggleMute: onToggleMute,
       toggleEqualizer: onToggleEqualizer,
     });

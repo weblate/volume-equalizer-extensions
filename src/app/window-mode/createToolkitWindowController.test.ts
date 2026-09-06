@@ -492,6 +492,7 @@ describe("createToolkitWindowController spectrum", () => {
     await controller.startTabCapture();
     expect(clippingStates.at(-1)).toBe(false);
 
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] = 456;
     await controller.handleStorageChange({
       [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: {
         oldValue: 123,
@@ -672,7 +673,7 @@ describe("createToolkitWindowController spectrum", () => {
     vi.stubGlobal("document", {
       createElement: () => new FakeElement(),
     });
-    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("chrome", { storage, runtime: { sendMessage: vi.fn(async () => ({ tabs: [], activeTabId: null })) } });
 
     const { controller } = createController();
 
@@ -686,4 +687,113 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
   });
+});
+
+const deferred = <T>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => { resolve = done; });
+  return { promise, resolve };
+};
+
+describe("selected tab settings", () => {
+  const setup = () => {
+    const storage = createChromeStorage();
+    vi.stubGlobal("window", { location: { search: "?mode=window" }, addEventListener: vi.fn() });
+    vi.stubGlobal("chrome", { storage, runtime: { sendMessage: vi.fn(async () => ({ tabs: [], activeTabId: 1 })) } });
+    const effects = {
+      setFilters: vi.fn(), initPoints: vi.fn(), resize: vi.fn(), setGainValue: vi.fn(),
+      setEnableButtonClass: vi.fn(), setMuteButtonClass: vi.fn(), renderCaptureError: vi.fn(),
+    };
+    const fallback = deferred<number>();
+    return { storage, effects, fallback, ...createController({ ...effects, getPointCount: () => fallback.promise }) };
+  };
+
+  test.each([false, true])("ignores a late response, including A/B/A: %s", async (returnToFirst) => {
+    const { storage, effects, controller } = setup();
+    const first = deferred<Record<string, unknown>>();
+    const second = deferred<Record<string, unknown>>();
+    const third = deferred<Record<string, unknown>>();
+    storage.local.get.mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise).mockImplementationOnce(() => third.promise);
+    const pendingA = controller.loadTabSettings(1);
+    const pendingB = controller.loadTabSettings(2);
+    const latest = returnToFirst ? controller.loadTabSettings(1) : pendingB;
+    const filters = [{ type: "peaking", freq: 2000, gain: 2, q: 0.5 }];
+    if (returnToFirst) third.resolve({ "filters.1": filters, "gain.1": 7 });
+    second.resolve({ "filters.2": filters, "gain.2": 7 });
+    await latest;
+    await pendingB;
+    const calls = Object.values(effects).map(effect => effect.mock.calls.length);
+    first.resolve({ "filters.1": [{ freq: 100, gain: 10 }], "gain.1": 12 });
+    await pendingA;
+    expect(effects.setFilters).toHaveBeenLastCalledWith(filters);
+    expect(effects.setGainValue).toHaveBeenLastCalledWith(7);
+    expect(Object.values(effects).map(effect => effect.mock.calls.length)).toEqual(calls);
+  });
+
+  test("invalidates pending settings when the last tab closes", async () => {
+    const { storage, effects, controller } = setup();
+    const reply = deferred<Record<string, unknown>>();
+    storage.local.get.mockImplementationOnce(() => reply.promise);
+    const pending = controller.loadTabSettings(1);
+    await controller.loadTabSettings(null);
+    reply.resolve({ "filters.1": [{ freq: 100, gain: 10 }] });
+    await pending;
+    expect(effects.setFilters).not.toHaveBeenCalled();
+    expect(effects.setGainValue).not.toHaveBeenCalled();
+  });
+
+  test("does not initialize stale defaults after point count resolves", async () => {
+    const { storage, effects, fallback, controller } = setup();
+    storage.local.get.mockResolvedValueOnce({}).mockResolvedValueOnce({ "filters.2": [{ freq: 2000, gain: 2 }] });
+    const pendingA = controller.loadTabSettings(1);
+    await Promise.resolve();
+    await controller.loadTabSettings(2);
+    fallback.resolve(5);
+    await pendingA;
+    expect(effects.initPoints).not.toHaveBeenCalled();
+    expect(effects.setFilters).toHaveBeenCalledTimes(1);
+  });
+  test("awaits selection loading and ignores its own storage notification", async () => {
+    const { storage, effects, controller } = setup();
+    const reply = deferred<Record<string, unknown>>();
+    storage.local.get.mockImplementationOnce(() => reply.promise);
+    const selected = controller.selectTab(1);
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: { oldValue: 123, newValue: 1 },
+    });
+    expect(storage.local.get).toHaveBeenCalledTimes(1);
+    reply.resolve({ "filters.1": [{ freq: 500, gain: 3 }] });
+    await selected;
+    expect(effects.setFilters).toHaveBeenCalledTimes(1);
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: { oldValue: 123, newValue: 1 },
+    });
+    expect(storage.local.get).toHaveBeenCalledTimes(1);
+  });
+
+  test("reconciles external selection from current storage instead of a stale notification", async () => {
+    const { storage, effects, controller } = setup();
+    storage.localValues["filters.2"] = [{ freq: 2000, gain: 2 }];
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] = 2;
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: { oldValue: 123, newValue: 1 },
+    });
+    expect(effects.setFilters).toHaveBeenLastCalledWith([{ freq: 2000, gain: 2 }]);
+    expect(storage.session.set).not.toHaveBeenCalled();
+  });
+
+  test("loads the next tab settings when the active capture is stopped", async () => {
+    const { storage, effects, controller } = setup();
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS] = [123, 456];
+    storage.localValues["filters.123"] = [{ freq: 1000, gain: 0 }];
+    storage.localValues["filters.456"] = [{ freq: 4000, gain: 4 }];
+    await controller.loadTabSettings(123);
+    await controller.stopCapturedTabCapture(123);
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: { oldValue: 123, newValue: 456 },
+    });
+    expect(effects.setFilters).toHaveBeenLastCalledWith([{ freq: 4000, gain: 4 }]);
+  });
+
 });

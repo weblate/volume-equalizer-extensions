@@ -1,5 +1,3 @@
-import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
-
 export interface CapturedTabInfo {
   id: number;
   title?: string;
@@ -77,9 +75,6 @@ export const createCapturedTabsView = (deps: {
     const tabId = getTabId(item);
     if (tabId == null) return;
 
-    await chrome.storage.session.set({
-      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: tabId,
-    });
     await deps.onSelectTab(tabId);
     await render();
   };
