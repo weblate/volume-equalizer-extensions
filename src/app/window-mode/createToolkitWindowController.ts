@@ -69,6 +69,7 @@ export const createToolkitWindowController = (deps: {
   let activeTabId: number | null = null;
   let settingsGeneration = 0;
   let selectionWrites = 0;
+  let selectionReadGeneration = 0;
   const captures = new Map<string, ToolkitCapture>();
   let capturedTabsView: ReturnType<typeof createCapturedTabsView> | null = null;
   let spectrumEnabled = false;
@@ -397,10 +398,11 @@ export const createToolkitWindowController = (deps: {
   };
 
   const reconcileSelectedTab = async (): Promise<void> => {
+    const readGeneration = ++selectionReadGeneration;
     if (selectionWrites > 0) return;
     const generation = settingsGeneration;
     const stored = await chrome.storage.session.get(STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID);
-    if (selectionWrites > 0 || generation !== settingsGeneration) return;
+    if (selectionWrites > 0 || generation !== settingsGeneration || readGeneration !== selectionReadGeneration) return;
     const tabId = (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ?? null;
     if (tabId === activeTabId) return;
     await loadTabSettings(tabId);

@@ -796,4 +796,36 @@ describe("selected tab settings", () => {
     expect(effects.setFilters).toHaveBeenLastCalledWith([{ freq: 4000, gain: 4 }]);
   });
 
+  test.each([false, true])("keeps the latest external selection when reads finish out of order: %s", async (latestFirst) => {
+    const { storage, effects, controller } = setup();
+    const b = deferred<Record<string, unknown>>();
+    const c = deferred<Record<string, unknown>>();
+    storage.session.get.mockImplementationOnce(() => b.promise).mockImplementationOnce(() => c.promise);
+    storage.localValues["filters.2"] = [{ freq: 2000, gain: 2 }];
+    storage.localValues["filters.3"] = [{ freq: 3000, gain: 3 }];
+    const changeB = controller.handleStorageChange({ toolkitWindowActiveTabId: { newValue: 2 } });
+    const changeC = controller.handleStorageChange({ toolkitWindowActiveTabId: { newValue: 3 } });
+    if (latestFirst) {
+      c.resolve({ toolkitWindowActiveTabId: 3 }); await changeC;
+      b.resolve({ toolkitWindowActiveTabId: 2 }); await changeB;
+    } else {
+      b.resolve({ toolkitWindowActiveTabId: 2 }); await changeB;
+      c.resolve({ toolkitWindowActiveTabId: 3 }); await changeC;
+    }
+    expect(effects.setFilters).toHaveBeenLastCalledWith([{ freq: 3000, gain: 3 }]);
+  });
+
+  test("stopping an active capture invalidates its in-flight settings", async () => {
+    const { storage, effects, controller } = setup();
+    const reply = deferred<Record<string, unknown>>();
+    storage.local.get.mockImplementationOnce(() => reply.promise);
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS] = [123];
+    const pending = controller.loadTabSettings(123);
+    await controller.stopCapturedTabCapture(123);
+    reply.resolve({ "filters.123": [{ freq: 100, gain: 10 }] });
+    await pending;
+    expect(effects.setFilters).not.toHaveBeenCalled();
+    expect(effects.setGainValue).not.toHaveBeenCalled();
+  });
+
 });
