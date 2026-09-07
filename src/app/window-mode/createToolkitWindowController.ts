@@ -8,9 +8,9 @@ import {
   createBiquadFilter,
   getBiquadHeadroomGain,
 } from "../../domains/audio/biquadChain";
-import { hasClippingSample } from "../../domains/audio/clipping";
 import { dbToGain } from "../../domains/equalizer/equalizerMath";
 import { isEqualizerFilterEnabled } from "../../domains/equalizer/defaultFilters";
+import { createSpectrumSampler } from "../../infrastructure/audio/spectrumSampler";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import { createCapturedTabsView } from "../../ui/popup/capturedTabsView";
 
@@ -24,7 +24,6 @@ interface ToolkitCapture {
   preamp: GainNode | null;
   filters: BiquadFilterNode[];
   output: AudioNode | null;
-  analyser: AnalyserNode | null;
   filterSettings: EqualizerPersistedFilter[];
 }
 
@@ -73,9 +72,11 @@ export const createToolkitWindowController = (deps: {
   const captures = new Map<string, ToolkitCapture>();
   let capturedTabsView: ReturnType<typeof createCapturedTabsView> | null = null;
   let spectrumEnabled = false;
-  let spectrumTimer: ReturnType<typeof setInterval> | null = null;
-  let spectrumTabId: string | null = null;
-  let spectrumAnalyser: AnalyserNode | null = null;
+  let spectrumOutput: AudioNode | null = null;
+  const spectrumSampler = createSpectrumSampler(
+    (meta) => deps.onSpectrumMeta?.(meta),
+    (buffer, clipping) => deps.onSpectrumFrame?.(buffer, clipping),
+  );
 
   if (isToolkitWindow) {
     deps.body.classList.add("toolkit-window-body");
@@ -144,16 +145,13 @@ export const createToolkitWindowController = (deps: {
   };
 
   const stopSpectrum = (): void => {
-    if (spectrumTimer) {
-      clearInterval(spectrumTimer);
-      spectrumTimer = null;
-    }
-    spectrumTabId = null;
-    spectrumAnalyser = null;
-    deps.onSpectrumFrame?.(null);
+    spectrumSampler.stop();
+    spectrumOutput = null;
   };
 
   const disconnectCaptureGraph = (capture: ToolkitCapture): void => {
+    if (capture.output && capture.output === spectrumOutput) stopSpectrum();
+
     try {
       capture.source.disconnect();
     } catch (e) {
@@ -178,7 +176,6 @@ export const createToolkitWindowController = (deps: {
     capture.preamp = null;
     capture.filters = [];
     capture.output = null;
-    capture.analyser = null;
   };
 
   const stopCaptureEntry = (capture: ToolkitCapture): void => {
@@ -289,18 +286,6 @@ export const createToolkitWindowController = (deps: {
     }
   };
 
-  const ensureSpectrumAnalyser = (capture: ToolkitCapture): AnalyserNode | null => {
-    if (!capture.output) return null;
-    if (capture.analyser) return capture.analyser;
-
-    const analyser = deps.audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.5;
-    capture.output.connect(analyser);
-    capture.analyser = analyser;
-    return analyser;
-  };
-
   function startSpectrum(tabId: number | string | null = activeTabId): void {
     if (!isToolkitWindow || !spectrumEnabled || tabId == null) {
       stopSpectrum();
@@ -313,46 +298,8 @@ export const createToolkitWindowController = (deps: {
       return;
     }
 
-    const analyser = ensureSpectrumAnalyser(capture);
-    if (!analyser) {
-      stopSpectrum();
-      return;
-    }
-
-    const nextSpectrumTabId = String(tabId);
-    if (
-      spectrumTimer &&
-      spectrumTabId === nextSpectrumTabId &&
-      spectrumAnalyser === analyser
-    ) {
-      return;
-    }
-
-    if (spectrumTimer) {
-      clearInterval(spectrumTimer);
-    }
-    if (spectrumTabId && spectrumTabId !== nextSpectrumTabId) {
-      deps.onSpectrumFrame?.(null, false);
-    }
-
-    spectrumTabId = nextSpectrumTabId;
-    spectrumAnalyser = analyser;
-    deps.onSpectrumMeta?.({
-      type: "meta",
-      sampleRate: deps.audioContext.sampleRate,
-      fftSize: analyser.fftSize,
-      minDb: analyser.minDecibels,
-      maxDb: analyser.maxDecibels,
-      frequencyBinCount: analyser.frequencyBinCount,
-    });
-
-    const timeDomainBuffer = new Float32Array(analyser.fftSize);
-    spectrumTimer = setInterval(() => {
-      const buffer = new Float32Array(analyser.frequencyBinCount);
-      analyser.getFloatFrequencyData(buffer);
-      analyser.getFloatTimeDomainData(timeDomainBuffer);
-      deps.onSpectrumFrame?.(buffer, hasClippingSample(timeDomainBuffer));
-    }, 50);
+    spectrumSampler.start(deps.audioContext, capture.output);
+    spectrumOutput = capture.output;
   }
 
   const loadTabSettings = async (tabId: number | null): Promise<void> => {
@@ -494,7 +441,6 @@ export const createToolkitWindowController = (deps: {
             preamp: null,
             filters: [],
             output: null,
-            analyser: null,
             filterSettings: tabFilters?.length
               ? tabFilters
               : defaultFilters?.length
@@ -543,13 +489,19 @@ export const createToolkitWindowController = (deps: {
   };
 
   const stopTabCapture = (): void => {
-    stopSpectrum();
+    spectrumSampler.dispose();
+    spectrumOutput = null;
     captures.forEach((capture) => stopCaptureEntry(capture));
     captures.clear();
   };
 
   const stopCapturedTabCapture = async (tabId: number): Promise<void> => {
     if (!isToolkitWindow) return;
+
+    if (activeTabId === tabId) {
+      settingsGeneration++;
+      stopSpectrum();
+    }
 
     const capture = captures.get(String(tabId));
     if (capture) {
@@ -580,11 +532,6 @@ export const createToolkitWindowController = (deps: {
     const nextActiveTabId = storedActiveTabId === tabId
       ? remainingTabIds[0] ?? null
       : storedActiveTabId;
-
-    if (activeTabId === tabId) {
-      settingsGeneration++;
-      stopSpectrum();
-    }
 
     await chrome.storage.session.set({
       [STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]: remainingTabIds,

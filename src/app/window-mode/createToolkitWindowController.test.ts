@@ -31,8 +31,10 @@ class FakeAudioNode {
     return destination;
   }
 
-  disconnect(): void {
-    this.connections = [];
+  disconnect(destination?: unknown): void {
+    this.connections = destination
+      ? this.connections.filter((connection) => connection !== destination)
+      : [];
   }
 }
 
@@ -62,12 +64,16 @@ class FakeAnalyserNode extends FakeAudioNode {
   maxDecibels = -30;
   frequencyBinCount = 8;
   peakAmplitude = 0;
+  frequencyBuffers: Float32Array[] = [];
+  sampleBuffers: Float32Array[] = [];
 
   getFloatFrequencyData(buffer: Float32Array): void {
+    this.frequencyBuffers.push(buffer);
     buffer.fill(-37);
   }
 
   getFloatTimeDomainData(buffer: Float32Array): void {
+    this.sampleBuffers.push(buffer);
     buffer.fill(this.peakAmplitude);
   }
 }
@@ -76,6 +82,7 @@ class FakeAudioContext {
   sampleRate = 44100;
   destination = new FakeAudioNode();
   createdAnalyser: FakeAnalyserNode | null = null;
+  createdAnalysers: FakeAnalyserNode[] = [];
   analyserPeaks: number[] = [];
   createdSource: FakeAudioNode | null = null;
   createdSources: FakeAudioNode[] = [];
@@ -99,6 +106,7 @@ class FakeAudioContext {
   createAnalyser(): FakeAnalyserNode {
     this.createdAnalyser = new FakeAnalyserNode();
     this.createdAnalyser.peakAmplitude = this.analyserPeaks.shift() ?? 0;
+    this.createdAnalysers.push(this.createdAnalyser);
     return this.createdAnalyser;
   }
 }
@@ -488,11 +496,15 @@ describe("createToolkitWindowController spectrum", () => {
     const { controller, audioContext } = createController({
       onSpectrumFrame: (_buffer, clipping) => clippingStates.push(clipping),
     });
-    audioContext.analyserPeaks.push(0.2, 0.95);
+    audioContext.analyserPeaks.push(0.2);
 
     await controller.startTabCapture();
     expect(clippingStates.at(-1)).toBe(false);
 
+    if (!audioContext.createdAnalyser) {
+      throw new Error("Expected a spectrum analyser");
+    }
+    audioContext.createdAnalyser.peakAmplitude = 0.95;
     storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] = 456;
     await controller.handleStorageChange({
       [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: {
@@ -543,6 +555,175 @@ describe("createToolkitWindowController spectrum", () => {
 
     expect(clearInterval).toHaveBeenCalledWith(1);
     expect(spectrumFrames.at(-1)).toBeNull();
+  });
+
+  test("disconnects only its analyser when spectrum is disabled", async () => {
+    const storage = createChromeStorage();
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController();
+    await controller.startTabCapture();
+    const output = (
+      audioContext.createdSource?.connections[0] as FakeGainNode
+    ).connections[0] as FakeAudioNode;
+    const analyser = audioContext.createdAnalyser;
+    const disconnect = vi.spyOn(output, "disconnect");
+
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.ENABLE_SPECTRUM]: {
+        oldValue: true,
+        newValue: false,
+      },
+    });
+
+    expect(disconnect).toHaveBeenCalledOnce();
+    expect(disconnect).toHaveBeenCalledWith(analyser);
+    expect(disconnect).not.toHaveBeenCalledWith();
+    expect(output.connections).toEqual([audioContext.destination]);
+  });
+
+  test("switches active captures using one analyser", async () => {
+    const storage = createChromeStorage();
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] = {
+      123: "stream-123",
+      456: "stream-456",
+    };
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", {
+      storage,
+      runtime: {
+        sendMessage: vi.fn(() => Promise.resolve({ tabs: [], activeTabId: 456 })),
+      },
+    });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController();
+    await controller.startTabCapture();
+    const firstOutput = (
+      audioContext.createdSources[0].connections[0] as FakeGainNode
+    ).connections[0] as FakeAudioNode;
+    const secondOutput = (
+      audioContext.createdSources[1].connections[0] as FakeGainNode
+    ).connections[0] as FakeAudioNode;
+    const analyser = audioContext.createdAnalyser;
+
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] = 456;
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: {
+        oldValue: 123,
+        newValue: 456,
+      },
+    });
+
+    expect(audioContext.createdAnalysers).toHaveLength(1);
+    expect(firstOutput.connections).toEqual([audioContext.destination]);
+    expect(secondOutput.connections).toContain(audioContext.destination);
+    expect(secondOutput.connections).toContain(analyser);
+  });
+
+  test("reuses spectrum buffers between ticks", async () => {
+    const storage = createChromeStorage();
+    const ticks: Array<() => void> = [];
+    const frames: Array<Float32Array | null> = [];
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn((tick: () => void) => {
+      ticks.push(tick);
+      return ticks.length;
+    }));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController({
+      onSpectrumFrame: (buffer) => frames.push(buffer),
+    });
+    await controller.startTabCapture();
+    ticks[0]();
+    ticks[0]();
+
+    const spectrumFrames = frames.filter(
+      (frame): frame is Float32Array => frame instanceof Float32Array,
+    );
+    expect(spectrumFrames).toHaveLength(2);
+    expect(spectrumFrames[0]).toBe(spectrumFrames[1]);
+    expect(audioContext.createdAnalyser?.frequencyBuffers[0]).toBe(
+      audioContext.createdAnalyser?.frequencyBuffers[1],
+    );
+    expect(audioContext.createdAnalyser?.sampleBuffers[0]).toBe(
+      audioContext.createdAnalyser?.sampleBuffers[1],
+    );
+  });
+
+  test("stops the active sampler before rebuilding its graph", async () => {
+    const storage = createChromeStorage();
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const { controller, audioContext } = createController();
+    await controller.startTabCapture();
+    const output = (
+      audioContext.createdSource?.connections[0] as FakeGainNode
+    ).connections[0] as FakeAudioNode;
+    const analyser = audioContext.createdAnalyser;
+    const disconnect = vi.spyOn(output, "disconnect");
+
+    controller.toggleEqualizer();
+
+    expect(disconnect).toHaveBeenNthCalledWith(1, analyser);
+    expect(disconnect).toHaveBeenNthCalledWith(2);
   });
 
   test("keeps the active spectrum timer running when capture settings refresh", async () => {
@@ -614,7 +795,7 @@ describe("createToolkitWindowController spectrum", () => {
     expect(clearInterval).not.toHaveBeenCalled();
   });
 
-  test("restarts spectrum when filter count changes rebuild the active graph", async () => {
+  test("restarts spectrum with the same analyser after rebuilding the active graph", async () => {
     const storage = createChromeStorage();
     let filters = [
       { type: "peaking" as const, freq: 1000, gain: 0, q: 0.5 },
@@ -654,7 +835,8 @@ describe("createToolkitWindowController spectrum", () => {
     ];
     controller.refreshCaptureFilters(123);
 
-    expect(audioContext.createdAnalyser).not.toBe(firstAnalyser);
+    expect(audioContext.createdAnalyser).toBe(firstAnalyser);
+    expect(audioContext.createdAnalysers).toHaveLength(1);
     expect(clearInterval).toHaveBeenCalledWith(1);
     expect(setInterval).toHaveBeenCalledTimes(1);
   });
