@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "ক্যাপচার বন্ধ করুন"
+  },
+  "equalizer_canvas_label": {
+    "message": "ইকুয়ালাইজার নিয়ন্ত্রণ"
+  },
+  "equalizer_keyboard_help": {
+    "message": "একটি ব্যান্ড নির্বাচন করতে Home, End, Page Up বা Page Down চাপুন। ফ্রিকোয়েন্সি ও গেইনের জন্য তীর চিহ্ন, Q-এর জন্য Shift+Up/Down এবং রিসেট করতে Enter চাপুন।"
   }
 }

@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Opname stoppen"
+  },
+  "equalizer_canvas_label": {
+    "message": "Equalizerbediening"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Selecteer een band met Home, End, Page Up of Page Down. Gebruik pijlen voor frequentie en versterking, Shift+Omhoog/Omlaag voor Q en Enter om te resetten."
   }
 }

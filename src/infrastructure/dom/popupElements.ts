@@ -10,6 +10,7 @@ export interface PopupElements {
   infoButton: HTMLButtonElement;
   equalizerCurveContainer: HTMLDivElement;
   eqCanvas: HTMLCanvasElement;
+  equalizerKeyboardStatus: HTMLSpanElement;
   spectrumCanvas: HTMLCanvasElement;
   infoTooltip: HTMLDivElement;
   masterVolumeLabel: HTMLLabelElement;
@@ -114,6 +115,11 @@ export const getPopupElements = (document: Document): PopupElements => ({
     HTMLDivElement,
   ),
   eqCanvas: getRequiredElement(document, "eq-canvas", HTMLCanvasElement),
+  equalizerKeyboardStatus: getRequiredElement(
+    document,
+    "equalizer-keyboard-status",
+    HTMLSpanElement,
+  ),
   spectrumCanvas: getRequiredElement(
     document,
     "spectrum-canvas",

@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Yakalamayı durdur"
+  },
+  "equalizer_canvas_label": {
+    "message": "Ekolayzer kontrolleri"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Home, End, Page Up veya Page Down ile bir bant seçin. Frekans ve kazanç için okları, Q için Shift+Yukarı/Aşağı, sıfırlamak için Enter'ı kullanın."
   }
 }

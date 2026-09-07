@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Parar captura"
+  },
+  "equalizer_canvas_label": {
+    "message": "Controlos do equalizador"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Selecione uma banda com Home, End, Page Up ou Page Down. Use as setas para frequência e ganho, Shift+Cima/Baixo para Q e Enter para repor."
   }
 }

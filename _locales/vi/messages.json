@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Dừng thu âm"
+  },
+  "equalizer_canvas_label": {
+    "message": "Điều khiển bộ cân bằng"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Chọn dải bằng Home, End, Page Up hoặc Page Down. Dùng phím mũi tên cho tần số và độ lợi, Shift+Lên/Xuống cho Q và Enter để đặt lại."
   }
 }

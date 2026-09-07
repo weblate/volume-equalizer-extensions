@@ -1,6 +1,8 @@
 import {
   DEFAULT_FILTER_Q,
   ensureQFactor,
+  frequencyToX,
+  xToFrequency,
 } from "../../domains/equalizer/equalizerMath";
 import type {
   EqualizerCanvasDimensions,
@@ -18,6 +20,7 @@ export interface EqualizerGestureOptions {
   refreshToolkitCaptureFilters: () => void;
   tooltips: Pick<EqualizerTooltipHelpers, "updateInfoTooltip" | "hideInfoTooltip">;
   getDimensions?: () => EqualizerCanvasDimensions;
+  onKeyboardSelection?: (target: EqualizerDragTarget | null, index: number) => void;
 }
 
 export type EqualizerGestureCleanup = () => void;
@@ -50,11 +53,18 @@ export const attachEqualizerGestures = ({
   saveCurrentFilters,
   refreshToolkitCaptureFilters,
   tooltips,
+  onKeyboardSelection = () => {},
   getDimensions = () => getCanvasDimensions(canvas),
 }: EqualizerGestureOptions): EqualizerGestureCleanup => {
   let qDragStartValue = DEFAULT_FILTER_Q;
   let qDragStartY = 0;
   let activeDragTarget: EqualizerDragTarget | null = null;
+  let keyboardIndex: number | null = null;
+  const getKeyboardTargets = (): EqualizerDragTarget[] => [
+    ...(state.getHighpassPoint() ? [{ type: "highpass" as const }] : []),
+    ...state.getPoints().map((_point, index) => ({ type: "peaking" as const, index })),
+    ...(state.getLowpassPoint() ? [{ type: "lowpass" as const }] : []),
+  ];
 
   const persistAndRedraw = async (): Promise<void> => {
     draw();
@@ -63,6 +73,8 @@ export const attachEqualizerGestures = ({
   };
 
   const handleMouseDown = (event: MouseEvent): void => {
+    keyboardIndex = null;
+    onKeyboardSelection(null, 0);
     const { x, y } = getMousePosition(canvas, event);
     const dragTarget = state.getPointIndexAtPosition(x, y);
 
@@ -146,15 +158,79 @@ export const attachEqualizerGestures = ({
     void saveCurrentFilters();
   };
 
+  const handleKeyDown = (event: KeyboardEvent): void => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const keys = ["Home", "End", "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter"];
+    if (!keys.includes(event.key)) return;
+    const targets = getKeyboardTargets();
+    if (!targets.length) return;
+    event.preventDefault();
+    handleMouseUp();
+    keyboardIndex = Math.min(keyboardIndex ?? 0, targets.length - 1);
+    if (event.key === "Home") keyboardIndex = 0;
+    if (event.key === "End") keyboardIndex = targets.length - 1;
+    if (event.key === "PageUp") keyboardIndex = Math.max(0, keyboardIndex - 1);
+    if (event.key === "PageDown") keyboardIndex = Math.min(targets.length - 1, keyboardIndex + 1);
+    const target = targets[keyboardIndex];
+    const dimensions = getDimensions();
+    let changed = false;
+    if (event.key === "Enter") {
+      state.resetPoint(target, dimensions);
+      changed = true;
+    } else if (event.key.startsWith("Arrow")) {
+      const horizontal = event.key === "ArrowLeft" || event.key === "ArrowRight";
+      const qEdit = event.shiftKey && !horizontal;
+      const direction = event.key === "ArrowUp" || event.key === "ArrowRight" ? 1 : -1;
+      state.setDragTarget(target, qEdit ? "q" : "point");
+      const point = state.getDraggedPoint();
+      if (point && (horizontal || qEdit || target.type === "peaking")) {
+        if (qEdit) point.q = ensureQFactor(point.q * 2 ** (direction / 12));
+        else if (horizontal) {
+          const width = dimensions.canvasWidth - 10;
+          const freq = Math.max(1, Math.min(24000, xToFrequency(point.x, width) * 2 ** (direction / 12)));
+          point.x = frequencyToX(freq, width);
+        } else {
+          const step = 0.5 / 25 * (dimensions.canvasHeight / 2 - 20);
+          point.y = Math.max(0, Math.min(dimensions.canvasHeight, point.y - direction * step));
+        }
+        state.setDraggedPoint(point);
+        changed = true;
+      }
+      state.clearDrag();
+    }
+    onKeyboardSelection(target, keyboardIndex);
+    if (changed) void persistAndRedraw();
+    else draw();
+  };
+
+  const handleFocus = (): void => {
+    keyboardIndex = 0;
+    onKeyboardSelection(getKeyboardTargets()[0] ?? null, 0);
+    draw();
+  };
+  const handleBlur = (): void => {
+    handleMouseUp();
+    keyboardIndex = null;
+    onKeyboardSelection(null, 0);
+    draw();
+  };
+
   canvas.addEventListener("mousedown", handleMouseDown);
   canvas.addEventListener("mousemove", handleMouseMove);
   canvas.addEventListener("dblclick", handleDoubleClick);
+  canvas.addEventListener("keydown", handleKeyDown);
+  canvas.addEventListener("focus", handleFocus);
+  canvas.addEventListener("blur", handleBlur);
   window.addEventListener("mouseup", handleMouseUp);
 
   return () => {
     canvas.removeEventListener("mousedown", handleMouseDown);
     canvas.removeEventListener("mousemove", handleMouseMove);
     canvas.removeEventListener("dblclick", handleDoubleClick);
+    canvas.removeEventListener("keydown", handleKeyDown);
+    canvas.removeEventListener("focus", handleFocus);
+    canvas.removeEventListener("blur", handleBlur);
+    handleBlur();
     window.removeEventListener("mouseup", handleMouseUp);
   };
 };

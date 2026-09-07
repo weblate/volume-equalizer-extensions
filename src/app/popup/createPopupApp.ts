@@ -91,6 +91,7 @@ export const createPopupApp = ({
     state: equalizerState,
     getColors,
     infoTooltip: elements.infoTooltip,
+    keyboardStatus: elements.equalizerKeyboardStatus,
     saveCurrentFilters: () => saveCurrentFilters(),
     refreshToolkitCaptureFilters: () => toolkitController.refreshCaptureFilters(),
   });

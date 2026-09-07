@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "หยุดการจับเสียง"
+  },
+  "equalizer_canvas_label": {
+    "message": "การควบคุมอีควอไลเซอร์"
+  },
+  "equalizer_keyboard_help": {
+    "message": "เลือกย่านด้วย Home, End, Page Up หรือ Page Down ใช้ปุ่มลูกศรสำหรับความถี่และเกน Shift+ขึ้น/ลง สำหรับ Q และ Enter เพื่อรีเซ็ต"
   }
 }

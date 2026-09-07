@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "ຢຸດການຈັບສຽງ"
+  },
+  "equalizer_canvas_label": {
+    "message": "ການຄວບຄຸມອີຄວາໄລເຊີ"
+  },
+  "equalizer_keyboard_help": {
+    "message": "ເລືອກແຖບດ້ວຍ Home, End, Page Up ຫຼື Page Down. ໃຊ້ລູກສອນສຳລັບຄວາມຖີ່ແລະເກນ, Shift+Up/Down ສຳລັບ Q ແລະ Enter ເພື່ອຣີເຊັດ."
   }
 }

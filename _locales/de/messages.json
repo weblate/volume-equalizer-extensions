@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Aufnahme beenden"
+  },
+  "equalizer_canvas_label": {
+    "message": "Equalizer-Steuerung"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Wähle mit Pos1, Ende, Bild auf oder Bild ab ein Band. Pfeiltasten ändern Frequenz und Verstärkung, Umschalt+Auf/Ab ändert Q, Eingabe setzt zurück."
   }
 }

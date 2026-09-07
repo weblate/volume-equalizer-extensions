@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Hentikan tangkapan"
+  },
+  "equalizer_canvas_label": {
+    "message": "Kontrol ekualiser"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Pilih band dengan Home, End, Page Up, atau Page Down. Gunakan panah untuk frekuensi dan gain, Shift+Atas/Bawah untuk Q, dan Enter untuk mereset."
   }
 }

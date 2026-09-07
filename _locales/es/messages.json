@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Detener captura"
+  },
+  "equalizer_canvas_label": {
+    "message": "Controles del ecualizador"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Selecciona una banda con Inicio, Fin, Re Pág o Av Pág. Usa las flechas para frecuencia y ganancia, Mayús+Arriba/Abajo para Q y Enter para restablecer."
   }
 }

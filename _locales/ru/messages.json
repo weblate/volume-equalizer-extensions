@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Остановить захват"
+  },
+  "equalizer_canvas_label": {
+    "message": "Управление эквалайзером"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Выберите полосу клавишами Home, End, Page Up или Page Down. Стрелки меняют частоту и усиление, Shift+Вверх/Вниз — Q, Enter сбрасывает полосу."
   }
 }

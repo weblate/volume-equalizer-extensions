@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Interrompi acquisizione"
+  },
+  "equalizer_canvas_label": {
+    "message": "Controlli equalizzatore"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Seleziona una banda con Home, Fine, Pagina su o Pagina giù. Usa le frecce per frequenza e guadagno, Maiusc+Su/Giù per Q e Invio per ripristinare."
   }
 }

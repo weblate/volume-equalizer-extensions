@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "कैप्चर रोकें"
+  },
+  "equalizer_canvas_label": {
+    "message": "इक्वलाइज़र नियंत्रण"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Home, End, Page Up या Page Down से बैंड चुनें। फ़्रीक्वेंसी और गेन के लिए तीर, Q के लिए Shift+Up/Down और रीसेट के लिए Enter दबाएँ।"
   }
 }

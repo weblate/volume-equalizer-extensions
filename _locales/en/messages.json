@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Stop capture"
+  },
+  "equalizer_canvas_label": {
+    "message": "Equalizer controls"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Select a band with Home, End, Page Up or Page Down. Use arrows for frequency and gain, Shift+Up/Down for Q, and Enter to reset."
   }
 }

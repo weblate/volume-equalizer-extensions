@@ -1,4 +1,6 @@
 import type { EqualizerCanvasDimensions } from "../../domains/equalizer/equalizerState";
+import type { EqualizerDragTarget } from "../../domains/equalizer/equalizerState";
+import { ensureQFactor } from "../../domains/equalizer/equalizerMath";
 import { createEqualizerTooltips } from "./equalizerTooltips";
 import { attachEqualizerGestures } from "./equalizerGestures";
 import type { EqualizerCanvasRenderOptions } from "./types";
@@ -8,11 +10,13 @@ export interface CreateEqualizerCanvasOptions extends EqualizerCanvasRenderOptio
   infoTooltip?: HTMLElement | null;
   saveCurrentFilters: () => Promise<void> | void;
   refreshToolkitCaptureFilters: () => void;
+  keyboardStatus: HTMLElement;
 }
 
 export const createEqualizerCanvas = (
   options: CreateEqualizerCanvasOptions,
 ) => {
+  let selectedTarget: EqualizerDragTarget | null = null;
   const getDimensions = (): EqualizerCanvasDimensions => {
     return {
       canvasWidth: options.canvas.width,
@@ -20,10 +24,10 @@ export const createEqualizerCanvas = (
     };
   };
   const draw = (): void => {
-    drawEqualizer(options);
+    drawEqualizer({ ...options, selectedTarget });
   };
   const resize = (): void => {
-    resizeEqualizerCanvas(options);
+    resizeEqualizerCanvas({ ...options, selectedTarget });
   };
   const tooltips = createEqualizerTooltips({
     canvas: options.canvas,
@@ -38,6 +42,21 @@ export const createEqualizerCanvas = (
     refreshToolkitCaptureFilters: options.refreshToolkitCaptureFilters,
     tooltips,
     getDimensions,
+    onKeyboardSelection: (target, index) => {
+      selectedTarget = target;
+      if (!target) {
+        options.keyboardStatus.textContent = "";
+        return;
+      }
+      const point = target.type === "highpass"
+        ? options.state.getHighpassPoint()
+        : target.type === "lowpass"
+          ? options.state.getLowpassPoint()
+          : options.state.getPoints()[target.index];
+      if (!point) return;
+      const value = tooltips.getPointTooltipText(point, getDimensions());
+      options.keyboardStatus.textContent = `${index + 1}. ${value}, Q ${ensureQFactor(point.q).toFixed(2)}`;
+    },
   });
 
   return {

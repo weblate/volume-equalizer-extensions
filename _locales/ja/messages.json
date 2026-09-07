@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "キャプチャを停止"
+  },
+  "equalizer_canvas_label": {
+    "message": "イコライザー操作"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Home、End、Page Up、Page Down でバンドを選択します。矢印キーで周波数とゲイン、Shift+上下で Q、Enter でリセットします。"
   }
 }

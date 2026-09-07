@@ -30,6 +30,16 @@ const drawTypedPoint = (
   ctx.stroke();
 };
 
+const getTargetPoint = (
+  state: EqualizerCanvasRenderOptions["state"],
+  target: EqualizerCanvasRenderOptions["selectedTarget"],
+): EqualizerCanvasPoint | null => {
+  if (!target) return null;
+  if (target.type === "highpass") return state.getHighpassPoint();
+  if (target.type === "lowpass") return state.getLowpassPoint();
+  return state.getPoints()[target.index] ?? null;
+};
+
 export const drawPoints = ({
   ctx,
   state,
@@ -69,10 +79,19 @@ export const drawFilter = ({
   audioContext,
   state,
   getColors,
+  selectedTarget,
 }: EqualizerCanvasRenderOptions): void => {
   const colors = getColors();
 
   drawPoints({ ctx, state, colors });
+  const selectedPoint = getTargetPoint(state, selectedTarget);
+  if (selectedPoint) {
+    ctx.beginPath();
+    ctx.arc(selectedPoint.x, selectedPoint.y, POINT_RADIUS + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = colors.axis;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
 
   const canvasWidth = canvas.width - 10;
   const highpassPoint = state.getHighpassPoint();

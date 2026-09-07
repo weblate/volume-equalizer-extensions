@@ -256,5 +256,11 @@
   },
   "stop_capture_label": {
     "message": "Arrêter la capture"
+  },
+  "equalizer_canvas_label": {
+    "message": "Commandes de l’égaliseur"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Sélectionnez une bande avec Début, Fin, Page précédente ou Page suivante. Utilisez les flèches pour la fréquence et le gain, Maj+Haut/Bas pour Q et Entrée pour réinitialiser."
   }
 }
