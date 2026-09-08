@@ -17,6 +17,7 @@ export interface EqualizerGestureOptions {
   state: EqualizerState;
   draw: () => void;
   saveCurrentFilters: () => Promise<void> | void;
+  flushCurrentFilters?: () => Promise<void> | void;
   refreshToolkitCaptureFilters: () => void;
   tooltips: Pick<EqualizerTooltipHelpers, "updateInfoTooltip" | "hideInfoTooltip">;
   getDimensions?: () => EqualizerCanvasDimensions;
@@ -29,8 +30,8 @@ const getCanvasDimensions = (
   canvas: HTMLCanvasElement,
 ): EqualizerCanvasDimensions => {
   return {
-    canvasWidth: canvas.width,
-    canvasHeight: canvas.height,
+    canvasWidth: canvas.clientWidth,
+    canvasHeight: canvas.clientHeight,
   };
 };
 
@@ -51,6 +52,7 @@ export const attachEqualizerGestures = ({
   state,
   draw,
   saveCurrentFilters,
+  flushCurrentFilters = saveCurrentFilters,
   refreshToolkitCaptureFilters,
   tooltips,
   onKeyboardSelection = () => {},
@@ -60,16 +62,25 @@ export const attachEqualizerGestures = ({
   let qDragStartY = 0;
   let activeDragTarget: EqualizerDragTarget | null = null;
   let keyboardIndex: number | null = null;
+  let visualFrame: number | null = null;
   const getKeyboardTargets = (): EqualizerDragTarget[] => [
     ...(state.getHighpassPoint() ? [{ type: "highpass" as const }] : []),
     ...state.getPoints().map((_point, index) => ({ type: "peaking" as const, index })),
     ...(state.getLowpassPoint() ? [{ type: "lowpass" as const }] : []),
   ];
 
-  const persistAndRedraw = async (): Promise<void> => {
-    draw();
-    refreshToolkitCaptureFilters();
-    await saveCurrentFilters();
+  const scheduleVisualUpdate = (): void => {
+    if (visualFrame != null) return;
+    visualFrame = window.requestAnimationFrame(() => {
+      visualFrame = null;
+      draw();
+      refreshToolkitCaptureFilters();
+    });
+  };
+
+  const persistAndRedraw = (): void => {
+    scheduleVisualUpdate();
+    void saveCurrentFilters();
   };
 
   const handleMouseDown = (event: MouseEvent): void => {
@@ -97,9 +108,11 @@ export const attachEqualizerGestures = ({
   };
 
   const handleMouseUp = (): void => {
+    const shouldFlush = activeDragTarget != null;
     activeDragTarget = null;
     state.clearDrag();
     tooltips.hideInfoTooltip();
+    if (shouldFlush) void flushCurrentFilters();
   };
 
   const handleMouseMove = (event: MouseEvent): void => {
@@ -124,8 +137,8 @@ export const attachEqualizerGestures = ({
       const nextQ = qDragStartValue * Math.pow(2, dy / 40);
       nextPoint = { ...currentPoint, q: ensureQFactor(nextQ) };
     } else if (mx > 0) {
-      mx = Math.max(0, Math.min(canvas.width, mx));
-      my = Math.max(0, Math.min(canvas.height, my));
+      mx = Math.max(0, Math.min(canvas.clientWidth, mx));
+      my = Math.max(0, Math.min(canvas.clientHeight, my));
       nextPoint = {
         ...currentPoint,
         x: mx,
@@ -141,7 +154,7 @@ export const attachEqualizerGestures = ({
 
     state.setDraggedPoint(nextPoint);
     tooltips.updateInfoTooltip(nextPoint, dimensions);
-    void persistAndRedraw();
+    persistAndRedraw();
   };
 
   const handleDoubleClick = (event: MouseEvent): void => {
@@ -153,9 +166,9 @@ export const attachEqualizerGestures = ({
     }
 
     state.resetPoint(pointTarget, getDimensions());
-    draw();
-    refreshToolkitCaptureFilters();
+    scheduleVisualUpdate();
     void saveCurrentFilters();
+    void flushCurrentFilters();
   };
 
   const handleKeyDown = (event: KeyboardEvent): void => {
@@ -199,7 +212,10 @@ export const attachEqualizerGestures = ({
       state.clearDrag();
     }
     onKeyboardSelection(target, keyboardIndex);
-    if (changed) void persistAndRedraw();
+    if (changed) {
+      persistAndRedraw();
+      void flushCurrentFilters();
+    }
     else draw();
   };
 
@@ -210,6 +226,7 @@ export const attachEqualizerGestures = ({
   };
   const handleBlur = (): void => {
     handleMouseUp();
+    void flushCurrentFilters();
     keyboardIndex = null;
     onKeyboardSelection(null, 0);
     draw();
@@ -224,6 +241,7 @@ export const attachEqualizerGestures = ({
   window.addEventListener("mouseup", handleMouseUp);
 
   return () => {
+    if (visualFrame != null) window.cancelAnimationFrame(visualFrame);
     canvas.removeEventListener("mousedown", handleMouseDown);
     canvas.removeEventListener("mousemove", handleMouseMove);
     canvas.removeEventListener("dblclick", handleDoubleClick);

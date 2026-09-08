@@ -99,7 +99,8 @@ export const createToolkitWindowController = (deps: {
       active: true,
       lastFocusedWindow: true,
     });
-    return tab?.id ?? null;
+    activeTabId = tab?.id ?? null;
+    return activeTabId;
   };
 
   const shouldShowToolkitWindowNotice = async (
@@ -569,6 +570,7 @@ export const createToolkitWindowController = (deps: {
   return {
     isToolkitWindow,
     getCurrentTabId,
+    getResolvedTabId: () => activeTabId,
     shouldShowToolkitWindowNotice,
     showToolkitWindowNotice,
     loadTabSettings,

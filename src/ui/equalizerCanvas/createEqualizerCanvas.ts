@@ -9,6 +9,7 @@ import { drawEqualizer, resizeEqualizerCanvas } from "./draw/drawEqualizer";
 export interface CreateEqualizerCanvasOptions extends EqualizerCanvasRenderOptions {
   infoTooltip?: HTMLElement | null;
   saveCurrentFilters: () => Promise<void> | void;
+  flushCurrentFilters: () => Promise<void> | void;
   refreshToolkitCaptureFilters: () => void;
   keyboardStatus: HTMLElement;
 }
@@ -19,8 +20,8 @@ export const createEqualizerCanvas = (
   let selectedTarget: EqualizerDragTarget | null = null;
   const getDimensions = (): EqualizerCanvasDimensions => {
     return {
-      canvasWidth: options.canvas.width,
-      canvasHeight: options.canvas.height,
+      canvasWidth: options.canvas.clientWidth,
+      canvasHeight: options.canvas.clientHeight,
     };
   };
   const draw = (): void => {
@@ -39,6 +40,7 @@ export const createEqualizerCanvas = (
     state: options.state,
     draw: resize,
     saveCurrentFilters: options.saveCurrentFilters,
+    flushCurrentFilters: options.flushCurrentFilters,
     refreshToolkitCaptureFilters: options.refreshToolkitCaptureFilters,
     tooltips,
     getDimensions,

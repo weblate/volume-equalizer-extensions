@@ -93,7 +93,7 @@ export const drawFilter = ({
     ctx.stroke();
   }
 
-  const canvasWidth = canvas.width - 10;
+  const canvasWidth = canvas.clientWidth - 10;
   const highpassPoint = state.getHighpassPoint();
 
   if (highpassPoint) {
@@ -110,7 +110,7 @@ export const drawFilter = ({
   }
 
   state.getPoints().forEach((point) => {
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    const gradient = ctx.createLinearGradient(0, 0, canvas.clientWidth, 0);
     gradient.addColorStop(0, colors.accentStart);
     gradient.addColorStop(0.5, colors.accentMid);
     gradient.addColorStop(1, colors.accentEnd);
@@ -122,7 +122,7 @@ export const drawFilter = ({
       type: "peaking",
       freq: xToFrequency(point.x, canvasWidth),
       q: ensureQFactor(point.q),
-      gain: yToDb(point.y, canvas.height),
+      gain: yToDb(point.y, canvas.clientHeight),
       strokeStyle: gradient,
     });
   });

@@ -942,6 +942,7 @@ describe("selected tab settings", () => {
     const reply = deferred<Record<string, unknown>>();
     storage.local.get.mockImplementationOnce(() => reply.promise);
     const selected = controller.selectTab(1);
+    expect(controller.getResolvedTabId()).toBe(1);
     await controller.handleStorageChange({
       [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: { oldValue: 123, newValue: 1 },
     });

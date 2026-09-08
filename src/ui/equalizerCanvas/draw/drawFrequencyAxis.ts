@@ -9,13 +9,13 @@ export const drawAxis = ({
   const colors = getColors();
   const freqMargin = 10;
   const margin = 10;
-  const yPos = canvas.height;
+  const yPos = canvas.clientHeight;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
 
   const freqs = [5, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
-  const canvasWidth = canvas.width - 10;
+  const canvasWidth = canvas.clientWidth - 10;
 
   ctx.strokeStyle = colors.axis;
   ctx.fillStyle = colors.axis;
@@ -51,7 +51,7 @@ export const drawAxis = ({
     const y =
       gainMargin +
       ((gainMax - gain) / (gainMax - gainMin)) *
-        (canvas.height - gainMargin * 2);
+        (canvas.clientHeight - gainMargin * 2);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(10, y);
@@ -61,7 +61,7 @@ export const drawAxis = ({
 
   const zeroY =
     gainMargin +
-    ((gainMax - 0) / (gainMax - gainMin)) * (canvas.height - gainMargin * 2);
+    ((gainMax - 0) / (gainMax - gainMin)) * (canvas.clientHeight - gainMargin * 2);
   ctx.textBaseline = "bottom";
   ctx.textAlign = "center";
 

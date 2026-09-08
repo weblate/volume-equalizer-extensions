@@ -3,6 +3,7 @@ import type {
   EqualizerPersistedFilter,
   EqualizerState,
 } from "../../domains/equalizer/equalizerState";
+import type { EqualizerFilter } from "../../domains/equalizer/types";
 import { clampPointCount } from "../../domains/equalizer/equalizerMath";
 import { type LocalizationService } from "../../domains/localization/localizationService";
 import {
@@ -16,6 +17,7 @@ import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import type { PopupElements } from "../../infrastructure/dom/popupElements";
 import { createToolkitWindowController } from "../window-mode/createToolkitWindowController";
 import { createEqualizerCanvas } from "../../ui/equalizerCanvas/createEqualizerCanvas";
+import { createFilterPersistence } from "./filterPersistence";
 import {
   createSpectrumRenderer,
   type SpectrumBuffer,
@@ -78,6 +80,16 @@ export const createPopupApp = ({
   let settingsView: ReturnType<typeof createSettingsView>;
 
   const getColors = (): ThemeColors => readThemeColors(document.documentElement);
+  const filterPersistence = createFilterPersistence(async (tabId, filters) => {
+    const values: Record<string, unknown> = {
+      [STORAGE_KEYS.tabFilters(tabId)]: filters,
+      [STORAGE_KEYS.FILTERS]: filters,
+    };
+    if (!toolkitController.isToolkitWindow) {
+      values[STORAGE_KEYS.tabEnabled(tabId)] = true;
+    }
+    await chrome.storage.local.set(values);
+  });
 
   const getPointCount = async (): Promise<number> => {
     const stored = await chrome.storage.local.get([STORAGE_KEYS.POINT_COUNT]);
@@ -92,7 +104,11 @@ export const createPopupApp = ({
     getColors,
     infoTooltip: elements.infoTooltip,
     keyboardStatus: elements.equalizerKeyboardStatus,
-    saveCurrentFilters: () => saveCurrentFilters(),
+    saveCurrentFilters: () => {
+      const tabId = toolkitController.getResolvedTabId();
+      if (tabId != null) filterPersistence.schedule(tabId, getCurrentFilters());
+    },
+    flushCurrentFilters: () => filterPersistence.flush(),
     refreshToolkitCaptureFilters: () => toolkitController.refreshCaptureFilters(),
   });
 
@@ -106,7 +122,7 @@ export const createPopupApp = ({
     equalizerCanvas.resize();
   };
 
-  const getCurrentFilters = (): EqualizerPersistedFilter[] => {
+  const getCurrentFilters = (): EqualizerFilter[] => {
     return equalizerState.getFilters(equalizerCanvas.getDimensions());
   };
 
@@ -170,6 +186,7 @@ export const createPopupApp = ({
   const saveCurrentFilters = async (
     options: { enableCurrentTab?: boolean } = {},
   ): Promise<void> => {
+    await filterPersistence.flush();
     const enableCurrentTab = options.enableCurrentTab ?? true;
     const tabId = await getCurrentTabId();
     if (tabId == null) return;
@@ -188,6 +205,7 @@ export const createPopupApp = ({
   const saveLoadedFilters = async (
     filters: EqualizerPersistedFilter[],
   ): Promise<void> => {
+    await filterPersistence.flush();
     const tabId = await getCurrentTabId();
     if (tabId == null) return;
 
@@ -628,6 +646,10 @@ export const createPopupApp = ({
     await toolkitController.startTabCapture();
     await toolkitController.renderCapturedTabs();
   };
+
+  window.addEventListener("pagehide", () => {
+    void filterPersistence.dispose();
+  });
 
   return {
     start,
