@@ -55,6 +55,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn().mockResolvedValue(capturedTabs),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -76,6 +78,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn().mockRejectedValue(new Error("gone")),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -97,6 +101,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -122,6 +128,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -144,6 +152,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab,
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -167,6 +177,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -189,6 +201,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -199,5 +213,67 @@ describe("createRuntimeMessageHandler", () => {
     );
 
     expect(result).toBeUndefined();
+  });
+
+  test("relays spectrum frames using the original sender without storage", () => {
+    const chromeMock = createChromeMock();
+    const acceptSpectrumFrame = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame,
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn(),
+    });
+    const payload = {
+      type: "spectrum" as const,
+      buffer: [-42, -38],
+      clipping: false,
+    };
+    const sender = {
+      tab: { id: 12 } as chrome.tabs.Tab,
+      frameId: 3,
+    };
+
+    handler(
+      { method: RUNTIME_MESSAGES.SPECTRUM_FRAME, payload },
+      sender,
+      vi.fn(),
+    );
+
+    expect(acceptSpectrumFrame).toHaveBeenCalledWith(payload, sender);
+    expect(chromeMock.localSet).not.toHaveBeenCalled();
+  });
+
+  test("restores spectrum demand only for ready content with routing ids", () => {
+    createChromeMock();
+    const restoreSpectrumDemand = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand,
+      toggleWindowMode: vi.fn(),
+    });
+    const routedSender = {
+      tab: { id: 12 } as chrome.tabs.Tab,
+      frameId: 3,
+    };
+
+    handler(
+      { method: RUNTIME_MESSAGES.SPECTRUM_READY },
+      routedSender,
+      vi.fn(),
+    );
+    handler(
+      { method: RUNTIME_MESSAGES.SPECTRUM_READY },
+      { tab: { id: 12 } as chrome.tabs.Tab },
+      vi.fn(),
+    );
+
+    expect(restoreSpectrumDemand).toHaveBeenCalledOnce();
+    expect(restoreSpectrumDemand).toHaveBeenCalledWith(routedSender);
   });
 });

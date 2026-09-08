@@ -11,6 +11,8 @@ export const RUNTIME_MESSAGES = {
   DISCONNECTED: "disconnected",
   CLEAR_STORAGE: "clearStorage",
   CONTENT_SCRIPT_PING: "contentScriptPing",
+  SPECTRUM_READY: "spectrum-ready",
+  SET_SPECTRUM_DEMAND: "set-spectrum-demand",
 } as const;
 
 export type RuntimeMessageMethod =
@@ -20,6 +22,100 @@ export interface RuntimeMessage {
   method: RuntimeMessageMethod;
   payload?: unknown;
 }
+
+export const SPECTRUM_PORT_NAME = "eq-spectrum";
+
+export interface SpectrumMetaPayload {
+  type: "meta";
+  sampleRate: number;
+  fftSize: number;
+  minDb: number;
+  maxDb: number;
+  frequencyBinCount: number;
+}
+
+export interface SpectrumDataPayload {
+  type: "spectrum";
+  buffer: number[] | null;
+  clipping: boolean;
+}
+
+export type SpectrumPayload = SpectrumMetaPayload | SpectrumDataPayload;
+
+export interface SpectrumSubscribeMessage {
+  type: "subscribe";
+  tabId: number;
+}
+
+export interface RelayedSpectrumMessage {
+  tabId: number;
+  frameId: number;
+  payload: SpectrumPayload;
+}
+
+export const normalizeSpectrumPayload = (
+  value: unknown,
+): SpectrumPayload | null => {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type === "meta") {
+    const numbers = [
+      candidate.sampleRate,
+      candidate.fftSize,
+      candidate.minDb,
+      candidate.maxDb,
+      candidate.frequencyBinCount,
+    ];
+    if (
+      !numbers.every(
+        (number) => typeof number === "number" && Number.isFinite(number),
+      )
+    ) {
+      return null;
+    }
+    if (
+      !Number.isInteger(candidate.fftSize) ||
+      (candidate.fftSize as number) <= 0 ||
+      !Number.isInteger(candidate.frequencyBinCount) ||
+      (candidate.frequencyBinCount as number) <= 0 ||
+      (candidate.maxDb as number) <= (candidate.minDb as number)
+    ) {
+      return null;
+    }
+    return {
+      type: "meta",
+      sampleRate: candidate.sampleRate as number,
+      fftSize: candidate.fftSize as number,
+      minDb: candidate.minDb as number,
+      maxDb: candidate.maxDb as number,
+      frequencyBinCount: candidate.frequencyBinCount as number,
+    };
+  }
+
+  if (candidate.type !== "spectrum" || typeof candidate.clipping !== "boolean") {
+    return null;
+  }
+  if (candidate.buffer === null) {
+    return { type: "spectrum", buffer: null, clipping: candidate.clipping };
+  }
+  const isTypedArray =
+    ArrayBuffer.isView(candidate.buffer) &&
+    typeof (candidate.buffer as { length?: unknown }).length === "number";
+  if (!Array.isArray(candidate.buffer) && !isTypedArray) return null;
+  const buffer = Array.from(candidate.buffer as ArrayLike<unknown>);
+  if (
+    !buffer.every(
+      (number) => typeof number === "number" && Number.isFinite(number),
+    )
+  ) {
+    return null;
+  }
+  return {
+    type: "spectrum",
+    buffer: buffer as number[],
+    clipping: candidate.clipping,
+  };
+};
 
 export const TOOLKIT_SHORTCUT_ACTIONS = {
   MUTE: "mute",

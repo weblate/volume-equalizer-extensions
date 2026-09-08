@@ -204,6 +204,34 @@ afterEach(() => {
 });
 
 describe("createToolkitWindowController spectrum", () => {
+  test("does not start a local sampler after capture demand is disposed", async () => {
+    const storage = createChromeStorage();
+    let resolveStream!: (stream: FakeMediaStream) => void;
+    const getUserMedia = vi.fn(() => new Promise<FakeMediaStream>((resolve) => {
+      resolveStream = resolve;
+    }));
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", { mediaDevices: { getUserMedia } });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal("clearInterval", vi.fn());
+    const { controller } = createController();
+
+    const started = controller.startTabCapture();
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalled());
+    controller.stopTabCapture();
+    resolveStream(new FakeMediaStream());
+    await started;
+
+    expect(setInterval).not.toHaveBeenCalled();
+  });
+
   test("keeps manual gain unchanged below the headroom threshold", async () => {
     const storage = createChromeStorage();
     storage.localValues[STORAGE_KEYS.tabGain(123)] = 6;

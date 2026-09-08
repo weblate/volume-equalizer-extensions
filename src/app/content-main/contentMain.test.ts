@@ -11,6 +11,7 @@ class FakePort extends EventTarget {
   dataset: Record<string, string> = {
     enabled: "true",
     enableSpectrum: "false",
+    spectrumDemand: "true",
     freqs: filters,
     mute: "false",
     preamp: "1",
@@ -247,6 +248,31 @@ describe("contentMain spectrum state", () => {
 
     return undefined;
   };
+
+  test("samples only on demand and refreshes metadata for repeated demand", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    port.dataset.spectrumDemand = "false";
+    const frames: Array<{ type?: string }> = [];
+    port.addEventListener("spectrum-frame", (event) => {
+      frames.push((event as CustomEvent).detail);
+    });
+    await loadContentMain(port);
+
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "active-source");
+    source.connect(context.destination);
+    expect(frames.filter((message) => message.type === "meta")).toHaveLength(0);
+    expect(getLastSpectrumFrame(frames)?.buffer).toBeNull();
+
+    port.dataset.spectrumDemand = "true";
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(frames.filter((message) => message.type === "meta")).toHaveLength(1);
+    expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
+
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(frames.filter((message) => message.type === "meta")).toHaveLength(2);
+  });
 
   test("uses the latest connected graph when spectrum is enabled", async () => {
     const port = new FakePort();

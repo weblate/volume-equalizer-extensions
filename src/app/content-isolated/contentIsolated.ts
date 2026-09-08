@@ -14,6 +14,7 @@ import {
 import {
   RUNTIME_MESSAGES,
   TOOLKIT_SHORTCUT_ACTIONS,
+  normalizeSpectrumPayload,
   type ToolkitShortcutAction,
   type RuntimeMessage,
 } from "../../infrastructure/chrome/runtimeMessages";
@@ -42,19 +43,24 @@ port.hidden = true;
 if (!port.isConnected) document.documentElement.append(port);
 const isCurrentInstance = claimContentInstance(port);
 port.dataset.enabled = "false";
+port.dataset.spectrumDemand = "false";
 port.dispatchEvent(new Event("enabled-changed"));
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (
-    !isCurrentInstance() ||
-    message?.method !== RUNTIME_MESSAGES.CONTENT_SCRIPT_PING
-  ) {
+  if (!isCurrentInstance()) return;
+
+  if (message?.method === RUNTIME_MESSAGES.CONTENT_SCRIPT_PING) {
+    (sendResponse as unknown as (response: boolean) => void)(
+      port.dataset.mainReady === "true",
+    );
     return;
   }
 
-  (sendResponse as unknown as (response: boolean) => void)(
-    port.dataset.mainReady === "true",
-  );
+  if (message?.method !== RUNTIME_MESSAGES.SET_SPECTRUM_DEMAND) return;
+  const enabled = (message.payload as { enabled?: unknown } | undefined)?.enabled;
+  if (typeof enabled !== "boolean") return;
+  port.dataset.spectrumDemand = String(enabled);
+  port.dispatchEvent(new Event("spectrum-state-changed"));
 });
 
 let currentTabId: number | null = null;
@@ -317,12 +323,18 @@ document.addEventListener(
 
 port.addEventListener("spectrum-frame", (event) => {
   if (!isCurrentInstance()) return;
+  const payload = normalizeSpectrumPayload(
+    (event as CustomEvent<unknown>).detail,
+  );
+  if (!payload) return;
 
   chrome.runtime.sendMessage({
     method: RUNTIME_MESSAGES.SPECTRUM_FRAME,
-    payload: (event as CustomEvent<unknown>).detail,
+    payload,
   });
 });
+
+chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.SPECTRUM_READY });
 
 const start = (): void => {
   if (window.top !== window) return;

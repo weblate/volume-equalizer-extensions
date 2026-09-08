@@ -1,5 +1,8 @@
 import { RUNTIME_MESSAGES } from "../../infrastructure/chrome/runtimeMessages";
-import type { RuntimeMessage } from "../../infrastructure/chrome/runtimeMessages";
+import type {
+  RuntimeMessage,
+  SpectrumPayload,
+} from "../../infrastructure/chrome/runtimeMessages";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import type { ApplyAutostartOptions } from "./autostartOnTab";
 import type { CapturedTabsResult } from "./windowModeCoordinator";
@@ -16,6 +19,10 @@ type RuntimeMessageHandler = (
 ) => boolean | void;
 
 export interface RuntimeMessageHandlerDependencies {
+  acceptSpectrumFrame: (
+    payload: SpectrumPayload,
+    sender: chrome.runtime.MessageSender,
+  ) => void;
   applyAutostartForTab: (
     tabId: number | undefined,
     url: string | undefined,
@@ -23,13 +30,16 @@ export interface RuntimeMessageHandlerDependencies {
   ) => Promise<void> | void;
   clearUnusedStorage: () => Promise<void> | void;
   getCapturedTabs: () => Promise<CapturedTabsResult>;
+  restoreSpectrumDemand: (sender: chrome.runtime.MessageSender) => void;
   toggleWindowMode: (tabId?: number) => Promise<void> | void;
 }
 
 export const createRuntimeMessageHandler = ({
+  acceptSpectrumFrame,
   applyAutostartForTab,
   clearUnusedStorage,
   getCapturedTabs,
+  restoreSpectrumDemand,
   toggleWindowMode,
 }: RuntimeMessageHandlerDependencies): RuntimeMessageHandler => {
   return (request, sender, response) => {
@@ -55,6 +65,22 @@ export const createRuntimeMessageHandler = ({
     const tabId = sender.tab?.id;
     if (tabId == null) return;
 
+    if (
+      request.method === RUNTIME_MESSAGES.SPECTRUM_READY &&
+      Number.isInteger(sender.frameId)
+    ) {
+      restoreSpectrumDemand(sender);
+      return;
+    }
+
+    if (
+      request.method === RUNTIME_MESSAGES.SPECTRUM_FRAME &&
+      Number.isInteger(sender.frameId)
+    ) {
+      acceptSpectrumFrame(request.payload as SpectrumPayload, sender);
+      return;
+    }
+
     if (request.method === RUNTIME_MESSAGES.IS_TOOLKIT_CAPTURED) {
       chrome.storage.session.get(
         STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
@@ -70,11 +96,7 @@ export const createRuntimeMessageHandler = ({
       return true;
     }
 
-    if (request.method === RUNTIME_MESSAGES.SPECTRUM_FRAME) {
-      chrome.storage.local.set({
-        [STORAGE_KEYS.tabSpectrum(tabId)]: request.payload,
-      });
-    } else if (request.method === RUNTIME_MESSAGES.GET_TAB_ID) {
+    if (request.method === RUNTIME_MESSAGES.GET_TAB_ID) {
       response(tabId);
     } else if (request.method === RUNTIME_MESSAGES.PAGE_STARTED) {
       applyAutostartForTab(tabId, sender.tab?.url, { resetWhenNoMatch: true });

@@ -117,7 +117,8 @@ const selectSpectrumGraph = (
 ): void => {
   if (
     port.dataset.enableSpectrum !== "true" ||
-    port.dataset.enabled !== "true"
+    port.dataset.enabled !== "true" ||
+    port.dataset.spectrumDemand !== "true"
   ) {
     stopSpectrum();
     return;
@@ -286,7 +287,7 @@ const reattach = (): void => {
 };
 
 const updateSpectrumState = (): void => {
-  selectSpectrumGraph();
+  selectSpectrumGraph(currentGraphSource, true);
 };
 
 port.addEventListener("spectrum-state-changed", updateSpectrumState);

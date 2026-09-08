@@ -14,14 +14,17 @@ import {
 } from "../../domains/shortcuts/shortcuts";
 import type { ThemeColors } from "../../domains/theme/themeColors";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
+import {
+  SPECTRUM_PORT_NAME,
+  type RelayedSpectrumMessage,
+  type SpectrumMetaPayload,
+} from "../../infrastructure/chrome/runtimeMessages";
 import type { PopupElements } from "../../infrastructure/dom/popupElements";
 import { createToolkitWindowController } from "../window-mode/createToolkitWindowController";
 import { createEqualizerCanvas } from "../../ui/equalizerCanvas/createEqualizerCanvas";
 import { createFilterPersistence } from "./filterPersistence";
 import {
   createSpectrumRenderer,
-  type SpectrumBuffer,
-  type SpectrumMeta,
 } from "../../ui/equalizerCanvas/draw/drawSpectrum";
 import { createAutostartView } from "../../ui/popup/autostartView";
 import {
@@ -50,11 +53,64 @@ export interface PopupAppDependencies {
   readThemeColors(element?: Element): ThemeColors;
 }
 
-interface SpectrumStorageMessage extends Partial<SpectrumMeta> {
-  type?: "meta" | "spectrum";
-  buffer?: SpectrumBuffer | null;
-  clipping?: boolean;
-}
+export const createSpectrumPortClient = (
+  tabId: number,
+  handlers: {
+    onMeta(meta: SpectrumMetaPayload): void;
+    onFrame(buffer: number[] | null, clipping: boolean): void;
+  },
+) => {
+  let activeFrameId: number | null = null;
+  let currentPort: chrome.runtime.Port | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let disposed = false;
+
+  const connect = (): void => {
+    if (disposed) return;
+    const port = chrome.runtime.connect(undefined, { name: SPECTRUM_PORT_NAME });
+    currentPort = port;
+    port.onMessage.addListener((value: unknown) => {
+      if (!value || typeof value !== "object") return;
+      const message = value as Partial<RelayedSpectrumMessage>;
+      if (message.tabId !== tabId || !Number.isInteger(message.frameId)) return;
+      const payload = message.payload;
+      if (payload?.type === "meta") {
+        activeFrameId = message.frameId as number;
+        handlers.onMeta(payload);
+        return;
+      }
+      if (
+        payload?.type !== "spectrum" ||
+        message.frameId !== activeFrameId
+      ) {
+        return;
+      }
+      handlers.onFrame(payload.buffer, payload.clipping);
+      if (payload.buffer === null) activeFrameId = null;
+    });
+    port.onDisconnect.addListener(() => {
+      if (currentPort !== port) return;
+      currentPort = null;
+      activeFrameId = null;
+      handlers.onFrame(null, false);
+      if (!disposed) reconnectTimer = setTimeout(connect, 100);
+    });
+    port.postMessage({ type: "subscribe", tabId });
+  };
+
+  connect();
+  return {
+    dispose: (): void => {
+      disposed = true;
+      if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      const port = currentPort;
+      currentPort = null;
+      activeFrameId = null;
+      port?.disconnect();
+    },
+  };
+};
 
 export const createPopupApp = ({
   elements,
@@ -78,6 +134,7 @@ export const createPopupApp = ({
   let controlsView: ReturnType<typeof createControlsView>;
   let presetsView: ReturnType<typeof createPresetsView>;
   let settingsView: ReturnType<typeof createSettingsView>;
+  let spectrumPortClient: ReturnType<typeof createSpectrumPortClient> | null = null;
 
   const getColors = (): ThemeColors => readThemeColors(document.documentElement);
   const filterPersistence = createFilterPersistence(async (tabId, filters) => {
@@ -513,19 +570,6 @@ export const createPopupApp = ({
         );
       }
 
-      const spectrumChange = changes[STORAGE_KEYS.tabSpectrum(tabId)];
-      if (spectrumChange) {
-        const message = spectrumChange.newValue as SpectrumStorageMessage | undefined;
-        if (message?.type === "meta") {
-          spectrumRenderer.setMeta(message);
-        }
-        if (message?.type === "spectrum") {
-          spectrumRenderer.scheduleDraw(message.buffer);
-          if (message.buffer == null) controlsView.resetClipping();
-          else controlsView.setClipping(message.clipping === true);
-        }
-      }
-
       if (
         toolkitController.isToolkitWindow &&
         changes[STORAGE_KEYS.tabFilters(tabId)]
@@ -557,6 +601,14 @@ export const createPopupApp = ({
 
     if (!toolkitController.isToolkitWindow && tabId != null) {
       await ensureContentScripts(tabId);
+      spectrumPortClient = createSpectrumPortClient(tabId, {
+        onMeta: (meta) => spectrumRenderer.setMeta(meta),
+        onFrame: (buffer, clipping) => {
+          spectrumRenderer.scheduleDraw(buffer);
+          if (buffer === null) controlsView.resetClipping();
+          else controlsView.setClipping(clipping);
+        },
+      });
     }
 
     resize();
@@ -648,6 +700,8 @@ export const createPopupApp = ({
   };
 
   window.addEventListener("pagehide", () => {
+    spectrumPortClient?.dispose();
+    spectrumPortClient = null;
     void filterPersistence.dispose();
   });
 

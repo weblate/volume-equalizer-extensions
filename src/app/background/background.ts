@@ -2,7 +2,12 @@ import { applyAutostartForTab } from "./autostartOnTab";
 import { prepareInstallUpdateNotice } from "./installUpdateNotice";
 import { createRuntimeMessageHandler } from "./messageRouter";
 import { registerContentScripts } from "./registerContentScripts";
+import { createSpectrumRelay } from "./spectrumRelay";
 import { clearTabStorage, clearUnusedStorage } from "./storageCleanup";
+import {
+  RUNTIME_MESSAGES,
+  SPECTRUM_PORT_NAME,
+} from "../../infrastructure/chrome/runtimeMessages";
 import {
   clearToolkitWindowState,
   getCapturedTabs,
@@ -23,10 +28,38 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await prepareInstallUpdateNotice(details);
 });
 
+const spectrumRelay = createSpectrumRelay({
+  setDemand: (tabId, enabled, frameId) => {
+    const message = {
+      method: RUNTIME_MESSAGES.SET_SPECTRUM_DEMAND,
+      payload: { enabled },
+    };
+    const sent = frameId == null
+      ? chrome.tabs.sendMessage(tabId, message)
+      : chrome.tabs.sendMessage(tabId, message, { frameId });
+    void sent.catch((error: unknown) => {
+      const text = error instanceof Error ? error.message : String(error);
+      if (
+        text.includes("Receiving end does not exist") ||
+        text.includes("No tab with id")
+      ) {
+        return;
+      }
+      console.error("Failed to update spectrum demand", { tabId, frameId, error });
+    });
+  },
+});
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === SPECTRUM_PORT_NAME) spectrumRelay.connect(port);
+});
+
 const runtimeMessageHandler = createRuntimeMessageHandler({
+  acceptSpectrumFrame: spectrumRelay.acceptFrame,
   applyAutostartForTab,
   clearUnusedStorage,
   getCapturedTabs,
+  restoreSpectrumDemand: spectrumRelay.contentReady,
   toggleWindowMode,
 });
 
@@ -52,6 +85,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 let tabRemovalQueue = Promise.resolve();
 chrome.tabs.onRemoved.addListener((tabId) => {
+  spectrumRelay.removeTab(tabId);
   tabRemovalQueue = tabRemovalQueue
     .then(async () => {
       await removeTabIdFromToolkitWindowStore(tabId);

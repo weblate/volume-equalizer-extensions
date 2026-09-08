@@ -72,6 +72,7 @@ export const createToolkitWindowController = (deps: {
   const captures = new Map<string, ToolkitCapture>();
   let capturedTabsView: ReturnType<typeof createCapturedTabsView> | null = null;
   let spectrumEnabled = false;
+  let spectrumDemand = false;
   let spectrumOutput: AudioNode | null = null;
   const spectrumSampler = createSpectrumSampler(
     (meta) => deps.onSpectrumMeta?.(meta),
@@ -288,7 +289,7 @@ export const createToolkitWindowController = (deps: {
   };
 
   function startSpectrum(tabId: number | string | null = activeTabId): void {
-    if (!isToolkitWindow || !spectrumEnabled || tabId == null) {
+    if (!isToolkitWindow || !spectrumEnabled || !spectrumDemand || tabId == null) {
       stopSpectrum();
       return;
     }
@@ -376,6 +377,7 @@ export const createToolkitWindowController = (deps: {
 
   const startTabCapture = async (): Promise<void> => {
     if (!isToolkitWindow) return;
+    spectrumDemand = true;
 
     activeTabId = await getCurrentTabId();
     const spectrumSettings = await chrome.storage.local.get([
@@ -490,6 +492,7 @@ export const createToolkitWindowController = (deps: {
   };
 
   const stopTabCapture = (): void => {
+    spectrumDemand = false;
     spectrumSampler.dispose();
     spectrumOutput = null;
     captures.forEach((capture) => stopCaptureEntry(capture));
