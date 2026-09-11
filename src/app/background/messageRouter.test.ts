@@ -8,7 +8,7 @@ const createChromeMock = () => {
   const localSet = vi.fn();
   const sessionGet = vi.fn();
   const sessionSet = vi.fn();
-  const setBadgeText = vi.fn();
+  const setBadgeText = vi.fn().mockResolvedValue(undefined);
 
   vi.stubGlobal("chrome", {
     action: {
@@ -60,11 +60,7 @@ describe("createRuntimeMessageHandler", () => {
       toggleWindowMode: vi.fn(),
     });
 
-    const result = handler(
-      { method: RUNTIME_MESSAGES.GET_CAPTURED_TABS },
-      {},
-      response
-    );
+    const result = handler({ method: RUNTIME_MESSAGES.GET_CAPTURED_TABS }, {}, response);
     await flushPromises();
 
     expect(result).toBe(true);
@@ -83,15 +79,60 @@ describe("createRuntimeMessageHandler", () => {
       toggleWindowMode: vi.fn(),
     });
 
-    const result = handler(
-      { method: RUNTIME_MESSAGES.GET_CAPTURED_TABS },
-      {},
-      response
-    );
+    const result = handler({ method: RUNTIME_MESSAGES.GET_CAPTURED_TABS }, {}, response);
     await flushPromises();
 
     expect(result).toBe(true);
     expect(response).toHaveBeenCalledWith({ tabs: [], activeTabId: null });
+  });
+
+  test("responds after window mode is enabled", async () => {
+    createChromeMock();
+    const response = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const result = handler(
+      { method: RUNTIME_MESSAGES.ENABLE_WINDOW_MODE, tabId: 12 },
+      {},
+      response,
+    );
+    await flushPromises();
+
+    expect(result).toBe(true);
+    expect(response).toHaveBeenCalledWith({ ok: true });
+  });
+
+  test("responds with the window mode failure", async () => {
+    createChromeMock();
+    const response = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn().mockRejectedValue(new Error("capture failed")),
+    });
+
+    const result = handler(
+      { method: RUNTIME_MESSAGES.ENABLE_WINDOW_MODE, tabId: 12 },
+      {},
+      response,
+    );
+    await flushPromises();
+
+    expect(result).toBe(true);
+    expect(response).toHaveBeenCalledWith({
+      ok: false,
+      error: "capture failed",
+    });
   });
 
   test("responds with the sender tab id without registering it", () => {
@@ -109,7 +150,7 @@ describe("createRuntimeMessageHandler", () => {
     const result = handler(
       { method: RUNTIME_MESSAGES.GET_TAB_ID },
       { tab: { id: 7 } as chrome.tabs.Tab },
-      response
+      response,
     );
 
     expect(result).toBeUndefined();
@@ -160,15 +201,13 @@ describe("createRuntimeMessageHandler", () => {
     const result = handler(
       { method: RUNTIME_MESSAGES.PAGE_STARTED },
       { tab: { id: 9, url: "https://example.com" } as chrome.tabs.Tab },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(result).toBeUndefined();
-    expect(applyAutostartForTab).toHaveBeenCalledWith(
-      9,
-      "https://example.com",
-      { resetWhenNoMatch: true }
-    );
+    expect(applyAutostartForTab).toHaveBeenCalledWith(9, "https://example.com", {
+      resetWhenNoMatch: true,
+    });
   });
 
   test("updates connected tab badge without an async response", () => {
@@ -185,13 +224,41 @@ describe("createRuntimeMessageHandler", () => {
     const result = handler(
       { method: RUNTIME_MESSAGES.CONNECTED },
       { tab: { id: 11 } as chrome.tabs.Tab },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(result).toBeUndefined();
     expect(chromeMock.setBadgeText).toHaveBeenCalledWith({
       text: "ON",
       tabId: 11,
+    });
+  });
+
+  test("reports a badge update failure with its operation and tab", async () => {
+    const chromeMock = createChromeMock();
+    const failure = new Error("badge failed");
+    chromeMock.setBadgeText.mockRejectedValue(failure);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn(),
+    });
+
+    handler(
+      { method: RUNTIME_MESSAGES.CONNECTED },
+      { tab: { id: 11 } as chrome.tabs.Tab },
+      vi.fn(),
+    );
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith("Failed to update tab badge", {
+      operation: "setBadgeText",
+      tabId: 11,
+      error: failure,
     });
   });
 
@@ -209,7 +276,7 @@ describe("createRuntimeMessageHandler", () => {
     const result = handler(
       { method: "unknown" as typeof RUNTIME_MESSAGES.GET_TAB_ID },
       { tab: { id: 13 } as chrome.tabs.Tab },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(result).toBeUndefined();
@@ -236,11 +303,7 @@ describe("createRuntimeMessageHandler", () => {
       frameId: 3,
     };
 
-    handler(
-      { method: RUNTIME_MESSAGES.SPECTRUM_FRAME, payload },
-      sender,
-      vi.fn(),
-    );
+    handler({ method: RUNTIME_MESSAGES.SPECTRUM_FRAME, payload }, sender, vi.fn());
 
     expect(acceptSpectrumFrame).toHaveBeenCalledWith(payload, sender);
     expect(chromeMock.localSet).not.toHaveBeenCalled();
@@ -262,11 +325,7 @@ describe("createRuntimeMessageHandler", () => {
       frameId: 3,
     };
 
-    handler(
-      { method: RUNTIME_MESSAGES.SPECTRUM_READY },
-      routedSender,
-      vi.fn(),
-    );
+    handler({ method: RUNTIME_MESSAGES.SPECTRUM_READY }, routedSender, vi.fn());
     handler(
       { method: RUNTIME_MESSAGES.SPECTRUM_READY },
       { tab: { id: 12 } as chrome.tabs.Tab },

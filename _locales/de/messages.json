@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Wähle mit Pos1, Ende, Bild auf oder Bild ab ein Band. Pfeiltasten ändern Frequenz und Verstärkung, Umschalt+Auf/Ab ändert Q, Eingabe setzt zurück."
+  },
+  "window_mode_start_error": {
+    "message": "Der Fenstermodus konnte nicht geöffnet werden. Bitte versuche es erneut."
   }
 }

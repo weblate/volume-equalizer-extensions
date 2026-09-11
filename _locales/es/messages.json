@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Selecciona una banda con Inicio, Fin, Re Pág o Av Pág. Usa las flechas para frecuencia y ganancia, Mayús+Arriba/Abajo para Q y Enter para restablecer."
+  },
+  "window_mode_start_error": {
+    "message": "No se pudo abrir el modo ventana. Inténtalo de nuevo."
   }
 }

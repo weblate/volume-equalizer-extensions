@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "เลือกย่านด้วย Home, End, Page Up หรือ Page Down ใช้ปุ่มลูกศรสำหรับความถี่และเกน Shift+ขึ้น/ลง สำหรับ Q และ Enter เพื่อรีเซ็ต"
+  },
+  "window_mode_start_error": {
+    "message": "ไม่สามารถเปิดโหมดหน้าต่างได้ โปรดลองอีกครั้ง"
   }
 }

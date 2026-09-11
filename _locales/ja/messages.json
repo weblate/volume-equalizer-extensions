@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Home、End、Page Up、Page Down でバンドを選択します。矢印キーで周波数とゲイン、Shift+上下で Q、Enter でリセットします。"
+  },
+  "window_mode_start_error": {
+    "message": "ウィンドウモードを開けませんでした。もう一度お試しください。"
   }
 }

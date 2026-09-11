@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Sélectionnez une bande avec Début, Fin, Page précédente ou Page suivante. Utilisez les flèches pour la fréquence et le gain, Maj+Haut/Bas pour Q et Entrée pour réinitialiser."
+  },
+  "window_mode_start_error": {
+    "message": "Impossible d’ouvrir le mode fenêtre. Veuillez réessayer."
   }
 }

@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Chọn dải bằng Home, End, Page Up hoặc Page Down. Dùng phím mũi tên cho tần số và độ lợi, Shift+Lên/Xuống cho Q và Enter để đặt lại."
+  },
+  "window_mode_start_error": {
+    "message": "Không thể mở chế độ cửa sổ. Vui lòng thử lại."
   }
 }

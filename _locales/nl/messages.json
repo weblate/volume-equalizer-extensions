@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Selecteer een band met Home, End, Page Up of Page Down. Gebruik pijlen voor frequentie en versterking, Shift+Omhoog/Omlaag voor Q en Enter om te resetten."
+  },
+  "window_mode_start_error": {
+    "message": "De venstermodus kan niet worden geopend. Probeer het opnieuw."
   }
 }

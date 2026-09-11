@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Selecione uma banda com Home, End, Page Up ou Page Down. Use as setas para frequência e ganho, Shift+Cima/Baixo para Q e Enter para repor."
+  },
+  "window_mode_start_error": {
+    "message": "Não foi possível abrir o modo de janela. Tente novamente."
   }
 }

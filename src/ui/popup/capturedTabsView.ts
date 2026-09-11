@@ -1,3 +1,5 @@
+import { RUNTIME_MESSAGES } from "../../infrastructure/chrome/runtimeMessages";
+
 export interface CapturedTabInfo {
   id: number;
   title?: string;
@@ -11,10 +13,15 @@ export interface CapturedTabsResponse {
 }
 
 const getCapturedTabs = (): Promise<CapturedTabsResponse> => {
-  return (chrome.runtime.sendMessage({
-    method: "getCapturedTabs",
-  }) as Promise<CapturedTabsResponse>).catch((error: unknown) => {
-    console.error(error);
+  return (
+    chrome.runtime.sendMessage({
+      method: RUNTIME_MESSAGES.GET_CAPTURED_TABS,
+    }) as Promise<CapturedTabsResponse>
+  ).catch((error: unknown) => {
+    console.error("Failed to get captured tabs", {
+      operation: "getCapturedTabs",
+      error,
+    });
     return { tabs: [], activeTabId: null };
   });
 };
@@ -36,8 +43,10 @@ export const createCapturedTabsView = (deps: {
       return;
     }
 
-    const focused = document.activeElement instanceof HTMLElement && deps.root.contains(document.activeElement)
-      ? document.activeElement : null;
+    const focused =
+      document.activeElement instanceof HTMLElement && deps.root.contains(document.activeElement)
+        ? document.activeElement
+        : null;
     const previousId = focused?.closest<HTMLElement>(".captured-tab")?.dataset.tabId;
     const previousItems = Array.from(deps.root.querySelectorAll<HTMLElement>(".captured-tab"));
     const previousIndex = previousItems.findIndex((item) => item.dataset.tabId === previousId);
@@ -71,15 +80,23 @@ export const createCapturedTabsView = (deps: {
       const stopButton = document.createElement("button");
       stopButton.type = "button";
       stopButton.className = "captured-tab-stop";
-      stopButton.setAttribute("aria-label", `${deps.getMessage("stop_capture_label")}: ${title.textContent}`);
+      stopButton.setAttribute(
+        "aria-label",
+        `${deps.getMessage("stop_capture_label")}: ${title.textContent}`,
+      );
       item.appendChild(stopButton);
 
       deps.root.appendChild(item);
     });
     if (focused) {
       const items = Array.from(deps.root.querySelectorAll<HTMLElement>(".captured-tab"));
-      const next = items.find((item) => item.dataset.tabId === previousId) ?? items[Math.min(previousIndex, items.length - 1)];
-      (next?.querySelector<HTMLElement>(wasStop ? ".captured-tab-stop" : ".captured-tab-select") ?? deps.root).focus();
+      const next =
+        items.find((item) => item.dataset.tabId === previousId) ??
+        items[Math.min(previousIndex, items.length - 1)];
+      (
+        next?.querySelector<HTMLElement>(wasStop ? ".captured-tab-stop" : ".captured-tab-select") ??
+        deps.root
+      ).focus();
     }
   };
 
@@ -117,7 +134,12 @@ export const createCapturedTabsView = (deps: {
       }
 
       await selectTab(item);
-    })();
+    })().catch((error) => {
+      console.error("Failed to update captured tab", {
+        operation: "capturedTabsClick",
+        error,
+      });
+    });
   });
 
   return { render };

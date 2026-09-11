@@ -15,13 +15,14 @@ export const RUNTIME_MESSAGES = {
   SET_SPECTRUM_DEMAND: "set-spectrum-demand",
 } as const;
 
-export type RuntimeMessageMethod =
-  (typeof RUNTIME_MESSAGES)[keyof typeof RUNTIME_MESSAGES];
+export type RuntimeMessageMethod = (typeof RUNTIME_MESSAGES)[keyof typeof RUNTIME_MESSAGES];
 
 export interface RuntimeMessage {
   method: RuntimeMessageMethod;
   payload?: unknown;
 }
+
+export type EnableWindowModeResponse = { ok: true } | { ok: false; error: string };
 
 export const SPECTRUM_PORT_NAME = "eq-spectrum";
 
@@ -53,9 +54,7 @@ export interface RelayedSpectrumMessage {
   payload: SpectrumPayload;
 }
 
-export const normalizeSpectrumPayload = (
-  value: unknown,
-): SpectrumPayload | null => {
+export const normalizeSpectrumPayload = (value: unknown): SpectrumPayload | null => {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Record<string, unknown>;
   if (candidate.type === "meta") {
@@ -66,11 +65,7 @@ export const normalizeSpectrumPayload = (
       candidate.maxDb,
       candidate.frequencyBinCount,
     ];
-    if (
-      !numbers.every(
-        (number) => typeof number === "number" && Number.isFinite(number),
-      )
-    ) {
+    if (!numbers.every((number) => typeof number === "number" && Number.isFinite(number))) {
       return null;
     }
     if (
@@ -103,11 +98,7 @@ export const normalizeSpectrumPayload = (
     typeof (candidate.buffer as { length?: unknown }).length === "number";
   if (!Array.isArray(candidate.buffer) && !isTypedArray) return null;
   const buffer = Array.from(candidate.buffer as ArrayLike<unknown>);
-  if (
-    !buffer.every(
-      (number) => typeof number === "number" && Number.isFinite(number),
-    )
-  ) {
+  if (!buffer.every((number) => typeof number === "number" && Number.isFinite(number))) {
     return null;
   }
   return {

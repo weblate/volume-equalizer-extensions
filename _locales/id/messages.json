@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Pilih band dengan Home, End, Page Up, atau Page Down. Gunakan panah untuk frekuensi dan gain, Shift+Atas/Bawah untuk Q, dan Enter untuk mereset."
+  },
+  "window_mode_start_error": {
+    "message": "Mode jendela tidak dapat dibuka. Silakan coba lagi."
   }
 }

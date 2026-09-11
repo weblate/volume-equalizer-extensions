@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "ເລືອກແຖບດ້ວຍ Home, End, Page Up ຫຼື Page Down. ໃຊ້ລູກສອນສຳລັບຄວາມຖີ່ແລະເກນ, Shift+Up/Down ສຳລັບ Q ແລະ Enter ເພື່ອຣີເຊັດ."
+  },
+  "window_mode_start_error": {
+    "message": "ບໍ່ສາມາດເປີດໂໝດໜ້າຕ່າງໄດ້. ກະລຸນາລອງໃໝ່."
   }
 }

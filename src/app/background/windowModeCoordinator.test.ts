@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import {
   addTabIdToToolkitWindowStore,
+  getCapturedTabs,
   toggleWindowMode,
   removeTabIdFromToolkitWindowStore,
 } from "./windowModeCoordinator";
@@ -85,9 +86,7 @@ describe("removeTabIdFromToolkitWindowStore", () => {
               ...(state[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS] as number[]),
             ],
             [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: {
-              ...(state[
-                STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS
-              ] as Record<string, string>),
+              ...(state[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as Record<string, string>),
             },
           })),
           set: vi.fn(async (values: Record<string, unknown>) => {
@@ -97,10 +96,7 @@ describe("removeTabIdFromToolkitWindowStore", () => {
       },
     });
 
-    await Promise.all([
-      addTabIdToToolkitWindowStore(14),
-      removeTabIdFromToolkitWindowStore(13),
-    ]);
+    await Promise.all([addTabIdToToolkitWindowStore(14), removeTabIdFromToolkitWindowStore(13)]);
 
     expect(state).toEqual({
       [STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]: [12, 14],
@@ -112,24 +108,74 @@ describe("removeTabIdFromToolkitWindowStore", () => {
   });
 });
 
+describe("getCapturedTabs", () => {
+  test("removes a captured tab that disappeared", async () => {
+    const state: Record<string, unknown> = {
+      [STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]: [12, 13],
+      [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: 13,
+      [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: {
+        12: "stream-12",
+        13: "stream-13",
+      },
+    };
+    vi.stubGlobal("chrome", {
+      storage: {
+        session: {
+          get: vi.fn(async () => structuredClone(state)),
+          set: vi.fn(async (values: Record<string, unknown>) => {
+            Object.assign(state, values);
+          }),
+        },
+      },
+      tabs: {
+        get: vi.fn(async (tabId: number) => {
+          if (tabId === 13) throw new Error("No tab with id: 13");
+          return { id: tabId, title: `Tab ${tabId}` };
+        }),
+      },
+    });
+
+    const result = await getCapturedTabs();
+
+    expect(result.tabs.map((tab) => tab.id)).toEqual([12]);
+    expect(result.activeTabId).toBe(12);
+    expect(state[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]).toEqual([12]);
+    expect(state[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]).toEqual({
+      12: "stream-12",
+    });
+  });
+});
 
 describe("capture transaction", () => {
   const setupCapture = () => {
     const state: Record<string, unknown> = {
-      toolkitWindowId: 5, toolkitWindowTabIds: [12, 13],
-      toolkitWindowActiveTabId: 12, toolkitWindowCaptureStreamIds: { 12: "old-12", 13: "old-13" },
+      toolkitWindowId: 5,
+      toolkitWindowTabIds: [12, 13],
+      toolkitWindowActiveTabId: 12,
+      toolkitWindowCaptureStreamIds: { 12: "old-12", 13: "old-13" },
     };
     let resolveStream!: (value: string) => void;
-    const stream = new Promise<string>(resolve => { resolveStream = resolve; });
-    const set = vi.fn(async (values: Record<string, unknown>) => { Object.assign(state, values); });
+    const stream = new Promise<string>((resolve) => {
+      resolveStream = resolve;
+    });
+    const set = vi.fn(async (values: Record<string, unknown>) => {
+      Object.assign(state, values);
+    });
     const getMediaStreamId = vi.fn(() => stream);
     const localSet = vi.fn(async () => {});
     vi.stubGlobal("chrome", {
-      storage: { local: { set: localSet }, session: {
-        get: vi.fn(async () => structuredClone(state)), set,
-      } },
+      storage: {
+        local: { set: localSet },
+        session: {
+          get: vi.fn(async () => structuredClone(state)),
+          set,
+        },
+      },
       tabCapture: { getMediaStreamId },
-      windows: { get: vi.fn(async () => ({ id: 5, state: "normal" })), update: vi.fn(async () => {}) },
+      windows: {
+        get: vi.fn(async () => ({ id: 5, state: "normal" })),
+        update: vi.fn(async () => {}),
+      },
     });
     return { state, set, resolveStream, getMediaStreamId, localSet };
   };
@@ -154,6 +200,8 @@ describe("capture transaction", () => {
     const rejection = expect(capture).rejects.toBe(failure);
     resolveStream("new-13");
     await rejection;
-    expect(localSet).not.toHaveBeenCalledWith(expect.objectContaining({ "captureError.13": expect.anything() }));
+    expect(localSet).not.toHaveBeenCalledWith(
+      expect.objectContaining({ "captureError.13": expect.anything() }),
+    );
   });
 });

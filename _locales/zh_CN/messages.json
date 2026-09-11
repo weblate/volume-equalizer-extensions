@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "使用 Home、End、Page Up 或 Page Down 选择频段。使用方向键调整频率和增益，Shift+上/下调整 Q，Enter 重置。"
+  },
+  "window_mode_start_error": {
+    "message": "无法打开窗口模式。请重试。"
   }
 }

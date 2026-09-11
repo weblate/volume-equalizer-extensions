@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Seleziona una banda con Home, Fine, Pagina su o Pagina giù. Usa le frecce per frequenza e guadagno, Maiusc+Su/Giù per Q e Invio per ripristinare."
+  },
+  "window_mode_start_error": {
+    "message": "Impossibile aprire la modalità finestra. Riprova."
   }
 }

@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Home, End, Page Up या Page Down से बैंड चुनें। फ़्रीक्वेंसी और गेन के लिए तीर, Q के लिए Shift+Up/Down और रीसेट के लिए Enter दबाएँ।"
+  },
+  "window_mode_start_error": {
+    "message": "विंडो मोड नहीं खुल सका। कृपया फिर से कोशिश करें।"
   }
 }

@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Home, End, Page Up veya Page Down ile bir bant seçin. Frekans ve kazanç için okları, Q için Shift+Yukarı/Aşağı, sıfırlamak için Enter'ı kullanın."
+  },
+  "window_mode_start_error": {
+    "message": "Pencere modu açılamadı. Lütfen tekrar deneyin."
   }
 }

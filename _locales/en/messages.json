@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "Select a band with Home, End, Page Up or Page Down. Use arrows for frequency and gain, Shift+Up/Down for Q, and Enter to reset."
+  },
+  "window_mode_start_error": {
+    "message": "Could not open Window mode. Please try again."
   }
 }

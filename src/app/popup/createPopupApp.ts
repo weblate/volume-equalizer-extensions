@@ -13,7 +13,9 @@ import {
 import type { ThemeColors } from "../../domains/theme/themeColors";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import {
+  RUNTIME_MESSAGES,
   SPECTRUM_PORT_NAME,
+  type EnableWindowModeResponse,
   type RelayedSpectrumMessage,
   type SpectrumMetaPayload,
 } from "../../infrastructure/chrome/runtimeMessages";
@@ -21,14 +23,9 @@ import type { PopupElements } from "../../infrastructure/dom/popupElements";
 import { createToolkitWindowController } from "../window-mode/createToolkitWindowController";
 import { createEqualizerCanvas } from "../../ui/equalizerCanvas/createEqualizerCanvas";
 import { createFilterPersistence } from "./filterPersistence";
-import {
-  createSpectrumRenderer,
-} from "../../ui/equalizerCanvas/draw/drawSpectrum";
+import { createSpectrumRenderer } from "../../ui/equalizerCanvas/draw/drawSpectrum";
 import { createAutostartView } from "../../ui/popup/autostartView";
-import {
-  createControlsView,
-  formatGainValue,
-} from "../../ui/popup/controlsView";
+import { createControlsView, formatGainValue } from "../../ui/popup/controlsView";
 import {
   createInstallUpdateNoticeView,
   getPendingInstallUpdateNotice,
@@ -42,6 +39,29 @@ import {
   applyToolkitShortcutMessage,
   resolveToolkitShortcutMessage,
 } from "./toolkitShortcutMessage";
+
+export const requestWindowMode = async (tabId: number, showError: () => void): Promise<void> => {
+  let response: EnableWindowModeResponse;
+  try {
+    response = (await chrome.runtime.sendMessage({
+      method: RUNTIME_MESSAGES.ENABLE_WINDOW_MODE,
+      tabId,
+    })) as EnableWindowModeResponse;
+  } catch (error) {
+    console.error("Failed to enable window mode", { tabId, error });
+    showError();
+    return;
+  }
+
+  if (response?.ok === true) {
+    window.close();
+    return;
+  }
+
+  const error = response?.ok === false ? response.error : "Invalid window mode response";
+  console.error("Failed to enable window mode", { tabId, error });
+  showError();
+};
 
 export interface PopupAppDependencies {
   elements: PopupElements;
@@ -77,10 +97,7 @@ export const createSpectrumPortClient = (
         handlers.onMeta(payload);
         return;
       }
-      if (
-        payload?.type !== "spectrum" ||
-        message.frameId !== activeFrameId
-      ) {
+      if (payload?.type !== "spectrum" || message.frameId !== activeFrameId) {
         return;
       }
       handlers.onFrame(payload.buffer, payload.clipping);
@@ -257,9 +274,7 @@ export const createPopupApp = ({
     await chrome.storage.local.set(values);
   };
 
-  const saveLoadedFilters = async (
-    filters: EqualizerFilter[],
-  ): Promise<void> => {
+  const saveLoadedFilters = async (filters: EqualizerFilter[]): Promise<void> => {
     await filterPersistence.flush();
     const tabId = await getCurrentTabId();
     if (tabId == null) return;
@@ -279,13 +294,9 @@ export const createPopupApp = ({
       STORAGE_KEYS.PRESET_NAMES,
       STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
     ]);
-    presetsView.renderPresetNames(
-      (stored[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[],
-      {
-        includeDefaultPresets:
-          stored[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] !== true,
-      },
-    );
+    presetsView.renderPresetNames((stored[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[], {
+      includeDefaultPresets: stored[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] !== true,
+    });
   };
 
   const refreshDynamicContent = async (): Promise<void> => {
@@ -381,11 +392,10 @@ export const createPopupApp = ({
     const tabId = await getCurrentTabId();
     if (tabId == null) return;
 
-    await chrome.runtime.sendMessage({
-      method: "enableWindowMode",
-      tabId,
+    await requestWindowMode(tabId, () => {
+      elements.captureError.textContent = localization.getMessage("window_mode_start_error");
+      elements.captureError.style.display = "block";
     });
-    window.close();
   };
 
   controlsView = createControlsView({
@@ -515,8 +525,7 @@ export const createPopupApp = ({
     },
     setTheme: (theme) => settingsView.setTheme(theme),
     setPointCount: (count) => settingsView.setPointCount(count),
-    onComplete: () =>
-      chrome.storage.local.remove(STORAGE_KEYS.INSTALL_UPDATE_NOTICE),
+    onComplete: () => chrome.storage.local.remove(STORAGE_KEYS.INSTALL_UPDATE_NOTICE),
   });
 
   document.addEventListener("keydown", (event) => {
@@ -531,10 +540,7 @@ export const createPopupApp = ({
         return;
       }
 
-      if (matchesShortcut(
-        event,
-        shortcuts[SHORTCUT_ACTION_TOGGLE_EQ_NAME],
-      )) {
+      if (matchesShortcut(event, shortcuts[SHORTCUT_ACTION_TOGGLE_EQ_NAME])) {
         event.preventDefault();
         event.stopPropagation();
         await onToggleEqualizer();
@@ -549,10 +555,7 @@ export const createPopupApp = ({
       const tabId = await getCurrentTabId();
       if (tabId == null) return;
 
-      if (
-        !toolkitController.isToolkitWindow &&
-        changes[STORAGE_KEYS.tabEnabled(tabId)]
-      ) {
+      if (!toolkitController.isToolkitWindow && changes[STORAGE_KEYS.tabEnabled(tabId)]) {
         controlsView.setEnableButtonClass(
           changes[STORAGE_KEYS.tabEnabled(tabId)].newValue === true,
         );
@@ -568,10 +571,7 @@ export const createPopupApp = ({
         );
       }
 
-      if (
-        toolkitController.isToolkitWindow &&
-        changes[STORAGE_KEYS.tabFilters(tabId)]
-      ) {
+      if (toolkitController.isToolkitWindow && changes[STORAGE_KEYS.tabFilters(tabId)]) {
         toolkitController.refreshCaptureFilters();
       }
     })();
@@ -665,13 +665,9 @@ export const createPopupApp = ({
       elements.enableSpectrum.checked = true;
     }
 
-    presetsView.renderPresetNames(
-      (result[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[],
-      {
-        includeDefaultPresets:
-          result[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] !== true,
-      },
-    );
+    presetsView.renderPresetNames((result[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[], {
+      includeDefaultPresets: result[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] !== true,
+    });
 
     renderCaptureError(
       typeof result[STORAGE_KEYS.tabCaptureError(tabId)] === "string"
@@ -689,9 +685,7 @@ export const createPopupApp = ({
     } else if (pendingNotice?.reason === "update") {
       installUpdateNoticeView.showInstallUpdateNotice(pendingNotice);
     } else if (!toolkitController.isToolkitWindow) {
-      donationReminderView.showDonationReminder(
-        stored[STORAGE_KEYS.DONATION_REMINDER_AT],
-      );
+      donationReminderView.showDonationReminder(stored[STORAGE_KEYS.DONATION_REMINDER_AT]);
     }
     await toolkitController.startTabCapture();
     await toolkitController.renderCapturedTabs();

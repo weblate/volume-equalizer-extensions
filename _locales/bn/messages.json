@@ -262,5 +262,8 @@
   },
   "equalizer_keyboard_help": {
     "message": "একটি ব্যান্ড নির্বাচন করতে Home, End, Page Up বা Page Down চাপুন। ফ্রিকোয়েন্সি ও গেইনের জন্য তীর চিহ্ন, Q-এর জন্য Shift+Up/Down এবং রিসেট করতে Enter চাপুন।"
+  },
+  "window_mode_start_error": {
+    "message": "উইন্ডো মোড খোলা যায়নি। আবার চেষ্টা করুন।"
   }
 }
