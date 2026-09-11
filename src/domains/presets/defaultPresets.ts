@@ -1,4 +1,5 @@
 import type { EqualizerFilter } from "../equalizer/types";
+import { readPersistedFilters } from "../equalizer/persistedFilters";
 
 export interface DefaultPreset {
   name: string;
@@ -105,7 +106,10 @@ export const getAvailablePresetNames = (
 
 export const resolvePresetFilters = (
   name: string,
-  userPresets: PresetStorage | undefined,
+  userPresets: Record<string, unknown> | undefined,
 ): EqualizerFilter[] | undefined => {
-  return defaultPresetMap.get(name) ?? userPresets?.[name];
+  const defaultPreset = defaultPresetMap.get(name);
+  if (defaultPreset) return defaultPreset;
+
+  return readPersistedFilters(userPresets?.[name]) ?? undefined;
 };

@@ -20,6 +20,10 @@ class FakeElement extends EventTarget {
     return new FakeElement();
   }
 
+  createElement(): FakeElement {
+    return new FakeElement();
+  }
+
   setAttribute(): void {}
 
   getAttribute(): null {
@@ -115,6 +119,55 @@ describe("createPresetsView", () => {
 
     expect(saveError.textContent).toBe("preset_name_duplicate_error");
     expect(storage.set).not.toHaveBeenCalled();
+  });
+
+  test("strips legacy canvas coordinates before saving a preset", async () => {
+    vi.stubGlobal("document", new FakeElement());
+    const storage = {
+      get: vi.fn(async () => ({
+        [STORAGE_KEYS.PRESETS]: {},
+        [STORAGE_KEYS.PRESET_NAMES]: [],
+        [STORAGE_KEYS.tabFilters(1)]: [
+          { type: "peaking", freq: "1000", gain: "6", q: "0.5", x: 10, y: 20 },
+        ],
+      })),
+      set: vi.fn(async () => undefined),
+    };
+    vi.stubGlobal("chrome", { storage: { local: storage } });
+    const saveForm = new FakeElement();
+    const nameInput = new FakeElement();
+    nameInput.value = "Legacy";
+
+    createPresetsView({
+      dropdown: new FakeElement() as unknown as HTMLElement,
+      toggle: new FakeElement() as unknown as HTMLElement,
+      menu: new FakeElement() as unknown as HTMLElement,
+      saveButton: new FakeElement() as unknown as HTMLButtonElement,
+      saveModal: new FakeElement() as unknown as HTMLDivElement,
+      saveModalClose: new FakeElement() as unknown as HTMLButtonElement,
+      saveForm: saveForm as unknown as HTMLFormElement,
+      nameInput: nameInput as unknown as HTMLInputElement,
+      saveError: new FakeElement() as unknown as HTMLDivElement,
+      saveCancel: new FakeElement() as unknown as HTMLButtonElement,
+      isToolkitWindow: false,
+      getMessage: (name) => name,
+      getCurrentTabId: vi.fn(async () => 1),
+      getCurrentFilters: vi.fn(() => []),
+      setCurrentFilters: vi.fn(),
+      saveLoadedFilters: vi.fn(async () => undefined),
+      redraw: vi.fn(),
+      refreshToolkitCaptureFilters: vi.fn(),
+    });
+
+    saveForm.dispatchEvent(new Event("submit", { cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(storage.set).toHaveBeenCalledWith({
+      [STORAGE_KEYS.PRESETS]: {
+        Legacy: [{ type: "peaking", freq: 1000, gain: 6, q: 0.5 }],
+      },
+      [STORAGE_KEYS.PRESET_NAMES]: ["Legacy"],
+    });
   });
 });
 

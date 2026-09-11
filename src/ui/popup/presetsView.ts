@@ -2,6 +2,7 @@ import { attachModalFocus } from "./modalFocus";
 import { attachPresetDropdown } from "./presetDropdown";
 import { isPresetUsedInWhitelist } from "../../domains/autostart/autostartRules";
 import type { EqualizerFilter } from "../../domains/equalizer/types";
+import { readPersistedFilters } from "../../domains/equalizer/persistedFilters";
 import {
   getAvailablePresetNames,
   isDefaultPresetName,
@@ -116,8 +117,7 @@ export const createPresetsView = (deps: {
 
       const { name } = validation;
       presets[name] =
-        (prefs[STORAGE_KEYS.tabFilters(tabId)] as EqualizerFilter[]) ??
-        deps.getCurrentFilters();
+        readPersistedFilters(prefs[STORAGE_KEYS.tabFilters(tabId)]) ?? deps.getCurrentFilters();
       presetNames.push(name);
 
       await chrome.storage.local.set({
@@ -179,7 +179,7 @@ export const createPresetsView = (deps: {
       deps.toggle.textContent =
         choice === "none" ? deps.getMessage("empty_preset_name") : choice;
       const prefs = await chrome.storage.local.get([STORAGE_KEYS.PRESETS]);
-      const presets = prefs[STORAGE_KEYS.PRESETS] as PresetStorage | undefined;
+      const presets = prefs[STORAGE_KEYS.PRESETS] as Record<string, unknown> | undefined;
       const filters = resolvePresetFilters(choice, presets);
       if (!filters) return;
 
