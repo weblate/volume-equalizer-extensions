@@ -1,4 +1,4 @@
-import { createEqualizerState } from "../../domains/equalizer/equalizerState";
+import { createEqualizerState } from "../../ui/equalizerCanvas/equalizerEditorState";
 import { createLocalizationService } from "../../domains/localization/localizationService";
 import { readThemeColors } from "../../domains/theme/themeColors";
 import { getPopupElements } from "../../infrastructure/dom/popupElements";

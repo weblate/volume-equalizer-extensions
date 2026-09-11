@@ -1,7 +1,7 @@
 import { attachModalFocus } from "./modalFocus";
 import { attachPresetDropdown } from "./presetDropdown";
 import { isPresetUsedInWhitelist } from "../../domains/autostart/autostartRules";
-import type { EqualizerPersistedFilter } from "../../domains/equalizer/equalizerState";
+import type { EqualizerFilter } from "../../domains/equalizer/types";
 import {
   getAvailablePresetNames,
   isDefaultPresetName,
@@ -25,9 +25,9 @@ export const createPresetsView = (deps: {
   isToolkitWindow: boolean;
   getMessage(messageName: string): string;
   getCurrentTabId(): Promise<number | null>;
-  getCurrentFilters(): EqualizerPersistedFilter[];
-  setCurrentFilters(filters: EqualizerPersistedFilter[]): void;
-  saveLoadedFilters(filters: EqualizerPersistedFilter[]): Promise<void>;
+  getCurrentFilters(): EqualizerFilter[];
+  setCurrentFilters(filters: EqualizerFilter[]): void;
+  saveLoadedFilters(filters: EqualizerFilter[]): Promise<void>;
   redraw(): void;
   refreshToolkitCaptureFilters(): void;
 }) => {
@@ -116,7 +116,7 @@ export const createPresetsView = (deps: {
 
       const { name } = validation;
       presets[name] =
-        (prefs[STORAGE_KEYS.tabFilters(tabId)] as EqualizerPersistedFilter[]) ??
+        (prefs[STORAGE_KEYS.tabFilters(tabId)] as EqualizerFilter[]) ??
         deps.getCurrentFilters();
       presetNames.push(name);
 

@@ -7,7 +7,7 @@ import type {
   EqualizerCanvasDimensions,
   EqualizerCanvasPoint,
   EqualizerState,
-} from "../../domains/equalizer/equalizerState";
+} from "./equalizerEditorState";
 
 export interface EqualizerTooltipOptions {
   canvas: HTMLCanvasElement;

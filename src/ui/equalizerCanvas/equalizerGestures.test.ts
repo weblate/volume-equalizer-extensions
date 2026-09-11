@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { createEqualizerState } from "../../domains/equalizer/equalizerState";
+import { createEqualizerState } from "./equalizerEditorState";
 import { attachEqualizerGestures } from "./equalizerGestures";
 
 const dimensions = { canvasWidth: 600, canvasHeight: 300 };

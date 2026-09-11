@@ -1,9 +1,7 @@
 import { dbToGain } from "../../domains/equalizer/equalizerMath";
-import type {
-  EqualizerPersistedFilter,
-  EqualizerState,
-} from "../../domains/equalizer/equalizerState";
 import type { EqualizerFilter } from "../../domains/equalizer/types";
+import { readPersistedFilters } from "../../domains/equalizer/persistedFilters";
+import type { EqualizerState } from "../../ui/equalizerCanvas/equalizerEditorState";
 import { clampPointCount } from "../../domains/equalizer/equalizerMath";
 import { type LocalizationService } from "../../domains/localization/localizationService";
 import {
@@ -183,7 +181,7 @@ export const createPopupApp = ({
     return equalizerState.getFilters(equalizerCanvas.getDimensions());
   };
 
-  const setCurrentFilters = (filters: EqualizerPersistedFilter[]): void => {
+  const setCurrentFilters = (filters: EqualizerFilter[]): void => {
     equalizerState.setPoints(filters, equalizerCanvas.getDimensions(), {
       onPointCountChange: (pointCount) => settingsView?.updatePointCountSelect(pointCount),
     });
@@ -260,7 +258,7 @@ export const createPopupApp = ({
   };
 
   const saveLoadedFilters = async (
-    filters: EqualizerPersistedFilter[],
+    filters: EqualizerFilter[],
   ): Promise<void> => {
     await filterPersistence.flush();
     const tabId = await getCurrentTabId();
@@ -636,13 +634,13 @@ export const createPopupApp = ({
       STORAGE_KEYS.tabCaptureError(tabId),
     ]);
 
-    const tabFilters = result[STORAGE_KEYS.tabFilters(tabId)] as
-      | EqualizerPersistedFilter[]
-      | undefined;
-    const defaultFilters = result[STORAGE_KEYS.FILTERS] as
-      | EqualizerPersistedFilter[]
-      | undefined;
-    const loadedFilters = tabFilters?.length ? tabFilters : defaultFilters?.length ? defaultFilters : null;
+    const tabFilters = readPersistedFilters(result[STORAGE_KEYS.tabFilters(tabId)]);
+    const defaultFilters = readPersistedFilters(result[STORAGE_KEYS.FILTERS]);
+    const loadedFilters = tabFilters?.length
+      ? tabFilters
+      : defaultFilters?.length
+        ? defaultFilters
+        : null;
 
     if (loadedFilters) {
       setCurrentFilters(loadedFilters);

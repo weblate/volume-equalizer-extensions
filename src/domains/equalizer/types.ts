@@ -7,3 +7,13 @@ export interface EqualizerFilter {
   type: EqualizerFilterType;
   enabled?: boolean;
 }
+
+export interface EqualizerPersistedFilter {
+  type?: unknown;
+  freq?: unknown;
+  gain?: unknown;
+  q?: unknown;
+  enabled?: unknown;
+  x?: unknown;
+  y?: unknown;
+}

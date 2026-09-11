@@ -1,5 +1,4 @@
-import type { EqualizerCanvasDimensions } from "../../domains/equalizer/equalizerState";
-import type { EqualizerDragTarget } from "../../domains/equalizer/equalizerState";
+import type { EqualizerCanvasDimensions, EqualizerDragTarget } from "./equalizerEditorState";
 import { ensureQFactor } from "../../domains/equalizer/equalizerMath";
 import { createEqualizerTooltips } from "./equalizerTooltips";
 import { attachEqualizerGestures } from "./equalizerGestures";

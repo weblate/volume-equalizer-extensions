@@ -1,20 +1,20 @@
-import type { EqualizerPersistedFilter } from "../equalizer/equalizerState";
+import type { EqualizerFilter } from "../equalizer/types";
 
 export interface DefaultPreset {
   name: string;
-  filters: EqualizerPersistedFilter[];
+  filters: EqualizerFilter[];
 }
 
-export type PresetStorage = Record<string, EqualizerPersistedFilter[] | undefined>;
+export type PresetStorage = Record<string, EqualizerFilter[] | undefined>;
 
 const createPresetFilters = (
   gains: [number, number, number, number, number, number, number, number, number],
-): EqualizerPersistedFilter[] => {
+): EqualizerFilter[] => {
   const freqs = [64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
   return [
     { type: "highpass", freq: 20, gain: 0, q: 0.5, enabled: false },
-    ...freqs.map((freq, index): EqualizerPersistedFilter => {
+    ...freqs.map((freq, index): EqualizerFilter => {
       return {
         type: "peaking",
         freq,
@@ -106,6 +106,6 @@ export const getAvailablePresetNames = (
 export const resolvePresetFilters = (
   name: string,
   userPresets: PresetStorage | undefined,
-): EqualizerPersistedFilter[] | undefined => {
+): EqualizerFilter[] | undefined => {
   return defaultPresetMap.get(name) ?? userPresets?.[name];
 };

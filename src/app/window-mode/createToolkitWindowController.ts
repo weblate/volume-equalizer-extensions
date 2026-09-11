@@ -1,8 +1,6 @@
-import type {
-  EqualizerPersistedFilter,
-  EqualizerState,
-} from "../../domains/equalizer/equalizerState";
 import type { EqualizerFilter } from "../../domains/equalizer/types";
+import { readPersistedFilters } from "../../domains/equalizer/persistedFilters";
+import type { EqualizerState } from "../../ui/equalizerCanvas/equalizerEditorState";
 import {
   applyBiquadSettings,
   createBiquadFilter,
@@ -24,7 +22,7 @@ interface ToolkitCapture {
   preamp: GainNode | null;
   filters: BiquadFilterNode[];
   output: AudioNode | null;
-  filterSettings: EqualizerPersistedFilter[];
+  filterSettings: EqualizerFilter[];
 }
 
 export interface ToolkitSpectrumMeta {
@@ -36,10 +34,10 @@ export interface ToolkitSpectrumMeta {
   frequencyBinCount: number;
 }
 
-const toBiquadInput = (filter: EqualizerPersistedFilter) => ({
-  freq: Number(filter.freq ?? 0),
-  gain: Number(filter.gain ?? 0),
-  q: Number(filter.q ?? 0.5),
+const toBiquadInput = (filter: EqualizerFilter) => ({
+  freq: filter.freq,
+  gain: filter.gain,
+  q: filter.q,
   type: filter.type,
 });
 
@@ -50,8 +48,8 @@ export const createToolkitWindowController = (deps: {
   equalizerState: EqualizerState;
   getDimensions(): { canvasWidth: number; canvasHeight: number };
   getPointCount(): Promise<number>;
-  getFilters(): EqualizerPersistedFilter[];
-  setFilters(filters: EqualizerPersistedFilter[]): void;
+  getFilters(): EqualizerFilter[];
+  setFilters(filters: EqualizerFilter[]): void;
   initPoints(count: number): void;
   resize(): void;
   setEnableButtonClass(enabled: boolean): void;
@@ -187,8 +185,8 @@ export const createToolkitWindowController = (deps: {
 
   const getCaptureFilterSettings = (
     tabId: number | string | null = activeTabId,
-  ): EqualizerPersistedFilter[] => {
-    let filters: EqualizerPersistedFilter[];
+  ): EqualizerFilter[] => {
+    let filters: EqualizerFilter[];
     if (tabId != null && Number(tabId) === activeTabId) {
       filters = deps.getFilters();
     } else {
@@ -199,7 +197,7 @@ export const createToolkitWindowController = (deps: {
     }
 
     return filters.filter((filter) => {
-      return isEqualizerFilterEnabled(filter as Partial<EqualizerFilter>);
+      return isEqualizerFilterEnabled(filter);
     });
   };
 
@@ -316,8 +314,8 @@ export const createToolkitWindowController = (deps: {
       STORAGE_KEYS.tabMute(tabId),
       STORAGE_KEYS.tabCaptureError(tabId),
     ]);
-    const tabFilters = result[STORAGE_KEYS.tabFilters(tabId)] as EqualizerPersistedFilter[] | undefined;
-    const defaultFilters = result[STORAGE_KEYS.FILTERS] as EqualizerPersistedFilter[] | undefined;
+    const tabFilters = readPersistedFilters(result[STORAGE_KEYS.tabFilters(tabId)]);
+    const defaultFilters = readPersistedFilters(result[STORAGE_KEYS.FILTERS]);
     const filters = tabFilters?.length ? tabFilters : defaultFilters?.length ? defaultFilters : null;
     const pointCount = filters ? null : await deps.getPointCount();
     if (generation !== settingsGeneration) return;
@@ -424,12 +422,10 @@ export const createToolkitWindowController = (deps: {
             STORAGE_KEYS.tabGain(Number(tabId)),
             STORAGE_KEYS.tabMute(Number(tabId)),
           ]);
-          const tabFilters = settings[
-            STORAGE_KEYS.tabFilters(Number(tabId))
-          ] as EqualizerPersistedFilter[] | undefined;
-          const defaultFilters = settings[STORAGE_KEYS.FILTERS] as
-            | EqualizerPersistedFilter[]
-            | undefined;
+          const tabFilters = readPersistedFilters(
+            settings[STORAGE_KEYS.tabFilters(Number(tabId))],
+          );
+          const defaultFilters = readPersistedFilters(settings[STORAGE_KEYS.FILTERS]);
           const gain = settings[STORAGE_KEYS.tabGain(Number(tabId))];
           const capture: ToolkitCapture = {
             streamId,

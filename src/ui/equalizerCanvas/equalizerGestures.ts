@@ -9,7 +9,7 @@ import type {
   EqualizerCanvasPoint,
   EqualizerDragTarget,
   EqualizerState,
-} from "../../domains/equalizer/equalizerState";
+} from "./equalizerEditorState";
 import type { EqualizerTooltipHelpers } from "./equalizerTooltips";
 
 export interface EqualizerGestureOptions {

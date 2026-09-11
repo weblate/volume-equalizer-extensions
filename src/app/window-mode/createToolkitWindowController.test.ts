@@ -991,7 +991,9 @@ describe("selected tab settings", () => {
     await controller.handleStorageChange({
       [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: { oldValue: 123, newValue: 1 },
     });
-    expect(effects.setFilters).toHaveBeenLastCalledWith([{ freq: 2000, gain: 2 }]);
+    expect(effects.setFilters).toHaveBeenLastCalledWith([
+      { type: "peaking", freq: 2000, gain: 2, q: 0.5 },
+    ]);
     expect(storage.session.set).not.toHaveBeenCalled();
   });
 
@@ -1005,7 +1007,9 @@ describe("selected tab settings", () => {
     await controller.handleStorageChange({
       [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: { oldValue: 123, newValue: 456 },
     });
-    expect(effects.setFilters).toHaveBeenLastCalledWith([{ freq: 4000, gain: 4 }]);
+    expect(effects.setFilters).toHaveBeenLastCalledWith([
+      { type: "peaking", freq: 4000, gain: 4, q: 0.5 },
+    ]);
   });
 
   test.each([false, true])("keeps the latest external selection when reads finish out of order: %s", async (latestFirst) => {
@@ -1024,7 +1028,9 @@ describe("selected tab settings", () => {
       b.resolve({ toolkitWindowActiveTabId: 2 }); await changeB;
       c.resolve({ toolkitWindowActiveTabId: 3 }); await changeC;
     }
-    expect(effects.setFilters).toHaveBeenLastCalledWith([{ freq: 3000, gain: 3 }]);
+    expect(effects.setFilters).toHaveBeenLastCalledWith([
+      { type: "peaking", freq: 3000, gain: 3, q: 0.5 },
+    ]);
   });
 
   test("stopping an active capture invalidates its in-flight settings", async () => {

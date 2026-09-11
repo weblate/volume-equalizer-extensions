@@ -1,4 +1,4 @@
-import type { EqualizerFilter, EqualizerFilterType } from "./types";
+import type { EqualizerFilter } from "../../domains/equalizer/types";
 
 import {
   clampPointCount,
@@ -7,8 +7,8 @@ import {
   frequencyToX,
   xToFrequency,
   yToDb,
-} from "./equalizerMath";
-import { isEqualizerFilterEnabled } from "./defaultFilters";
+} from "../../domains/equalizer/equalizerMath";
+import { isEqualizerFilterEnabled } from "../../domains/equalizer/defaultFilters";
 
 export interface EqualizerCanvasDimensions {
   canvasWidth: number;
@@ -28,23 +28,6 @@ export type EqualizerDragTarget =
   | { type: "highpass" }
   | { type: "lowpass" };
 
-export type EqualizerPersistedFilter = Partial<
-  Omit<EqualizerFilter, "type" | "freq" | "gain" | "q" | "enabled">
-> & {
-  type?: EqualizerFilterType;
-  freq?: unknown;
-  gain?: unknown;
-  q?: unknown;
-  x?: unknown;
-  y?: unknown;
-  enabled?: unknown;
-};
-
-export type EqualizerCanvasFilter = EqualizerFilter & {
-  x: number;
-  y: number;
-};
-
 export interface SetEqualizerPointsOptions {
   onPointCountChange?: (pointCount: number) => void;
 }
@@ -55,12 +38,12 @@ export interface EqualizerState {
   getLowpassPoint: () => EqualizerCanvasPoint | null;
   initPoints: (count: number, dimensions: EqualizerCanvasDimensions) => void;
   setPoints: (
-    filters: EqualizerPersistedFilter[],
+    filters: EqualizerFilter[],
     dimensions: EqualizerCanvasDimensions,
     options?: SetEqualizerPointsOptions,
   ) => void;
-  getFilters: (dimensions: EqualizerCanvasDimensions) => EqualizerCanvasFilter[];
-  hasCrossoverFilters: (filters: EqualizerPersistedFilter[]) => boolean;
+  getFilters: (dimensions: EqualizerCanvasDimensions) => EqualizerFilter[];
+  hasCrossoverFilters: (filters: EqualizerFilter[]) => boolean;
   getPointIndexAtPosition: (x: number, y: number) => EqualizerDragTarget | null;
   getDraggedPoint: () => EqualizerCanvasPoint | null;
   setDraggedPoint: (point: EqualizerCanvasPoint) => void;
@@ -89,12 +72,6 @@ const getFrequencyCanvasWidth = (dimensions: EqualizerCanvasDimensions): number 
   return dimensions.canvasWidth - 10;
 };
 
-const finiteNumberOrNull = (value: unknown): number | null => {
-  const numberValue = Number(value);
-
-  return Number.isFinite(numberValue) ? numberValue : null;
-};
-
 const createPeakingFilterPoint = (
   index: number,
   count: number,
@@ -113,28 +90,25 @@ const createPeakingFilterPoint = (
 const createCrossoverPoint = (
   freq: number,
   dimensions: EqualizerCanvasDimensions,
-  filter: EqualizerPersistedFilter = {},
+  filter?: EqualizerFilter,
 ): EqualizerCanvasPoint => {
-  const x = finiteNumberOrNull(filter.x);
-  const filterFreq = finiteNumberOrNull(filter.freq ?? freq);
-
   return {
-    x: x ?? frequencyToX(filterFreq ?? freq, getFrequencyCanvasWidth(dimensions)),
+    x: frequencyToX(filter?.freq ?? freq, getFrequencyCanvasWidth(dimensions)),
     y: dimensions.canvasHeight / 2,
-    q: ensureQFactor(filter.q),
+    q: ensureQFactor(filter?.q),
   };
 };
 
 const createDefaultHighpassPoint = (
   dimensions: EqualizerCanvasDimensions,
-  filter: EqualizerPersistedFilter = {},
+  filter?: EqualizerFilter,
 ): EqualizerCanvasPoint => {
   return createCrossoverPoint(DEFAULT_HIGHPASS_FREQ, dimensions, filter);
 };
 
 const createDefaultLowpassPoint = (
   dimensions: EqualizerCanvasDimensions,
-  filter: EqualizerPersistedFilter = {},
+  filter?: EqualizerFilter,
 ): EqualizerCanvasPoint => {
   return createCrossoverPoint(DEFAULT_LOWPASS_FREQ, dimensions, filter);
 };
@@ -217,31 +191,24 @@ export const createEqualizerState = (): EqualizerState => {
       highpassPoint = createDefaultHighpassPoint(dimensions, highpassFilter);
       lowpassPoint = createDefaultLowpassPoint(dimensions, lowpassFilter);
       highpassEnabled = highpassFilter
-        ? isEqualizerFilterEnabled(highpassFilter as Partial<EqualizerFilter>)
+        ? isEqualizerFilterEnabled(highpassFilter)
         : false;
       lowpassEnabled = lowpassFilter
-        ? isEqualizerFilterEnabled(lowpassFilter as Partial<EqualizerFilter>)
+        ? isEqualizerFilterEnabled(lowpassFilter)
         : false;
-      points = peakingFilters.map((filter, index) => {
-        const centeredPoint = createPeakingFilterPoint(index, pointCount, dimensions);
-        const freq = finiteNumberOrNull(filter.freq);
-        const gain = finiteNumberOrNull(filter.gain);
-        const x = finiteNumberOrNull(filter.x);
-        const y = finiteNumberOrNull(filter.y);
-
+      points = peakingFilters.map((filter) => {
         return {
-          x: x ?? (freq == null ? centeredPoint.x : frequencyToX(freq, getFrequencyCanvasWidth(dimensions))),
-          y: y ?? (gain == null
-            ? centeredPoint.y
-            : dimensions.canvasHeight / 2 -
-              (gain / 25) * (dimensions.canvasHeight / 2 - 20)),
+          x: frequencyToX(filter.freq, getFrequencyCanvasWidth(dimensions)),
+          y:
+            dimensions.canvasHeight / 2 -
+            (filter.gain / 25) * (dimensions.canvasHeight / 2 - 20),
           q: ensureQFactor(filter.q),
         };
       });
     },
 
     getFilters: (dimensions) => {
-      const filters: EqualizerCanvasFilter[] = [];
+      const filters: EqualizerFilter[] = [];
       const canvasWidth = getFrequencyCanvasWidth(dimensions);
 
       if (highpassPoint) {
@@ -251,8 +218,6 @@ export const createEqualizerState = (): EqualizerState => {
           freq: xToFrequency(highpassPoint.x, canvasWidth),
           gain: 0,
           q: ensureQFactor(highpassPoint.q),
-          x: highpassPoint.x,
-          y: highpassPoint.y,
         });
       }
 
@@ -262,8 +227,6 @@ export const createEqualizerState = (): EqualizerState => {
           freq: xToFrequency(point.x, canvasWidth),
           gain: yToDb(point.y, dimensions.canvasHeight),
           q: ensureQFactor(point.q),
-          x: point.x,
-          y: point.y,
         });
       });
 
@@ -274,8 +237,6 @@ export const createEqualizerState = (): EqualizerState => {
           freq: xToFrequency(lowpassPoint.x, canvasWidth),
           gain: 0,
           q: ensureQFactor(lowpassPoint.q),
-          x: lowpassPoint.x,
-          y: lowpassPoint.y,
         });
       }
 
