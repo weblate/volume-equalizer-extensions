@@ -30,10 +30,17 @@ type SendRuntimeMessageWithCallback = (
 const sendRuntimeMessageWithCallback = chrome.runtime
   .sendMessage as unknown as SendRuntimeMessageWithCallback;
 
+const failingOperations = new Set<string>();
+
 const reportAsyncFailure = (operation: string, promise: Promise<unknown>): void => {
-  void promise.catch((error: unknown) => {
-    console.error(`Failed to ${operation}`, { operation, error });
-  });
+  void promise.then(
+    () => failingOperations.delete(operation),
+    (error: unknown) => {
+      if (failingOperations.has(operation)) return;
+      failingOperations.add(operation);
+      console.error(`Failed to ${operation}`, { operation, error });
+    },
+  );
 };
 
 const existingPort = document.getElementById("eq-tools-port");
