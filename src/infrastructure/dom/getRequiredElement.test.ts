@@ -21,9 +21,9 @@ describe("getRequiredElement", () => {
     try {
       delete (globalThis as { CSS?: typeof CSS }).CSS;
 
-      expect(() =>
-        getRequiredElement(createRoot(null), "missing.id", expectedConstructor),
-      ).toThrow("Missing required element #missing.id");
+      expect(() => getRequiredElement(createRoot(null), "missing.id", expectedConstructor)).toThrow(
+        "Missing required element #missing.id",
+      );
     } finally {
       if (originalCss) {
         (globalThis as { CSS?: typeof CSS }).CSS = originalCss;
@@ -33,11 +33,7 @@ describe("getRequiredElement", () => {
 
   test("reports expected and actual element types", () => {
     expect(() =>
-      getRequiredElement(
-        createRoot(new ActualElement()),
-        "settings-modal",
-        expectedConstructor,
-      ),
+      getRequiredElement(createRoot(new ActualElement()), "settings-modal", expectedConstructor),
     ).toThrow(
       "Element #settings-modal has an unexpected type. Expected ExpectedElement, received ActualElement/div.",
     );

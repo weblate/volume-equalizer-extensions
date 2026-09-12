@@ -8,12 +8,9 @@ describe("parsePresetImport", () => {
     "null",
     '{"presetNames":"bad"}',
     '{"presetNames":["Broken"],"presets":{"Broken":{}}}',
-  ])(
-    "rejects invalid import %s",
-    (text) => {
-      expect(parsePresetImport(text).ok).toBe(false);
-    },
-  );
+  ])("rejects invalid import %s", (text) => {
+    expect(parsePresetImport(text).ok).toBe(false);
+  });
 
   test("round-trips the current export format", () => {
     const exported = {
@@ -112,20 +109,17 @@ describe("parsePresetImport", () => {
     ).toEqual({ ok: false, error: "filter" });
   });
 
-  test.each([
-    "",
-    "  ",
-    "__proto__",
-    "constructor",
-    "prototype",
-  ])("rejects an unsafe or empty name %s", (name) => {
-    const exported = JSON.stringify({
-      presetNames: [name],
-      presets: { [name]: [] },
-    });
+  test.each(["", "  ", "__proto__", "constructor", "prototype"])(
+    "rejects an unsafe or empty name %s",
+    (name) => {
+      const exported = JSON.stringify({
+        presetNames: [name],
+        presets: { [name]: [] },
+      });
 
-    expect(parsePresetImport(exported)).toEqual({ ok: false, error: "name" });
-  });
+      expect(parsePresetImport(exported)).toEqual({ ok: false, error: "name" });
+    },
+  );
 
   test("rejects duplicate names after trimming", () => {
     const exported = JSON.stringify({

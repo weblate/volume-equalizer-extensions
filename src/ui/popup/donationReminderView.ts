@@ -19,10 +19,7 @@ export const createDonationReminderView = (deps: {
   deps.closeButton.addEventListener("click", modalFocus.close);
   deps.modal.addEventListener("modal-closed", () => {
     void chrome.storage.local.set({
-      [STORAGE_KEYS.DONATION_REMINDER_AT]: getNextDonationReminderAt(
-        now(),
-        random(),
-      ),
+      [STORAGE_KEYS.DONATION_REMINDER_AT]: getNextDonationReminderAt(now(), random()),
     });
   });
 

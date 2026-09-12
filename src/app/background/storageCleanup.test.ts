@@ -1,11 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
-import {
-  clearTabStorage,
-  clearUnusedStorage,
-  parseTabStorageKey,
-} from "./storageCleanup";
+import { clearTabStorage, clearUnusedStorage, parseTabStorageKey } from "./storageCleanup";
 
 describe("clearUnusedStorage", () => {
   beforeEach(() => {
@@ -46,14 +42,16 @@ describe("clearUnusedStorage", () => {
       },
       storage: {
         local: {
-          getKeys: vi.fn().mockResolvedValue([
-            STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
-            STORAGE_KEYS.SKIP_POINTS_CONFIRM,
-            "futureSetting",
-            STORAGE_KEYS.tabFilters(12),
-            STORAGE_KEYS.tabVolume(13),
-            "custom.13",
-          ]),
+          getKeys: vi
+            .fn()
+            .mockResolvedValue([
+              STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
+              STORAGE_KEYS.SKIP_POINTS_CONFIRM,
+              "futureSetting",
+              STORAGE_KEYS.tabFilters(12),
+              STORAGE_KEYS.tabVolume(13),
+              "custom.13",
+            ]),
           remove,
         },
       },
@@ -67,11 +65,7 @@ describe("clearUnusedStorage", () => {
 
     expect(remove).toHaveBeenCalledWith(["volume.13"]);
     expect(remove).not.toHaveBeenCalledWith(
-      expect.arrayContaining([
-        "hideDefaultPresets",
-        "skipPointsResetConfirm",
-        "futureSetting",
-      ]),
+      expect.arrayContaining(["hideDefaultPresets", "skipPointsResetConfirm", "futureSetting"]),
     );
     expect(cleanupFinished).toBe(false);
 

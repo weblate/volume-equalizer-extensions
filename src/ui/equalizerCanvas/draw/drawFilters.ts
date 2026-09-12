@@ -1,12 +1,5 @@
-import {
-  ensureQFactor,
-  xToFrequency,
-  yToDb,
-} from "../../../domains/equalizer/equalizerMath";
-import {
-  POINT_RADIUS,
-  type EqualizerCanvasPoint,
-} from "../equalizerEditorState";
+import { ensureQFactor, xToFrequency, yToDb } from "../../../domains/equalizer/equalizerMath";
+import { POINT_RADIUS, type EqualizerCanvasPoint } from "../equalizerEditorState";
 import type { ThemeColors } from "../../theme/themeColors";
 import type { EqualizerCanvasRenderOptions } from "../types";
 import { drawBiquadFilter } from "./drawBiquadFilter";
@@ -59,18 +52,8 @@ export const drawPoints = ({
     ctx.stroke();
   });
 
-  drawTypedPoint(
-    ctx,
-    state.getHighpassPoint(),
-    colors.highpassFilterColor,
-    colors.panelBg,
-  );
-  drawTypedPoint(
-    ctx,
-    state.getLowpassPoint(),
-    colors.lowpassFilterColor,
-    colors.panelBg,
-  );
+  drawTypedPoint(ctx, state.getHighpassPoint(), colors.highpassFilterColor, colors.panelBg);
+  drawTypedPoint(ctx, state.getLowpassPoint(), colors.lowpassFilterColor, colors.panelBg);
 };
 
 export const drawFilter = ({

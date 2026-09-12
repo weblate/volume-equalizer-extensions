@@ -517,8 +517,7 @@ export const createPopupApp = ({
 
     const tabId = await getCurrentTabId();
     if (disposed) return;
-    const showWindowNotice =
-      await toolkitController.shouldShowToolkitWindowNotice(tabId);
+    const showWindowNotice = await toolkitController.shouldShowToolkitWindowNotice(tabId);
     if (disposed) return;
     if (showWindowNotice) {
       toolkitController.showToolkitWindowNotice();

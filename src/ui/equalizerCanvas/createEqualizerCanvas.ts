@@ -13,9 +13,7 @@ export interface CreateEqualizerCanvasOptions extends EqualizerCanvasRenderOptio
   keyboardStatus: HTMLElement;
 }
 
-export const createEqualizerCanvas = (
-  options: CreateEqualizerCanvasOptions,
-) => {
+export const createEqualizerCanvas = (options: CreateEqualizerCanvasOptions) => {
   let selectedTarget: EqualizerDragTarget | null = null;
   const getDimensions = (): EqualizerCanvasDimensions => {
     return {
@@ -49,11 +47,12 @@ export const createEqualizerCanvas = (
         options.keyboardStatus.textContent = "";
         return;
       }
-      const point = target.type === "highpass"
-        ? options.state.getHighpassPoint()
-        : target.type === "lowpass"
-          ? options.state.getLowpassPoint()
-          : options.state.getPoints()[target.index];
+      const point =
+        target.type === "highpass"
+          ? options.state.getHighpassPoint()
+          : target.type === "lowpass"
+            ? options.state.getLowpassPoint()
+            : options.state.getPoints()[target.index];
       if (!point) return;
       const value = tooltips.getPointTooltipText(point, getDimensions());
       options.keyboardStatus.textContent = `${index + 1}. ${value}, Q ${ensureQFactor(point.q).toFixed(2)}`;

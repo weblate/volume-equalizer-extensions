@@ -1,13 +1,8 @@
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 
 export const parseTabStorageKey = (key: string): number | null => {
-  const match =
-    /^(?:filters|enabled|mute|gain|volume|pan|captureError|spectrum)\.(\d+)$/.exec(
-      key,
-    );
-  return match && Number.isSafeInteger(Number(match[1]))
-    ? Number(match[1])
-    : null;
+  const match = /^(?:filters|enabled|mute|gain|volume|pan|captureError|spectrum)\.(\d+)$/.exec(key);
+  return match && Number.isSafeInteger(Number(match[1])) ? Number(match[1]) : null;
 };
 
 export const clearTabStorage = async (tabId: number): Promise<void> => {
@@ -26,9 +21,7 @@ export const clearTabStorage = async (tabId: number): Promise<void> => {
 export const clearUnusedStorage = async (): Promise<void> => {
   const keys = await chrome.storage.local.getKeys();
   const tabs = await chrome.tabs.query({});
-  const tabIds = new Set(
-    tabs.flatMap(({ id }) => (id == null ? [] : [id])),
-  );
+  const tabIds = new Set(tabs.flatMap(({ id }) => (id == null ? [] : [id])));
   const unusedKeys = keys.filter((key) => {
     const tabId = parseTabStorageKey(key);
     return tabId != null && !tabIds.has(tabId);

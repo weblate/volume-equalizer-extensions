@@ -75,11 +75,7 @@ const syncSpectrumCanvasSize = (canvas: HTMLCanvasElement): void => {
   }
 };
 
-const spectrumBinToFrequency = (
-  index: number,
-  binCount: number,
-  meta: SpectrumMeta,
-): number => {
+const spectrumBinToFrequency = (index: number, binCount: number, meta: SpectrumMeta): number => {
   const sampleRate = meta.sampleRate || 48000;
   const nyquist = sampleRate / 2;
 

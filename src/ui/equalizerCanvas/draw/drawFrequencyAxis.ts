@@ -1,11 +1,7 @@
 import { LOG_MAX, LOG_MIN } from "../../../domains/equalizer/equalizerMath";
 import type { EqualizerCanvasPaintOptions } from "../types";
 
-export const drawAxis = ({
-  canvas,
-  ctx,
-  getColors,
-}: EqualizerCanvasPaintOptions): void => {
+export const drawAxis = ({ canvas, ctx, getColors }: EqualizerCanvasPaintOptions): void => {
   const colors = getColors();
   const freqMargin = 10;
   const margin = 10;
@@ -21,9 +17,7 @@ export const drawAxis = ({
   ctx.fillStyle = colors.axis;
 
   freqs.forEach((freq) => {
-    const x =
-      Math.pow((Math.log10(freq) - LOG_MIN) / (LOG_MAX - LOG_MIN), 2) *
-      canvasWidth;
+    const x = Math.pow((Math.log10(freq) - LOG_MIN) / (LOG_MAX - LOG_MIN), 2) * canvasWidth;
     ctx.beginPath();
     ctx.moveTo(x, yPos - 10);
     ctx.lineTo(x, yPos);
@@ -50,8 +44,7 @@ export const drawAxis = ({
   gainLabels.forEach((gain) => {
     const y =
       gainMargin +
-      ((gainMax - gain) / (gainMax - gainMin)) *
-        (canvas.clientHeight - gainMargin * 2);
+      ((gainMax - gain) / (gainMax - gainMin)) * (canvas.clientHeight - gainMargin * 2);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(10, y);
@@ -60,15 +53,12 @@ export const drawAxis = ({
   });
 
   const zeroY =
-    gainMargin +
-    ((gainMax - 0) / (gainMax - gainMin)) * (canvas.clientHeight - gainMargin * 2);
+    gainMargin + ((gainMax - 0) / (gainMax - gainMin)) * (canvas.clientHeight - gainMargin * 2);
   ctx.textBaseline = "bottom";
   ctx.textAlign = "center";
 
   freqs.forEach((freq) => {
-    const x =
-      Math.pow((Math.log10(freq) - LOG_MIN) / (LOG_MAX - LOG_MIN), 2) *
-      canvasWidth;
+    const x = Math.pow((Math.log10(freq) - LOG_MIN) / (LOG_MAX - LOG_MIN), 2) * canvasWidth;
     ctx.beginPath();
     ctx.moveTo(x, zeroY - 5);
     ctx.lineTo(x, zeroY + 5);

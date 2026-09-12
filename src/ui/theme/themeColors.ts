@@ -8,9 +8,7 @@ export interface ThemeColors {
   axis: string;
 }
 
-export const readThemeColors = (
-  element: Element = document.documentElement,
-): ThemeColors => {
+export const readThemeColors = (element: Element = document.documentElement): ThemeColors => {
   const css = getComputedStyle(element);
 
   return {

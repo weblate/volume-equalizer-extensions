@@ -24,9 +24,7 @@ export interface EqualizerCanvasPoint {
 export type EqualizerDragMode = "point" | "q";
 
 export type EqualizerDragTarget =
-  | { type: "peaking"; index: number }
-  | { type: "highpass" }
-  | { type: "lowpass" };
+  { type: "peaking"; index: number } | { type: "highpass" } | { type: "lowpass" };
 
 export interface SetEqualizerPointsOptions {
   onPointCountChange?: (pointCount: number) => void;
@@ -47,16 +45,10 @@ export interface EqualizerState {
   getPointIndexAtPosition: (x: number, y: number) => EqualizerDragTarget | null;
   getDraggedPoint: () => EqualizerCanvasPoint | null;
   setDraggedPoint: (point: EqualizerCanvasPoint) => void;
-  setDragTarget: (
-    target: EqualizerDragTarget | null,
-    mode: EqualizerDragMode | null,
-  ) => void;
+  setDragTarget: (target: EqualizerDragTarget | null, mode: EqualizerDragMode | null) => void;
   clearDrag: () => void;
   getDragMode: () => EqualizerDragMode | null;
-  resetPoint: (
-    target: EqualizerDragTarget | null,
-    dimensions: EqualizerCanvasDimensions,
-  ) => void;
+  resetPoint: (target: EqualizerDragTarget | null, dimensions: EqualizerCanvasDimensions) => void;
 }
 
 export const POINT_RADIUS = 3;
@@ -122,11 +114,7 @@ const createPeakingFilterPoints = (
   });
 };
 
-const pointMatchesPosition = (
-  point: EqualizerCanvasPoint,
-  x: number,
-  y: number,
-): boolean => {
+const pointMatchesPosition = (point: EqualizerCanvasPoint, x: number, y: number): boolean => {
   return Math.hypot(point.x - x, point.y - y) < POINT_RADIUS + 2;
 };
 
@@ -190,18 +178,12 @@ export const createEqualizerState = (): EqualizerState => {
       options.onPointCountChange?.(pointCount);
       highpassPoint = createDefaultHighpassPoint(dimensions, highpassFilter);
       lowpassPoint = createDefaultLowpassPoint(dimensions, lowpassFilter);
-      highpassEnabled = highpassFilter
-        ? isEqualizerFilterEnabled(highpassFilter)
-        : false;
-      lowpassEnabled = lowpassFilter
-        ? isEqualizerFilterEnabled(lowpassFilter)
-        : false;
+      highpassEnabled = highpassFilter ? isEqualizerFilterEnabled(highpassFilter) : false;
+      lowpassEnabled = lowpassFilter ? isEqualizerFilterEnabled(lowpassFilter) : false;
       points = peakingFilters.map((filter) => {
         return {
           x: frequencyToX(filter.freq, getFrequencyCanvasWidth(dimensions)),
-          y:
-            dimensions.canvasHeight / 2 -
-            (filter.gain / 25) * (dimensions.canvasHeight / 2 - 20),
+          y: dimensions.canvasHeight / 2 - (filter.gain / 25) * (dimensions.canvasHeight / 2 - 20),
           q: ensureQFactor(filter.q),
         };
       });
@@ -326,11 +308,7 @@ export const createEqualizerState = (): EqualizerState => {
         return;
       }
 
-      points[target.index] = createPeakingFilterPoint(
-        target.index,
-        points.length,
-        dimensions,
-      );
+      points[target.index] = createPeakingFilterPoint(target.index, points.length, dimensions);
     },
   };
 };

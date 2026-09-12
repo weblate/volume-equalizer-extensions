@@ -21,7 +21,7 @@ describe("shortcuts", () => {
         shift: false,
         meta: false,
         key: "K",
-      })
+      }),
     ).toBe("Ctrl+Alt+K");
   });
 
@@ -33,7 +33,7 @@ describe("shortcuts", () => {
         shift: false,
         meta: false,
         key: "K",
-      })
+      }),
     ).toBeNull();
   });
 
@@ -50,7 +50,7 @@ describe("shortcuts", () => {
       validateShortcutConfig({
         mute: duplicateShortcut,
         toggleEq: duplicateShortcut,
-      })
+      }),
     ).toBe("duplicate");
   });
 });

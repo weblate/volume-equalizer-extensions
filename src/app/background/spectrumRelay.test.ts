@@ -108,10 +108,7 @@ describe("createSpectrumRelay", () => {
     relay.acceptFrame(frame, sender(12, 1));
     relay.acceptFrame({ ...meta, sampleRate: 44100 }, sender(12, 2));
     relay.acceptFrame({ ...frame, buffer: [-30] }, sender(12, 2));
-    relay.acceptFrame(
-      { type: "spectrum", buffer: null, clipping: false },
-      sender(12, 1),
-    );
+    relay.acceptFrame({ type: "spectrum", buffer: null, clipping: false }, sender(12, 1));
     relay.acceptFrame({ ...frame, buffer: [-29] }, sender(12, 2));
 
     expect(client.postMessage.mock.calls.map(([message]) => message)).toEqual([

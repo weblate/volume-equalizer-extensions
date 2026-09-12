@@ -36,10 +36,7 @@ export const drawBiquadFilter = ({
   const maxFrequency = audioContext.sampleRate / 2;
 
   for (let i = 0; i < width; i++) {
-    frequencies[i] = Math.min(
-      xToFrequency(i, width - 10),
-      maxFrequency,
-    );
+    frequencies[i] = Math.min(xToFrequency(i, width - 10), maxFrequency);
   }
 
   filter.getFrequencyResponse(frequencies, magnitudes, phases);
@@ -48,8 +45,7 @@ export const drawBiquadFilter = ({
   ctx.beginPath();
 
   for (let i = 0; i < width; i++) {
-    const magnitude =
-      minDb == null ? magnitudes[i] : magnitudes[i] || Number.EPSILON;
+    const magnitude = minDb == null ? magnitudes[i] : magnitudes[i] || Number.EPSILON;
     const response = 25 * Math.log10(magnitude);
     const db = minDb == null ? response : Math.max(minDb, response);
     const y = height / 2 - (db / 25) * (height / 2 - 40);

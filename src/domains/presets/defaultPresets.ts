@@ -82,9 +82,7 @@ export const DEFAULT_PRESETS: DefaultPreset[] = [
   },
 ];
 
-const defaultPresetMap = new Map(
-  DEFAULT_PRESETS.map((preset) => [preset.name, preset.filters]),
-);
+const defaultPresetMap = new Map(DEFAULT_PRESETS.map((preset) => [preset.name, preset.filters]));
 
 export const isDefaultPresetName = (name: string): boolean => {
   return defaultPresetMap.has(name);

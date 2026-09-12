@@ -50,11 +50,13 @@ describe("getPendingInstallUpdateNotice", () => {
   });
 
   it("shows Patch Notes for updates but not installs", () => {
-    const modal = Object.assign(new EventTarget(), { style: { display: "none" } }) as unknown as HTMLElement;
+    const modal = Object.assign(new EventTarget(), {
+      style: { display: "none" },
+    }) as unknown as HTMLElement;
     const closeButton = { addEventListener: vi.fn() } as unknown as HTMLElement;
     const view = createInstallUpdateNoticeView({
       modal,
-    returnFocusTo: modal,
+      returnFocusTo: modal,
       closeButton,
       topCloseButton: closeButton,
     });
@@ -77,11 +79,13 @@ describe("getPendingInstallUpdateNotice", () => {
           listeners.push(listener);
         },
       }) as unknown as HTMLElement;
-    const modal = Object.assign(new EventTarget(), { style: { display: "block" } }) as unknown as HTMLElement;
+    const modal = Object.assign(new EventTarget(), {
+      style: { display: "block" },
+    }) as unknown as HTMLElement;
 
     createInstallUpdateNoticeView({
       modal,
-    returnFocusTo: modal,
+      returnFocusTo: modal,
       closeButton: createCloseButton(),
       topCloseButton: createCloseButton(),
     });
@@ -98,7 +102,9 @@ describe("getPendingInstallUpdateNotice", () => {
 // Modal keyboard/inert behavior is exercised separately; these tests cover view actions.
 vi.mock("./modalFocus", () => ({
   attachModalFocus: (modal: HTMLElement) => ({
-    open: () => { modal.style.display = "block"; },
+    open: () => {
+      modal.style.display = "block";
+    },
     close: () => {
       modal.style.display = "none";
       modal.dispatchEvent(new Event("modal-closed"));

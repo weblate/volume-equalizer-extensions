@@ -9,7 +9,7 @@ export interface ApplyAutostartOptions {
 export const applyAutostartForTab = async (
   tabId: number | undefined,
   url: string | undefined,
-  options: ApplyAutostartOptions = {}
+  options: ApplyAutostartOptions = {},
 ): Promise<void> => {
   if (tabId == null || !url || !url.startsWith("http")) return;
 
@@ -17,10 +17,7 @@ export const applyAutostartForTab = async (
     STORAGE_KEYS.AUTOSTART_RULES,
     STORAGE_KEYS.PRESETS,
   ]);
-  const entry = findWhitelistMatch(
-    stored[STORAGE_KEYS.AUTOSTART_RULES],
-    url
-  );
+  const entry = findWhitelistMatch(stored[STORAGE_KEYS.AUTOSTART_RULES], url);
   if (!entry) {
     if (options.resetWhenNoMatch) {
       await chrome.storage.local.set({ [STORAGE_KEYS.tabEnabled(tabId)]: false });
@@ -35,12 +32,8 @@ export const applyAutostartForTab = async (
     return;
   }
 
-  const session = await chrome.storage.session.get(
-    STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
-  );
-  const capturedTabIds = Array.isArray(
-    session[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS],
-  )
+  const session = await chrome.storage.session.get(STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS);
+  const capturedTabIds = Array.isArray(session[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS])
     ? session[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]
     : [];
 

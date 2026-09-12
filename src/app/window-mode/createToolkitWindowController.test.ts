@@ -132,10 +132,7 @@ const createChromeStorage = () => {
     }
 
     return Object.fromEntries(
-      Object.entries(keys).map(([key, fallback]) => [
-        key,
-        store[key] ?? fallback,
-      ]),
+      Object.entries(keys).map(([key, fallback]) => [key, store[key] ?? fallback]),
     );
   };
 
@@ -175,9 +172,7 @@ const createController = (
     capturedTabs: new FakeElement() as unknown as HTMLElement,
     audioContext: audioContext as unknown as AudioContext,
     getPointCount: () => Promise.resolve(3),
-    getFilters: () => [
-      { type: "peaking", freq: 1000, gain: 0, q: 0.5 },
-    ],
+    getFilters: () => [{ type: "peaking", freq: 1000, gain: 0, q: 0.5 }],
     setFilters: vi.fn(),
     initPoints: vi.fn(),
     resize: vi.fn(),
@@ -203,9 +198,12 @@ describe("createToolkitWindowController spectrum", () => {
   test("does not start a local sampler after capture demand is disposed", async () => {
     const storage = createChromeStorage();
     let resolveStream!: (stream: FakeMediaStream) => void;
-    const getUserMedia = vi.fn(() => new Promise<FakeMediaStream>((resolve) => {
-      resolveStream = resolve;
-    }));
+    const getUserMedia = vi.fn(
+      () =>
+        new Promise<FakeMediaStream>((resolve) => {
+          resolveStream = resolve;
+        }),
+    );
     vi.stubGlobal("window", {
       location: { search: "?mode=window" },
       addEventListener: vi.fn(),
@@ -215,7 +213,10 @@ describe("createToolkitWindowController spectrum", () => {
     });
     vi.stubGlobal("navigator", { mediaDevices: { getUserMedia } });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
     const { controller } = createController();
 
@@ -245,14 +246,15 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
       getGainValue: () => 6,
-      getFilters: () => [
-        { type: "peaking", freq: 1000, gain: 6, q: 0.5 },
-      ],
+      getFilters: () => [{ type: "peaking", freq: 1000, gain: 6, q: 0.5 }],
     });
 
     await controller.startTabCapture();
@@ -277,7 +279,10 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
@@ -314,7 +319,10 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
@@ -323,22 +331,18 @@ describe("createToolkitWindowController spectrum", () => {
     });
 
     await controller.startTabCapture();
-    const filteredPreamp = audioContext.createdSource
-      ?.connections[0] as FakeGainNode;
+    const filteredPreamp = audioContext.createdSource?.connections[0] as FakeGainNode;
     expect(filteredPreamp.gain.value).toBeCloseTo(dbToGain(6));
     expect(filteredPreamp.connections[0]).toBeInstanceOf(FakeBiquadFilterNode);
     expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
 
     controller.toggleEqualizer();
 
-    const bypassPreamp = audioContext.createdSource
-      ?.connections[0] as FakeGainNode;
+    const bypassPreamp = audioContext.createdSource?.connections[0] as FakeGainNode;
     expect(bypassPreamp.gain.value).toBe(1);
     expect(bypassPreamp.connections).toContain(audioContext.destination);
     expect(
-      bypassPreamp.connections.some(
-        (connection) => connection instanceof FakeBiquadFilterNode,
-      ),
+      bypassPreamp.connections.some((connection) => connection instanceof FakeBiquadFilterNode),
     ).toBe(false);
     expect(setEnableButtonClass).toHaveBeenLastCalledWith(false);
 
@@ -352,8 +356,7 @@ describe("createToolkitWindowController spectrum", () => {
     expect(setEnableButtonClass).toHaveBeenCalledWith(false);
 
     controller.toggleEqualizer();
-    const restoredPreamp = audioContext.createdSource
-      ?.connections[0] as FakeGainNode;
+    const restoredPreamp = audioContext.createdSource?.connections[0] as FakeGainNode;
     expect(restoredPreamp.gain.value).toBeCloseTo(dbToGain(6));
     expect(restoredPreamp.connections[0]).toBeInstanceOf(FakeBiquadFilterNode);
     expect(setEnableButtonClass).toHaveBeenLastCalledWith(true);
@@ -380,7 +383,10 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller } = createController({ setEnableButtonClass });
@@ -424,7 +430,10 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
@@ -460,10 +469,13 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
-      callback();
-      return 1;
-    }));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn((callback: () => void) => {
+        callback();
+        return 1;
+      }),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
@@ -511,10 +523,13 @@ describe("createToolkitWindowController spectrum", () => {
         sendMessage: vi.fn(() => Promise.resolve({ tabs: [], activeTabId: 456 })),
       },
     });
-    vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
-      callback();
-      return 1;
-    }));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn((callback: () => void) => {
+        callback();
+        return 1;
+      }),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
@@ -557,10 +572,13 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
-      callback();
-      return 1;
-    }));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn((callback: () => void) => {
+        callback();
+        return 1;
+      }),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller } = createController({
@@ -597,14 +615,16 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController();
     await controller.startTabCapture();
-    const output = (
-      audioContext.createdSource?.connections[0] as FakeGainNode
-    ).connections[0] as FakeAudioNode;
+    const output = (audioContext.createdSource?.connections[0] as FakeGainNode)
+      .connections[0] as FakeAudioNode;
     const analyser = audioContext.createdAnalyser;
     const disconnect = vi.spyOn(output, "disconnect");
 
@@ -646,17 +666,18 @@ describe("createToolkitWindowController spectrum", () => {
         sendMessage: vi.fn(() => Promise.resolve({ tabs: [], activeTabId: 456 })),
       },
     });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController();
     await controller.startTabCapture();
-    const firstOutput = (
-      audioContext.createdSources[0].connections[0] as FakeGainNode
-    ).connections[0] as FakeAudioNode;
-    const secondOutput = (
-      audioContext.createdSources[1].connections[0] as FakeGainNode
-    ).connections[0] as FakeAudioNode;
+    const firstOutput = (audioContext.createdSources[0].connections[0] as FakeGainNode)
+      .connections[0] as FakeAudioNode;
+    const secondOutput = (audioContext.createdSources[1].connections[0] as FakeGainNode)
+      .connections[0] as FakeAudioNode;
     const analyser = audioContext.createdAnalyser;
 
     storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] = 456;
@@ -691,10 +712,13 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn((tick: () => void) => {
-      ticks.push(tick);
-      return ticks.length;
-    }));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn((tick: () => void) => {
+        ticks.push(tick);
+        return ticks.length;
+      }),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
@@ -733,14 +757,16 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController();
     await controller.startTabCapture();
-    const output = (
-      audioContext.createdSource?.connections[0] as FakeGainNode
-    ).connections[0] as FakeAudioNode;
+    const output = (audioContext.createdSource?.connections[0] as FakeGainNode)
+      .connections[0] as FakeAudioNode;
     const analyser = audioContext.createdAnalyser;
     const disconnect = vi.spyOn(output, "disconnect");
 
@@ -766,10 +792,13 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
-      callback();
-      return 1;
-    }));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn((callback: () => void) => {
+        callback();
+        return 1;
+      }),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller } = createController();
@@ -800,15 +829,17 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn(() => 1));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController();
 
     await controller.startTabCapture();
     controller.toggleEqualizer();
-    const bypassPreamp = audioContext.createdSource
-      ?.connections[0] as FakeGainNode;
+    const bypassPreamp = audioContext.createdSource?.connections[0] as FakeGainNode;
     vi.mocked(setInterval).mockClear();
     vi.mocked(clearInterval).mockClear();
 
@@ -821,9 +852,7 @@ describe("createToolkitWindowController spectrum", () => {
 
   test("restarts spectrum with the same analyser after rebuilding the active graph", async () => {
     const storage = createChromeStorage();
-    let filters = [
-      { type: "peaking" as const, freq: 1000, gain: 0, q: 0.5 },
-    ];
+    let filters = [{ type: "peaking" as const, freq: 1000, gain: 0, q: 0.5 }];
 
     vi.stubGlobal("window", {
       location: { search: "?mode=window" },
@@ -838,10 +867,13 @@ describe("createToolkitWindowController spectrum", () => {
       },
     });
     vi.stubGlobal("chrome", { storage });
-    vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
-      callback();
-      return 1;
-    }));
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn((callback: () => void) => {
+        callback();
+        return 1;
+      }),
+    );
     vi.stubGlobal("clearInterval", vi.fn());
 
     const { controller, audioContext } = createController({
@@ -880,7 +912,10 @@ describe("createToolkitWindowController spectrum", () => {
     vi.stubGlobal("document", {
       createElement: () => new FakeElement(),
     });
-    vi.stubGlobal("chrome", { storage, runtime: { sendMessage: vi.fn(async () => ({ tabs: [], activeTabId: null })) } });
+    vi.stubGlobal("chrome", {
+      storage,
+      runtime: { sendMessage: vi.fn(async () => ({ tabs: [], activeTabId: null })) },
+    });
 
     const { controller } = createController();
 

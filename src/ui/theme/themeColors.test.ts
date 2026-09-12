@@ -19,8 +19,7 @@ describe("readThemeColors", () => {
     vi.stubGlobal(
       "getComputedStyle",
       vi.fn(() => ({
-        getPropertyValue: (propertyName: string) =>
-          values.get(propertyName) ?? "",
+        getPropertyValue: (propertyName: string) => values.get(propertyName) ?? "",
       })),
     );
 

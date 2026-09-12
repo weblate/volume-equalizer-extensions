@@ -14,9 +14,7 @@ const entries = {
   "content-main": resolve(rootDir, "src/app/content-main/contentMain.ts"),
 };
 
-const expectedEntryFiles = new Set(
-  Object.keys(entries).map((entryName) => `${entryName}.js`),
-);
+const expectedEntryFiles = new Set(Object.keys(entries).map((entryName) => `${entryName}.js`));
 
 await rm(distDir, { recursive: true, force: true });
 await mkdir(resolve(distDir, "scripts"), { recursive: true });
@@ -63,9 +61,7 @@ if (missing.length > 0) {
   throw new Error(`Missing extension bundles: ${missing.join(", ")}`);
 }
 
-const expectedPaths = new Set(
-  [...expectedEntryFiles].map((name) => `scripts/${name}`),
-);
+const expectedPaths = new Set([...expectedEntryFiles].map((name) => `scripts/${name}`));
 const outputEntries = await readdir(distDir, { recursive: true, withFileTypes: true });
 const unexpectedScripts = outputEntries
   .filter((entry) => entry.isFile() && /\.[cm]?js$/.test(entry.name))
@@ -73,7 +69,5 @@ const unexpectedScripts = outputEntries
   .filter((name) => !expectedPaths.has(name));
 
 if (unexpectedScripts.length > 0) {
-  throw new Error(
-    `Unexpected script bundles emitted: ${unexpectedScripts.join(", ")}`,
-  );
+  throw new Error(`Unexpected script bundles emitted: ${unexpectedScripts.join(", ")}`);
 }

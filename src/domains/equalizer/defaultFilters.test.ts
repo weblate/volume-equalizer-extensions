@@ -1,9 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  createDefaultFilterSettings,
-  normalizeFilterSettings,
-} from "./defaultFilters";
+import { createDefaultFilterSettings, normalizeFilterSettings } from "./defaultFilters";
 
 describe("defaultFilters", () => {
   test("creates default filter settings in legacy order", () => {

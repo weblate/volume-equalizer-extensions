@@ -26,9 +26,7 @@ export interface EqualizerGestureOptions {
 
 export type EqualizerGestureCleanup = () => void;
 
-const getCanvasDimensions = (
-  canvas: HTMLCanvasElement,
-): EqualizerCanvasDimensions => {
+const getCanvasDimensions = (canvas: HTMLCanvasElement): EqualizerCanvasDimensions => {
   return {
     canvasWidth: canvas.clientWidth,
     canvasHeight: canvas.clientHeight,
@@ -142,9 +140,7 @@ export const attachEqualizerGestures = ({
       nextPoint = {
         ...currentPoint,
         x: mx,
-        y: activeDragTarget?.type === "peaking"
-          ? my
-          : dimensions.canvasHeight / 2,
+        y: activeDragTarget?.type === "peaking" ? my : dimensions.canvasHeight / 2,
       };
     }
 
@@ -173,7 +169,17 @@ export const attachEqualizerGestures = ({
 
   const handleKeyDown = (event: KeyboardEvent): void => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    const keys = ["Home", "End", "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter"];
+    const keys = [
+      "Home",
+      "End",
+      "PageUp",
+      "PageDown",
+      "ArrowUp",
+      "ArrowDown",
+      "ArrowLeft",
+      "ArrowRight",
+      "Enter",
+    ];
     if (!keys.includes(event.key)) return;
     const targets = getKeyboardTargets();
     if (!targets.length) return;
@@ -200,10 +206,13 @@ export const attachEqualizerGestures = ({
         if (qEdit) point.q = ensureQFactor(point.q * 2 ** (direction / 12));
         else if (horizontal) {
           const width = dimensions.canvasWidth - 10;
-          const freq = Math.max(1, Math.min(24000, xToFrequency(point.x, width) * 2 ** (direction / 12)));
+          const freq = Math.max(
+            1,
+            Math.min(24000, xToFrequency(point.x, width) * 2 ** (direction / 12)),
+          );
           point.x = frequencyToX(freq, width);
         } else {
-          const step = 0.5 / 25 * (dimensions.canvasHeight / 2 - 20);
+          const step = (0.5 / 25) * (dimensions.canvasHeight / 2 - 20);
           point.y = Math.max(0, Math.min(dimensions.canvasHeight, point.y - direction * step));
         }
         state.setDraggedPoint(point);
@@ -215,8 +224,7 @@ export const attachEqualizerGestures = ({
     if (changed) {
       persistAndRedraw();
       void flushCurrentFilters();
-    }
-    else draw();
+    } else draw();
   };
 
   const handleFocus = (): void => {

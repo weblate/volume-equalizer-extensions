@@ -7,10 +7,7 @@ type BiquadFilterInput = Pick<EqualizerFilter, "freq"> &
 const RESPONSE_POINT_COUNT = 512;
 const HEADROOM_THRESHOLD_GAIN = Math.fround(10 ** (18 / 20));
 
-export const getBiquadHeadroomGain = (
-  filters: BiquadFilterNode[],
-  sampleRate: number,
-): number => {
+export const getBiquadHeadroomGain = (filters: BiquadFilterNode[], sampleRate: number): number => {
   if (!filters.length) return 1;
 
   const frequencies = new Float32Array(RESPONSE_POINT_COUNT);
@@ -20,10 +17,7 @@ export const getBiquadHeadroomGain = (
   const maxFrequency = sampleRate / 2;
 
   for (let i = 0; i < RESPONSE_POINT_COUNT; i++) {
-    frequencies[i] = Math.pow(
-      maxFrequency,
-      i / (RESPONSE_POINT_COUNT - 1),
-    );
+    frequencies[i] = Math.pow(maxFrequency, i / (RESPONSE_POINT_COUNT - 1));
   }
 
   filters.forEach((filter) => {
@@ -38,9 +32,7 @@ export const getBiquadHeadroomGain = (
     peakMagnitude = Math.max(peakMagnitude, magnitude);
   }
 
-  return peakMagnitude > HEADROOM_THRESHOLD_GAIN
-    ? HEADROOM_THRESHOLD_GAIN / peakMagnitude
-    : 1;
+  return peakMagnitude > HEADROOM_THRESHOLD_GAIN ? HEADROOM_THRESHOLD_GAIN / peakMagnitude : 1;
 };
 
 export const getBiquadFilterCount = (filters: BiquadFilterMap): number => {
@@ -73,5 +65,5 @@ export const getLastBiquadFilter = <TFallbackNode extends AudioNode>(
   fallbackNode: TFallbackNode,
 ): BiquadFilterNode | TFallbackNode => {
   const count = getBiquadFilterCount(filters);
-  return count > 0 ? filters[count - 1] as BiquadFilterNode : fallbackNode;
+  return count > 0 ? (filters[count - 1] as BiquadFilterNode) : fallbackNode;
 };

@@ -12,7 +12,9 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 test("shows only when the stored reminder is due", () => {
-  const modal = Object.assign(new EventTarget(), { style: { display: "none" } }) as unknown as HTMLElement;
+  const modal = Object.assign(new EventTarget(), {
+    style: { display: "none" },
+  }) as unknown as HTMLElement;
   const closeButton = {
     addEventListener: vi.fn(),
     focus: vi.fn(),
@@ -33,7 +35,9 @@ test("shows only when the stored reminder is due", () => {
 
 test("dismisses and schedules the next reminder", async () => {
   let click: EventListener = () => undefined;
-  const modal = Object.assign(new EventTarget(), { style: { display: "block" } }) as unknown as HTMLElement;
+  const modal = Object.assign(new EventTarget(), {
+    style: { display: "block" },
+  }) as unknown as HTMLElement;
   const closeButton = {
     addEventListener: vi.fn((_type: string, listener: EventListener) => {
       click = listener;
@@ -60,7 +64,9 @@ test("dismisses and schedules the next reminder", async () => {
 // Modal keyboard/inert behavior is exercised separately; these tests cover view actions.
 vi.mock("./modalFocus", () => ({
   attachModalFocus: (modal: HTMLElement) => ({
-    open: () => { modal.style.display = "block"; },
+    open: () => {
+      modal.style.display = "block";
+    },
     close: () => {
       modal.style.display = "none";
       modal.dispatchEvent(new Event("modal-closed"));

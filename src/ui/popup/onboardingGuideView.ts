@@ -54,9 +54,7 @@ export const getNextFocusIndex = (
 ): number => {
   if (length <= 0) return -1;
   if (currentIndex < 0) return backwards ? length - 1 : 0;
-  return backwards
-    ? (currentIndex - 1 + length) % length
-    : (currentIndex + 1) % length;
+  return backwards ? (currentIndex - 1 + length) % length : (currentIndex + 1) % length;
 };
 
 export const createOnboardingGuideView = (deps: {
@@ -160,14 +158,9 @@ export const createOnboardingGuideView = (deps: {
         row.append(label, shortcut);
         return row;
       };
-      content.append(...GUIDE_SHORTCUTS.map(([label, keys]) => (
-        createShortcut(label, keys)
-      )));
+      content.append(...GUIDE_SHORTCUTS.map(([label, keys]) => createShortcut(label, keys)));
     }
-    [
-      screen.messageKey,
-      ...(screen.additionalMessageKeys ?? []),
-    ].forEach((messageKey) => {
+    [screen.messageKey, ...(screen.additionalMessageKeys ?? [])].forEach((messageKey) => {
       if (!messageKey) return;
 
       const message = document.createElement("span");
@@ -185,11 +178,7 @@ export const createOnboardingGuideView = (deps: {
       right: Math.min(window.innerWidth, rect.right + padding),
       bottom: Math.min(window.innerHeight, rect.bottom + padding),
     };
-    const panelRects = getSpotlightPanels(
-      focus,
-      window.innerWidth,
-      window.innerHeight,
-    );
+    const panelRects = getSpotlightPanels(focus, window.innerWidth, window.innerHeight);
     Object.entries(panels).forEach(([name, panel]) => {
       setRect(panel, panelRects[name as keyof typeof panelRects]);
     });
@@ -204,10 +193,7 @@ export const createOnboardingGuideView = (deps: {
     const cardRect = card.getBoundingClientRect();
     const center = Math.max(
       margin + cardRect.width / 2,
-      Math.min(
-        window.innerWidth - margin - cardRect.width / 2,
-        (focus.left + focus.right) / 2,
-      ),
+      Math.min(window.innerWidth - margin - cardRect.width / 2, (focus.left + focus.right) / 2),
     );
     const below = focus.bottom + margin;
     const above = focus.top - cardRect.height - margin;
@@ -238,9 +224,7 @@ export const createOnboardingGuideView = (deps: {
     skipButton.hidden = !navigation.canSkip;
     backButton.textContent = deps.getMessage("guide_back");
     skipButton.textContent = deps.getMessage("guide_skip");
-    nextButton.textContent = deps.getMessage(
-      navigation.isLast ? "guide_finish" : "guide_next",
-    );
+    nextButton.textContent = deps.getMessage(navigation.isLast ? "guide_finish" : "guide_next");
     renderContent(screen);
 
     card.style.left = "";
@@ -295,7 +279,7 @@ export const createOnboardingGuideView = (deps: {
       ),
     );
     if (controls.length === 0) return;
-    const current = controls.indexOf(document.activeElement as typeof controls[number]);
+    const current = controls.indexOf(document.activeElement as (typeof controls)[number]);
     const next = getNextFocusIndex(current, controls.length, event.shiftKey);
     event.preventDefault();
     controls[next].focus();

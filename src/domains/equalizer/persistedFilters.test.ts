@@ -18,9 +18,7 @@ describe("readPersistedFilters", () => {
 
   test("normalizes legacy numeric strings at the input boundary", () => {
     expect(
-      readPersistedFilters([
-        { type: "highpass", freq: "40", gain: "0", q: "1", enabled: true },
-      ]),
+      readPersistedFilters([{ type: "highpass", freq: "40", gain: "0", q: "1", enabled: true }]),
     ).toEqual([{ type: "highpass", freq: 40, gain: 0, q: 1, enabled: true }]);
   });
 

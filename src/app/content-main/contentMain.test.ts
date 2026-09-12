@@ -141,9 +141,7 @@ class FakeAudioContext {
     return new FakeAnalyserNode(this, "analyser");
   }
 
-  createMediaElementSource(
-    target: FakeHTMLMediaElement,
-  ): FakeMediaElementAudioSourceNode {
+  createMediaElementSource(target: FakeHTMLMediaElement): FakeMediaElementAudioSourceNode {
     if (target.alreadyConnected) {
       throw new DOMException(
         "HTMLMediaElement already connected previously to a different MediaElementSourceNode.",
@@ -218,14 +216,20 @@ const loadContentMain = async (
   vi.stubGlobal("HTMLMediaElement", FakeHTMLMediaElement);
   vi.stubGlobal("MediaElementAudioSourceNode", FakeMediaElementAudioSourceNode);
   vi.stubGlobal("AudioContext", FakeAudioContext);
-  vi.stubGlobal("setTimeout", vi.fn((callback: () => void) => {
-    callback();
-    return 1;
-  }));
-  vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
-    callback();
-    return 1;
-  }));
+  vi.stubGlobal(
+    "setTimeout",
+    vi.fn((callback: () => void) => {
+      callback();
+      return 1;
+    }),
+  );
+  vi.stubGlobal(
+    "setInterval",
+    vi.fn((callback: () => void) => {
+      callback();
+      return 1;
+    }),
+  );
   vi.stubGlobal("clearInterval", vi.fn());
 
   await import("./contentMain");
@@ -325,9 +329,7 @@ describe("contentMain spectrum state", () => {
       const serviceMedia = new FakeHTMLMediaElement();
       serviceMedia.isConnected = false;
       serviceMedia.paused = true;
-      serviceContext.createMediaElementSource(serviceMedia).connect(
-        serviceContext.destination,
-      );
+      serviceContext.createMediaElementSource(serviceMedia).connect(serviceContext.destination);
     });
 
     expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
@@ -351,16 +353,12 @@ describe("contentMain spectrum state", () => {
 
     const connectedContext = new FakeAudioContext(-42);
     const connectedMedia = new FakeHTMLMediaElement();
-    connectedContext.createMediaElementSource(connectedMedia).connect(
-      connectedContext.destination,
-    );
+    connectedContext.createMediaElementSource(connectedMedia).connect(connectedContext.destination);
 
     const detachedContext = new FakeAudioContext(-70);
     const detachedMedia = new FakeHTMLMediaElement();
     detachedMedia.isConnected = false;
-    detachedContext.createMediaElementSource(detachedMedia).connect(
-      detachedContext.destination,
-    );
+    detachedContext.createMediaElementSource(detachedMedia).connect(detachedContext.destination);
 
     expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
   });
@@ -377,16 +375,12 @@ describe("contentMain spectrum state", () => {
     const pausedContext = new FakeAudioContext(-90);
     const pausedMedia = new FakeHTMLMediaElement();
     pausedMedia.paused = true;
-    pausedContext.createMediaElementSource(pausedMedia).connect(
-      pausedContext.destination,
-    );
+    pausedContext.createMediaElementSource(pausedMedia).connect(pausedContext.destination);
 
     const endedContext = new FakeAudioContext(-91);
     const endedMedia = new FakeHTMLMediaElement();
     endedMedia.ended = true;
-    endedContext.createMediaElementSource(endedMedia).connect(
-      endedContext.destination,
-    );
+    endedContext.createMediaElementSource(endedMedia).connect(endedContext.destination);
 
     expect(getLastSpectrumFrame(frames)?.buffer).toBeNull();
   });
@@ -516,17 +510,13 @@ describe("contentMain spectrum state", () => {
     port.dataset.enabled = "true";
     port.dispatchEvent(new Event("enabled-changed"));
 
-    expect(
-      source.connections.some((connection) => connection instanceof FakeGainNode),
-    ).toBe(true);
+    expect(source.connections.some((connection) => connection instanceof FakeGainNode)).toBe(true);
     expect(source.connections).toContain(pageAnalyser);
   });
 
   test("does not reduce preamp below the headroom threshold", async () => {
     const port = new FakePort();
-    port.dataset.freqs = JSON.stringify([
-      { freq: 1000, gain: 6, q: 0.5, type: "peaking" },
-    ]);
+    port.dataset.freqs = JSON.stringify([{ freq: 1000, gain: 6, q: 0.5, type: "peaking" }]);
     await loadContentMain(port);
     const context = new FakeAudioContext(-42);
     const source = new FakeAudioNode(context, "source");
@@ -570,10 +560,7 @@ describe("contentMain spectrum state", () => {
 
   test("uses one owned context for different media elements", async () => {
     const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
-    await loadContentMain(new FakePort(), [
-      new FakeHTMLMediaElement(),
-      new FakeHTMLMediaElement(),
-    ]);
+    await loadContentMain(new FakePort(), [new FakeHTMLMediaElement(), new FakeHTMLMediaElement()]);
     await Promise.resolve();
     expect(createSource).toHaveBeenCalledTimes(2);
     expect(createSource.mock.contexts[0]).toBe(createSource.mock.contexts[1]);
@@ -581,10 +568,7 @@ describe("contentMain spectrum state", () => {
 
   test("reuses a media source after pause and resume", async () => {
     const media = new FakeHTMLMediaElement();
-    const createSource = vi.spyOn(
-      FakeAudioContext.prototype,
-      "createMediaElementSource",
-    );
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
     await loadContentMain(new FakePort(), [media]);
     await Promise.resolve();
 
@@ -598,10 +582,7 @@ describe("contentMain spectrum state", () => {
   });
 
   test("captures a detached audio created through the Audio constructor", async () => {
-    const createSource = vi.spyOn(
-      FakeAudioContext.prototype,
-      "createMediaElementSource",
-    );
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
     await loadContentMain(new FakePort());
 
     const media = new window.Audio() as unknown as FakeHTMLMediaElement;
@@ -613,10 +594,7 @@ describe("contentMain spectrum state", () => {
 
   test("reuses the source when a removed video returns", async () => {
     const media = new FakeHTMLMediaElement();
-    const createSource = vi.spyOn(
-      FakeAudioContext.prototype,
-      "createMediaElementSource",
-    );
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
     await loadContentMain(new FakePort(), [media]);
     await Promise.resolve();
 
@@ -633,10 +611,7 @@ describe("contentMain spectrum state", () => {
 
   test("closes only its owned context on final page teardown", async () => {
     const media = new FakeHTMLMediaElement();
-    const createSource = vi.spyOn(
-      FakeAudioContext.prototype,
-      "createMediaElementSource",
-    );
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
     await loadContentMain(new FakePort(), [media]);
     await Promise.resolve();
     const ownedContext = createSource.mock.contexts[0] as FakeAudioContext;
@@ -669,5 +644,4 @@ describe("contentMain spectrum state", () => {
     expect(source.connections).toContain(pageAnalyser);
     expect(source.connections).toContain(pageGain);
   });
-
 });

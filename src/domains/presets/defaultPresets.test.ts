@@ -19,9 +19,7 @@ describe("default presets", () => {
     const names = getAvailablePresetNames(["Custom", DEFAULT_PRESETS[0].name]);
 
     expect(names[0]).toBe("Custom");
-    expect(names.slice(1)).toEqual(
-      DEFAULT_PRESETS.map((preset) => preset.name),
-    );
+    expect(names.slice(1)).toEqual(DEFAULT_PRESETS.map((preset) => preset.name));
     expect(names.filter((name) => name === DEFAULT_PRESETS[0].name)).toHaveLength(1);
   });
 

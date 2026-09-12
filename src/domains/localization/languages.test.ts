@@ -17,9 +17,7 @@ describe("resolveLanguageCode", () => {
 });
 
 test("uses the native display name for Chrome locale codes", () => {
-  const expected = new Intl.DisplayNames(["en"], { type: "language" }).of(
-    "pt-PT",
-  );
+  const expected = new Intl.DisplayNames(["en"], { type: "language" }).of("pt-PT");
 
   expect(getLanguageName("pt_PT")).toBe(expected);
 });

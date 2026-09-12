@@ -14,10 +14,7 @@ export const createFilterPersistence = (
     if (draining) return draining;
     draining = (async () => {
       while (pending.size > 0) {
-        const [tabId, filters] = pending.entries().next().value as [
-          number,
-          EqualizerFilter[],
-        ];
+        const [tabId, filters] = pending.entries().next().value as [number, EqualizerFilter[]];
         pending.delete(tabId);
         await write(tabId, filters);
       }
@@ -36,9 +33,14 @@ export const createFilterPersistence = (
   return {
     schedule: (tabId: number, filters: EqualizerFilter[]): void => {
       if (disposed) return;
-      pending.set(tabId, filters.map((filter) => ({ ...filter })));
+      pending.set(
+        tabId,
+        filters.map((filter) => ({ ...filter })),
+      );
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => { void flush(); }, SAVE_DELAY_MS);
+      timer = setTimeout(() => {
+        void flush();
+      }, SAVE_DELAY_MS);
     },
     flush,
     dispose: async (): Promise<void> => {

@@ -1,8 +1,7 @@
 import { isDefaultPresetName } from "./defaultPresets";
 
 export type PresetNameValidation =
-  | { kind: "valid"; name: string }
-  | { kind: "error"; reason: "empty" | "reserved" | "duplicate" };
+  { kind: "valid"; name: string } | { kind: "error"; reason: "empty" | "reserved" | "duplicate" };
 
 export const validatePresetName = (
   rawName: string,

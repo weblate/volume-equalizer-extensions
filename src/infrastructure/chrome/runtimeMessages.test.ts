@@ -34,9 +34,30 @@ describe("normalizeSpectrumPayload", () => {
   });
 
   test.each([
-    { type: "meta", sampleRate: Infinity, fftSize: 2048, minDb: -100, maxDb: -30, frequencyBinCount: 1024 },
-    { type: "meta", sampleRate: 48000, fftSize: 2.5, minDb: -100, maxDb: -30, frequencyBinCount: 1024 },
-    { type: "meta", sampleRate: 48000, fftSize: 2048, minDb: -30, maxDb: -100, frequencyBinCount: 1024 },
+    {
+      type: "meta",
+      sampleRate: Infinity,
+      fftSize: 2048,
+      minDb: -100,
+      maxDb: -30,
+      frequencyBinCount: 1024,
+    },
+    {
+      type: "meta",
+      sampleRate: 48000,
+      fftSize: 2.5,
+      minDb: -100,
+      maxDb: -30,
+      frequencyBinCount: 1024,
+    },
+    {
+      type: "meta",
+      sampleRate: 48000,
+      fftSize: 2048,
+      minDb: -30,
+      maxDb: -100,
+      frequencyBinCount: 1024,
+    },
     { type: "spectrum", buffer: { 0: -42, length: 1 }, clipping: false },
     { type: "spectrum", buffer: new DataView(new ArrayBuffer(8)), clipping: false },
     { type: "spectrum", buffer: [Number.NaN], clipping: false },

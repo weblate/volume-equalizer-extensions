@@ -25,10 +25,7 @@ export const ensureQFactor = (value: unknown): number => {
 };
 
 export const xToFrequency = (x: number, canvasWidth: number): number => {
-  const freq = Math.pow(
-    10,
-    Math.sqrt(x / canvasWidth) * (LOG_MAX - LOG_MIN) + LOG_MIN
-  );
+  const freq = Math.pow(10, Math.sqrt(x / canvasWidth) * (LOG_MAX - LOG_MIN) + LOG_MIN);
 
   return freq > 24000 ? 24000 : freq;
 };
@@ -40,10 +37,7 @@ export const frequencyToX = (freq: number, canvasWidth: number): number => {
 
   const normalizedFreq = freq > 24000 ? 24000 : freq;
 
-  return (
-    Math.pow((Math.log10(normalizedFreq) - LOG_MIN) / (LOG_MAX - LOG_MIN), 2) *
-    canvasWidth
-  );
+  return Math.pow((Math.log10(normalizedFreq) - LOG_MIN) / (LOG_MAX - LOG_MIN), 2) * canvasWidth;
 };
 
 export const yToDb = (y: number, canvasHeight: number): number => {

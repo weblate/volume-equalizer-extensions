@@ -36,8 +36,7 @@ export const createSpectrumRelay = ({ setDemand }: SpectrumRelayDependencies) =>
   const activeFrames = new Map<number, number>();
   const quiescedSources = new Set<string>();
 
-  const sourceKey = (tabId: number, frameId: number): string =>
-    `${tabId}:${frameId}`;
+  const sourceKey = (tabId: number, frameId: number): string => `${tabId}:${frameId}`;
 
   const post = (
     port: chrome.runtime.Port,
@@ -49,11 +48,7 @@ export const createSpectrumRelay = ({ setDemand }: SpectrumRelayDependencies) =>
     port.postMessage(message);
   };
 
-  const broadcast = (
-    tabId: number,
-    frameId: number,
-    payload: SpectrumPayload,
-  ): void => {
+  const broadcast = (tabId: number, frameId: number, payload: SpectrumPayload): void => {
     subscribers.get(tabId)?.forEach((port) => post(port, tabId, frameId, payload));
   };
 
@@ -65,10 +60,7 @@ export const createSpectrumRelay = ({ setDemand }: SpectrumRelayDependencies) =>
     }
   };
 
-  const unsubscribe = (
-    port: chrome.runtime.Port,
-    options: { notify?: boolean } = {},
-  ): void => {
+  const unsubscribe = (port: chrome.runtime.Port, options: { notify?: boolean } = {}): void => {
     const tabId = subscriptions.get(port);
     if (tabId == null) return;
     subscriptions.delete(port);
@@ -138,10 +130,7 @@ export const createSpectrumRelay = ({ setDemand }: SpectrumRelayDependencies) =>
       setDemand(tabId, demanded, frameId);
     },
 
-    acceptFrame: (
-      payload: SpectrumPayload,
-      sender: chrome.runtime.MessageSender,
-    ): void => {
+    acceptFrame: (payload: SpectrumPayload, sender: chrome.runtime.MessageSender): void => {
       const source = getSource(sender);
       if (!source) return;
       const { tabId, frameId } = source;

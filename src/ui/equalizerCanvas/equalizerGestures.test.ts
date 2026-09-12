@@ -5,12 +5,21 @@ import { attachEqualizerGestures } from "./equalizerGestures";
 const dimensions = { canvasWidth: 600, canvasHeight: 300 };
 const setup = () => {
   let frame: FrameRequestCallback | null = null;
-  vi.stubGlobal("window", Object.assign(new EventTarget(), {
-    requestAnimationFrame: (callback: FrameRequestCallback) => { frame = callback; return 1; },
-    cancelAnimationFrame: vi.fn(),
-  }));
+  vi.stubGlobal(
+    "window",
+    Object.assign(new EventTarget(), {
+      requestAnimationFrame: (callback: FrameRequestCallback) => {
+        frame = callback;
+        return 1;
+      },
+      cancelAnimationFrame: vi.fn(),
+    }),
+  );
   const canvas = Object.assign(new EventTarget(), {
-    width: 600, height: 300, clientWidth: 600, clientHeight: 300,
+    width: 600,
+    height: 300,
+    clientWidth: 600,
+    clientHeight: 300,
     getBoundingClientRect: () => ({ left: 0, top: 0 }),
   });
   const state = createEqualizerState();
@@ -20,8 +29,11 @@ const setup = () => {
   const draw = vi.fn();
   const refresh = vi.fn();
   const cleanup = attachEqualizerGestures({
-    canvas: canvas as HTMLCanvasElement, state, draw,
-    saveCurrentFilters: save, flushCurrentFilters: flush,
+    canvas: canvas as HTMLCanvasElement,
+    state,
+    draw,
+    saveCurrentFilters: save,
+    flushCurrentFilters: flush,
     refreshToolkitCaptureFilters: refresh,
     tooltips: { updateInfoTooltip: vi.fn(), hideInfoTooltip: vi.fn() },
   });
@@ -30,7 +42,22 @@ const setup = () => {
     canvas.dispatchEvent(event);
     return event;
   };
-  return { canvas, state, save, flush, draw, refresh, runFrame: () => { const callback = frame; frame = null; callback?.(0); }, key, cleanup, filters: () => state.getFilters(dimensions) };
+  return {
+    canvas,
+    state,
+    save,
+    flush,
+    draw,
+    refresh,
+    runFrame: () => {
+      const callback = frame;
+      frame = null;
+      callback?.(0);
+    },
+    key,
+    cleanup,
+    filters: () => state.getFilters(dimensions),
+  };
 };
 afterEach(() => vi.unstubAllGlobals());
 
@@ -63,9 +90,13 @@ test("Home/End/Page keys select bands, arrows edit gain/frequency, Shift arrows 
 test("coalesces a drag to one visual update and flushes persistence on mouseup", () => {
   const { canvas, state, draw, refresh, save, flush, runFrame, cleanup } = setup();
   const point = state.getPoints()[0];
-  canvas.dispatchEvent(Object.assign(new Event("mousedown"), { clientX: point.x, clientY: point.y, shiftKey: false }));
+  canvas.dispatchEvent(
+    Object.assign(new Event("mousedown"), { clientX: point.x, clientY: point.y, shiftKey: false }),
+  );
   for (let index = 0; index < 100; index++) {
-    canvas.dispatchEvent(Object.assign(new Event("mousemove"), { clientX: point.x + index, clientY: point.y - index }));
+    canvas.dispatchEvent(
+      Object.assign(new Event("mousemove"), { clientX: point.x + index, clientY: point.y - index }),
+    );
   }
   expect(draw).not.toHaveBeenCalled();
   expect(refresh).not.toHaveBeenCalled();

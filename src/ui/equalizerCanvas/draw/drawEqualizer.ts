@@ -23,7 +23,8 @@ export const resizeCanvasBackingStore = (
     canvas.width === width &&
     canvas.height === height &&
     canvasScales.get(canvas) === deviceScale
-  ) return false;
+  )
+    return false;
   canvas.width = width;
   canvas.height = height;
   context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
@@ -31,9 +32,7 @@ export const resizeCanvasBackingStore = (
   return true;
 };
 
-export const resizeEqualizerCanvas = (
-  options: EqualizerCanvasRenderOptions,
-): void => {
+export const resizeEqualizerCanvas = (options: EqualizerCanvasRenderOptions): void => {
   const { canvas } = options;
 
   resizeCanvasBackingStore(canvas, options.ctx);

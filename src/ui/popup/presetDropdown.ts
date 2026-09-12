@@ -1,4 +1,8 @@
-export const attachPresetDropdown = (dropdown: HTMLElement, toggle: HTMLElement, menu: HTMLElement) => {
+export const attachPresetDropdown = (
+  dropdown: HTMLElement,
+  toggle: HTMLElement,
+  menu: HTMLElement,
+) => {
   const close = (restoreFocus = false): void => {
     menu.style.display = "none";
     toggle.setAttribute("aria-expanded", "false");

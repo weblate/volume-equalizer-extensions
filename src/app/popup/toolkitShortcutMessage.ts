@@ -33,13 +33,10 @@ export const resolveToolkitShortcutMessage = (
 
   const tabId = sender.tab?.id;
   const action =
-    "payload" in message
-      ? (message.payload as { action?: unknown } | null)?.action
-      : undefined;
+    "payload" in message ? (message.payload as { action?: unknown } | null)?.action : undefined;
   if (
     tabId == null ||
-    (action !== TOOLKIT_SHORTCUT_ACTIONS.MUTE &&
-      action !== TOOLKIT_SHORTCUT_ACTIONS.TOGGLE_EQ)
+    (action !== TOOLKIT_SHORTCUT_ACTIONS.MUTE && action !== TOOLKIT_SHORTCUT_ACTIONS.TOGGLE_EQ)
   ) {
     return null;
   }

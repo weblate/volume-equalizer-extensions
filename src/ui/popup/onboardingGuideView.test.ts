@@ -127,13 +127,7 @@ test("moves backward from the dialog title to the last control", () => {
 });
 
 test("splits the viewport into four panels around the target", () => {
-  expect(
-    getSpotlightPanels(
-      { left: 10, top: 20, right: 40, bottom: 60 },
-      100,
-      90,
-    ),
-  ).toEqual({
+  expect(getSpotlightPanels({ left: 10, top: 20, right: 40, bottom: 60 }, 100, 90)).toEqual({
     top: { left: 0, top: 0, width: 100, height: 20 },
     left: { left: 0, top: 20, width: 10, height: 40 },
     right: { left: 40, top: 20, width: 60, height: 40 },

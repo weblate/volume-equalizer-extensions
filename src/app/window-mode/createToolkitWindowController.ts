@@ -4,10 +4,7 @@ import { isEqualizerFilterEnabled } from "../../domains/equalizer/defaultFilters
 import { createSpectrumSampler } from "../../infrastructure/audio/spectrumSampler";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import { createCapturedTabsView } from "../../ui/popup/capturedTabsView";
-import {
-  createTabSettingsController,
-  readStoredGain,
-} from "../popup/tabSettingsController";
+import { createTabSettingsController, readStoredGain } from "../popup/tabSettingsController";
 import { createCaptureGraph, type CaptureGraph } from "./captureGraph";
 import { createCaptureSession } from "./captureSession";
 
@@ -49,15 +46,16 @@ export const createToolkitWindowController = (deps: {
     (buffer, clipping) => deps.onSpectrumFrame?.(buffer, clipping),
   );
   const captureSession = createCaptureSession({
-    acquireStream: (_tabId, streamId) => navigator.mediaDevices.getUserMedia({
-      audio: {
-        mandatory: {
-          chromeMediaSource: "tab",
-          chromeMediaSourceId: streamId,
-        },
-      } as MediaTrackConstraints,
-      video: false,
-    }),
+    acquireStream: (_tabId, streamId) =>
+      navigator.mediaDevices.getUserMedia({
+        audio: {
+          mandatory: {
+            chromeMediaSource: "tab",
+            chromeMediaSourceId: streamId,
+          },
+        } as MediaTrackConstraints,
+        video: false,
+      }),
     createGraph: async (tabId, _streamId, stream) => {
       const settings = await chrome.storage.local.get([
         STORAGE_KEYS.FILTERS,
@@ -84,10 +82,7 @@ export const createToolkitWindowController = (deps: {
           if (output === spectrumOutput) stopSpectrum();
         },
         onOutputChange: () => {
-          if (
-            spectrumEnabled &&
-            tabId === tabSettingsController.getActiveTabId()
-          ) {
+          if (spectrumEnabled && tabId === tabSettingsController.getActiveTabId()) {
             startSpectrum(tabId);
           }
         },
@@ -132,12 +127,9 @@ export const createToolkitWindowController = (deps: {
       const activeTabId = tabSettingsController.getActiveTabId();
       if (activeTabId != null) return activeTabId;
 
-      const stored = await chrome.storage.session.get(
-        STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID,
-      );
+      const stored = await chrome.storage.session.get(STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID);
       const storedTabId =
-        (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ??
-        null;
+        (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ?? null;
       tabSettingsController.setActiveTabId(storedTabId);
       return storedTabId;
     }
@@ -151,23 +143,18 @@ export const createToolkitWindowController = (deps: {
     return tabId;
   };
 
-  const shouldShowToolkitWindowNotice = async (
-    currentTabId: number | null,
-  ): Promise<boolean> => {
+  const shouldShowToolkitWindowNotice = async (currentTabId: number | null): Promise<boolean> => {
     if (isToolkitWindow || currentTabId == null) return false;
 
     const stored = await chrome.storage.session.get([
       STORAGE_KEYS.TOOLKIT_WINDOW_ID,
       STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
     ]);
-    const toolkitWindowTabIds = Array.isArray(
-      stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS],
-    )
+    const toolkitWindowTabIds = Array.isArray(stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS])
       ? (stored[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS] as number[])
       : [];
     return (
-      stored[STORAGE_KEYS.TOOLKIT_WINDOW_ID] != null &&
-      toolkitWindowTabIds.includes(currentTabId)
+      stored[STORAGE_KEYS.TOOLKIT_WINDOW_ID] != null && toolkitWindowTabIds.includes(currentTabId)
     );
   };
 
@@ -175,21 +162,17 @@ export const createToolkitWindowController = (deps: {
     const notice = document.createElement("div");
     notice.className = "window-open-notice";
     notice.textContent =
-      deps.getMessage("toolkit_window_already_open") ||
-      "Equalizer is already open in a window";
+      deps.getMessage("toolkit_window_already_open") || "Equalizer is already open in a window";
 
     deps.body.className = "window-open-notice-body";
     deps.body.replaceChildren(notice);
   };
 
   const getCaptureStreamIds = async (): Promise<Record<string, string>> => {
-    const stored = await chrome.storage.session.get(
-      STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS,
-    );
+    const stored = await chrome.storage.session.get(STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS);
     return (
       (stored[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as
-        | Record<string, string>
-        | undefined) ?? {}
+        Record<string, string> | undefined) ?? {}
     );
   };
 
@@ -202,10 +185,7 @@ export const createToolkitWindowController = (deps: {
     tabId: number | string | null = tabSettingsController.getActiveTabId(),
   ): EqualizerFilter[] => {
     let filters: EqualizerFilter[];
-    if (
-      tabId != null &&
-      Number(tabId) === tabSettingsController.getActiveTabId()
-    ) {
+    if (tabId != null && Number(tabId) === tabSettingsController.getActiveTabId()) {
       filters = deps.getFilters();
     } else {
       const capture = captures.get(String(tabId));
@@ -244,10 +224,7 @@ export const createToolkitWindowController = (deps: {
     const filterSettings = getCaptureFilterSettings(tabId);
     capture.graph.update({ filterSettings });
 
-    if (
-      spectrumEnabled &&
-      Number(tabId) === tabSettingsController.getActiveTabId()
-    ) {
+    if (spectrumEnabled && Number(tabId) === tabSettingsController.getActiveTabId()) {
       startSpectrum(tabId);
     }
   };
@@ -279,9 +256,7 @@ export const createToolkitWindowController = (deps: {
     spectrumDemand = true;
 
     const activeTabId = await getCurrentTabId();
-    const spectrumSettings = await chrome.storage.local.get([
-      STORAGE_KEYS.ENABLE_SPECTRUM,
-    ]);
+    const spectrumSettings = await chrome.storage.local.get([STORAGE_KEYS.ENABLE_SPECTRUM]);
     spectrumEnabled = spectrumSettings[STORAGE_KEYS.ENABLE_SPECTRUM] === true;
 
     const streamIds = await getCaptureStreamIds();
@@ -291,14 +266,14 @@ export const createToolkitWindowController = (deps: {
       await deps.audioContext.resume();
 
       await captureSession.sync(streamIds);
-      await Promise.all(streamEntries
-        .filter(([tabId]) => captureSession.has(tabId))
-        .map(([tabId]) => chrome.storage.local.remove(STORAGE_KEYS.tabCaptureError(tabId))));
+      await Promise.all(
+        streamEntries
+          .filter(([tabId]) => captureSession.has(tabId))
+          .map(([tabId]) => chrome.storage.local.remove(STORAGE_KEYS.tabCaptureError(tabId))),
+      );
 
       deps.renderCaptureError(null);
-      deps.setEnableButtonClass(
-        captures.get(String(activeTabId))?.graph.enabled === true,
-      );
+      deps.setEnableButtonClass(captures.get(String(activeTabId))?.graph.enabled === true);
       if (spectrumEnabled) {
         startSpectrum(activeTabId);
       } else {
@@ -360,17 +335,14 @@ export const createToolkitWindowController = (deps: {
       : [];
     const streamIds = {
       ...((stored[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as
-        | Record<string, string>
-        | undefined) ?? {}),
+        Record<string, string> | undefined) ?? {}),
     };
     delete streamIds[tabId];
 
     const storedActiveTabId =
-      (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ??
-      activeTabId;
-    const nextActiveTabId = storedActiveTabId === tabId
-      ? remainingTabIds[0] ?? null
-      : storedActiveTabId;
+      (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ?? activeTabId;
+    const nextActiveTabId =
+      storedActiveTabId === tabId ? (remainingTabIds[0] ?? null) : storedActiveTabId;
 
     await chrome.storage.session.set({
       [STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS]: remainingTabIds,
@@ -421,9 +393,7 @@ export const createToolkitWindowController = (deps: {
     toggleEqualizer,
     stopCapturedTabCapture,
     stopTabCapture,
-    handleStorageChange: async (
-      changes: Record<string, chrome.storage.StorageChange>,
-    ) => {
+    handleStorageChange: async (changes: Record<string, chrome.storage.StorageChange>) => {
       if (isToolkitWindow && changes[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]) {
         await reconcileSelectedTab();
       }

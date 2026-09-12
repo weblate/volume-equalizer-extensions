@@ -11,20 +11,16 @@ import {
 describe("autostartRules", () => {
   test("normalizes whitelist urls by removing fragments", () => {
     expect(normalizeWhitelistUrl("https://example.com/path#section")).toBe(
-      "https://example.com/path"
+      "https://example.com/path",
     );
   });
 
   test("gets whitelist domains without a leading www prefix", () => {
-    expect(getWhitelistDomain("https://www.example.com/path")).toBe(
-      "example.com"
-    );
+    expect(getWhitelistDomain("https://www.example.com/path")).toBe("example.com");
   });
 
   test("creates normalized domain whitelist entries", () => {
-    expect(
-      createWhitelistEntry("domain", "https://www.example.com/page", "Rock")
-    ).toEqual({
+    expect(createWhitelistEntry("domain", "https://www.example.com/page", "Rock")).toEqual({
       id: "domain:example.com",
       type: "domain",
       value: "example.com",
@@ -46,9 +42,9 @@ describe("autostartRules", () => {
       presetName: "Domain",
     };
 
-    expect(
-      findWhitelistMatch([domainEntry, urlEntry], "https://example.com/path#top")
-    ).toBe(urlEntry);
+    expect(findWhitelistMatch([domainEntry, urlEntry], "https://example.com/path#top")).toBe(
+      urlEntry,
+    );
   });
 
   test("returns null when no whitelist entries exist", () => {
@@ -57,16 +53,10 @@ describe("autostartRules", () => {
 
   test("normalizes autostart setting values by type", () => {
     expect(
-      normalizeAutostartSettingsUrlValue(
-        "domain",
-        " https://www.example.com/path#section "
-      )
+      normalizeAutostartSettingsUrlValue("domain", " https://www.example.com/path#section "),
     ).toBe("example.com");
     expect(
-      normalizeAutostartSettingsUrlValue(
-        "url",
-        " https://www.example.com/path#section "
-      )
+      normalizeAutostartSettingsUrlValue("url", " https://www.example.com/path#section "),
     ).toBe("https://www.example.com/path");
   });
 });

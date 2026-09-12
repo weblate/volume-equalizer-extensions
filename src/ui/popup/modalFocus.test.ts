@@ -11,10 +11,13 @@ class TestElement extends EventTarget {
   setAttribute = vi.fn();
   matches = () => false;
   getClientRects = () => [{}];
-  closest = () => this.inert || this.parentElement?.inert ? this : null;
+  closest = () => (this.inert || this.parentElement?.inert ? this : null);
   querySelectorAll = () => this.controls;
-  contains = (element: unknown): boolean => element === this || this.children.includes(element as TestElement);
-  focus = () => { testDocument.activeElement = this; };
+  contains = (element: unknown): boolean =>
+    element === this || this.children.includes(element as TestElement);
+  focus = () => {
+    testDocument.activeElement = this;
+  };
 }
 
 const testDocument = Object.assign(new EventTarget(), {
@@ -23,7 +26,10 @@ const testDocument = Object.assign(new EventTarget(), {
 });
 const disposers: Array<() => void> = [];
 const attach = (dialog: TestElement, trigger: TestElement) => {
-  const view = attachModalFocus(dialog as unknown as HTMLElement, trigger as unknown as HTMLElement);
+  const view = attachModalFocus(
+    dialog as unknown as HTMLElement,
+    trigger as unknown as HTMLElement,
+  );
   disposers.unshift(view.dispose);
   return view;
 };
@@ -50,7 +56,9 @@ test("nested dialogs restore original inert states and focus one level at a time
   settings.controls = settings.children = [pointSelect];
   pointSelect.parentElement = settings;
   testDocument.body.children = [trigger, settings, confirmation, alreadyInert];
-  testDocument.body.children.forEach((element) => { element.parentElement = testDocument.body; });
+  testDocument.body.children.forEach((element) => {
+    element.parentElement = testDocument.body;
+  });
   trigger.focus();
   const parent = attach(settings, trigger);
   const child = attach(confirmation, pointSelect);

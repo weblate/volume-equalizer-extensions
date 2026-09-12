@@ -4,15 +4,27 @@ import { resizeCanvasBackingStore } from "./drawEqualizer";
 test("updates the backing store only when logical size or device scale changes", () => {
   let width = 0;
   let height = 0;
-  const widthSet = vi.fn((value: number) => { width = value; });
-  const heightSet = vi.fn((value: number) => { height = value; });
+  const widthSet = vi.fn((value: number) => {
+    width = value;
+  });
+  const heightSet = vi.fn((value: number) => {
+    height = value;
+  });
   const canvas = {
     clientWidth: 100,
     clientHeight: 60,
-    get width() { return width; },
-    set width(value) { widthSet(value); },
-    get height() { return height; },
-    set height(value) { heightSet(value); },
+    get width() {
+      return width;
+    },
+    set width(value) {
+      widthSet(value);
+    },
+    get height() {
+      return height;
+    },
+    set height(value) {
+      heightSet(value);
+    },
   } as HTMLCanvasElement;
   const context = { setTransform: vi.fn() } as unknown as CanvasRenderingContext2D;
   expect(resizeCanvasBackingStore(canvas, context, 2)).toBe(true);
