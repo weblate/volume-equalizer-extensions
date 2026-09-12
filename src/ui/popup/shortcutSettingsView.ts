@@ -18,7 +18,6 @@ export const createShortcutSettingsView = (deps: {
   saveShortcuts(shortcuts: ShortcutMap): Promise<void>;
 }) => {
   let savedShortcuts = resolveShortcuts(null);
-  let displayedShortcuts = savedShortcuts;
   let requestedShortcuts = savedShortcuts;
   let interactionGeneration = 0;
   let saveQueue = Promise.resolve();
@@ -33,7 +32,7 @@ export const createShortcutSettingsView = (deps: {
   };
   const render = (invalidAction: ShortcutActionName | null = null): void => {
     Object.entries(inputs).forEach(([action, input]) => {
-      input.value = formatShortcut(displayedShortcuts[action as ShortcutActionName]);
+      input.value = formatShortcut(savedShortcuts[action as ShortcutActionName]);
       input.classList.toggle("invalid", action === invalidAction);
     });
   };
@@ -80,7 +79,6 @@ export const createShortcutSettingsView = (deps: {
           savedShortcuts = next;
           if (generation !== interactionGeneration) return;
           requestedShortcuts = next;
-          displayedShortcuts = next;
           setError(null);
           render();
         })
@@ -88,7 +86,6 @@ export const createShortcutSettingsView = (deps: {
           console.error("Failed to save shortcut settings", { action, error });
           if (generation !== interactionGeneration) return;
           requestedShortcuts = savedShortcuts;
-          displayedShortcuts = savedShortcuts;
           setError("shortcut_validation_error");
           render(action);
         });
@@ -98,10 +95,9 @@ export const createShortcutSettingsView = (deps: {
   return {
     setShortcuts: (value: Partial<ShortcutMap> | null | undefined): void => {
       savedShortcuts = resolveShortcuts(value);
-      displayedShortcuts = savedShortcuts;
       requestedShortcuts = savedShortcuts;
       render();
     },
-    getShortcuts: (): ShortcutMap => displayedShortcuts,
+    getShortcuts: (): ShortcutMap => savedShortcuts,
   };
 };

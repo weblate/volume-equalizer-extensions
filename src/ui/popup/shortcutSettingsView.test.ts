@@ -92,7 +92,7 @@ test("shortcut saves are serialized and only the latest result updates the view"
   await vi.waitFor(() => expect(saveShortcuts).toHaveBeenCalledOnce());
   resolveFirst();
   await vi.waitFor(() => expect(saveShortcuts).toHaveBeenCalledTimes(2));
-  expect(view.getShortcuts().toggleEq?.key).toBe("K");
+  expect(view.getShortcuts().toggleEq?.key).toBe("E");
   resolveSecond();
   await vi.waitFor(() => expect(view.getShortcuts().toggleEq?.key).toBe("F"));
 });
@@ -165,4 +165,5 @@ test("a pending valid save cannot clear a newer validation error", async () => {
   await Promise.resolve();
   await Promise.resolve();
   expect(error.textContent).toBe("shortcut_validation_error");
+  expect(view.getShortcuts().toggleEq?.key).toBe("E");
 });
