@@ -1,43 +1,18 @@
 import {
   AVAILABLE_LANGUAGE_CODES,
   DEFAULT_LANGUAGE,
-  getBrowserLanguage,
   getLanguageName,
+  resolveLanguageCode,
 } from "./languages";
 
-const setNavigatorLanguage = (language: string): void => {
-  Object.defineProperty(globalThis.navigator, "language", {
-    configurable: true,
-    value: language,
-  });
-};
-
-describe("getBrowserLanguage", () => {
-  beforeEach(() => {
-    vi.stubGlobal("chrome", {
-      i18n: {
-        getMessage: vi.fn(() => ""),
-      },
-    });
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  test("uses exact Chrome UI locale matches", () => {
-    vi.mocked(chrome.i18n.getMessage).mockReturnValue("pt_PT");
-    setNavigatorLanguage("en");
-
-    expect(getBrowserLanguage()).toBe("pt_PT");
+describe("resolveLanguageCode", () => {
+  test("uses exact supported locale matches", () => {
+    expect(resolveLanguageCode("pt_PT")).toBe("pt_PT");
   });
 
   test("does not use partial language matches", () => {
-    vi.mocked(chrome.i18n.getMessage).mockReturnValue("pt");
-    setNavigatorLanguage("en-US");
-
     expect(AVAILABLE_LANGUAGE_CODES).not.toContain("pt");
-    expect(getBrowserLanguage()).toBe(DEFAULT_LANGUAGE);
+    expect(resolveLanguageCode("pt")).toBe(DEFAULT_LANGUAGE);
   });
 });
 

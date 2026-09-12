@@ -1,0 +1,113 @@
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
+import { createPresetActions } from "./presetActions";
+
+afterEach(() => vi.unstubAllGlobals());
+
+const setup = (stored: Record<string, unknown>, rejectWrite = false) => {
+  const storage = {
+    get: vi.fn(async () => structuredClone(stored)),
+    set: rejectWrite
+      ? vi.fn(async () => {
+          throw new Error("write failed");
+        })
+      : vi.fn(async () => undefined),
+  };
+  vi.stubGlobal("chrome", { storage: { local: storage } });
+  return {
+    actions: createPresetActions({
+      getCurrentTabId: vi.fn(async () => 7),
+      getCurrentFilters: vi.fn(() => [
+        {
+          freq: 1000,
+          gain: 2,
+          q: 0.5,
+          type: "peaking" as const,
+        },
+      ]),
+    }),
+    storage,
+  };
+};
+
+describe("presetActions", () => {
+  test("rejects an invalid save without writing storage", async () => {
+    const { actions, storage } = setup({
+      [STORAGE_KEYS.PRESET_NAMES]: ["Mine"],
+      [STORAGE_KEYS.PRESETS]: {},
+    });
+    await expect(actions.savePreset("Mine")).resolves.toEqual({
+      ok: false,
+      reason: "duplicate",
+    });
+    expect(storage.set).not.toHaveBeenCalled();
+  });
+
+  test("strips legacy canvas coordinates before saving a preset", async () => {
+    const { actions, storage } = setup({
+      [STORAGE_KEYS.PRESET_NAMES]: [],
+      [STORAGE_KEYS.PRESETS]: {},
+      [STORAGE_KEYS.tabFilters(7)]: [
+        { type: "peaking", freq: "1000", gain: "6", q: "0.5", x: 10, y: 20 },
+      ],
+    });
+
+    await expect(actions.savePreset("Legacy")).resolves.toMatchObject({ ok: true });
+    expect(storage.set).toHaveBeenCalledWith({
+      [STORAGE_KEYS.PRESETS]: {
+        Legacy: [{ type: "peaking", freq: 1000, gain: 6, q: 0.5 }],
+      },
+      [STORAGE_KEYS.PRESET_NAMES]: ["Legacy"],
+    });
+  });
+
+  test("refuses default and whitelist-referenced preset deletion", async () => {
+    const { actions, storage } = setup({
+      [STORAGE_KEYS.PRESET_NAMES]: ["Mine"],
+      [STORAGE_KEYS.PRESETS]: { Mine: [] },
+      [STORAGE_KEYS.AUTOSTART_RULES]: [{ id: "x", presetName: "Mine" }],
+    });
+    await expect(actions.deletePreset("Bass Boost")).resolves.toEqual({
+      ok: false,
+      reason: "default",
+    });
+    await expect(actions.deletePreset("Mine")).resolves.toEqual({ ok: false, reason: "used" });
+    expect(storage.set).not.toHaveBeenCalled();
+  });
+
+  test("imports only new non-default presets and preserves the caller list on rejection", async () => {
+    const names = ["Existing"];
+    const { actions, storage } = setup(
+      {
+        [STORAGE_KEYS.PRESET_NAMES]: names,
+        [STORAGE_KEYS.PRESETS]: { Existing: [{ freq: 500, gain: 1 }] },
+      },
+      true,
+    );
+    const text = JSON.stringify({
+      presetNames: ["Bass Boost", "Existing", "New"],
+      presets: {
+        "Bass Boost": [{ freq: 1000, gain: -12 }],
+        Existing: [{ freq: 500, gain: 1 }],
+        New: [{ freq: 1000, gain: 2 }],
+      },
+    });
+    await expect(actions.importPresets(text)).rejects.toThrow("write failed");
+    expect(names).toEqual(["Existing"]);
+    expect(storage.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        [STORAGE_KEYS.PRESET_NAMES]: ["Existing", "New"],
+      }),
+    );
+  });
+
+  test("exports current preset data", async () => {
+    const stored = {
+      [STORAGE_KEYS.PRESET_NAMES]: ["Mine"],
+      [STORAGE_KEYS.PRESETS]: { Mine: [{ freq: 1000, gain: 2 }] },
+    };
+    const { actions } = setup(stored);
+    expect(JSON.parse(await actions.exportPresets())).toEqual(stored);
+  });
+});

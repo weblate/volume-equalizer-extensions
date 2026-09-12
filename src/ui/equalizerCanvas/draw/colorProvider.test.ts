@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { ThemeColors } from "../../../domains/theme/themeColors";
+import type { ThemeColors } from "../../theme/themeColors";
 import { drawAxis } from "./drawFrequencyAxis";
 import { createSpectrumRenderer } from "./drawSpectrum";
 

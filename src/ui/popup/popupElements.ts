@@ -1,4 +1,4 @@
-import { getRequiredElement } from "./getRequiredElement";
+import { getRequiredElement } from "../../infrastructure/dom/getRequiredElement";
 
 export interface PopupElements {
   settingsButton: HTMLButtonElement;

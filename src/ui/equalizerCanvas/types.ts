@@ -1,5 +1,5 @@
 import type { EqualizerDragTarget, EqualizerState } from "./equalizerEditorState";
-import type { ThemeColors } from "../../domains/theme/themeColors";
+import type { ThemeColors } from "../theme/themeColors";
 
 export interface EqualizerCanvasRenderOptions {
   canvas: HTMLCanvasElement;

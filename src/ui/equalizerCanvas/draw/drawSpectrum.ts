@@ -1,5 +1,5 @@
 import { frequencyToX } from "../../../domains/equalizer/equalizerMath";
-import type { ThemeColors } from "../../../domains/theme/themeColors";
+import type { ThemeColors } from "../../theme/themeColors";
 
 export interface SpectrumMeta {
   sampleRate: number;

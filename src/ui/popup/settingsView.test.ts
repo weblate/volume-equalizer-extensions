@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
+import { createPresetActions } from "../../app/popup/presetActions";
+import { createSettingsActions } from "../../app/popup/settingsActions";
 import { createSettingsView } from "./settingsView";
 
 class FakeElement extends EventTarget {
@@ -68,6 +70,11 @@ const setup = (options: {
   vi.stubGlobal("chrome", { storage: { local: storage } });
   vi.stubGlobal("alert", alert);
   vi.stubGlobal("FileReader", FakeFileReader);
+  const presetActions = createPresetActions({
+    getCurrentTabId: vi.fn(async () => 1),
+    getCurrentFilters: vi.fn(() => []),
+  });
+  const settingsActions = createSettingsActions();
 
   createSettingsView({
     settingsModal: new FakeElement() as unknown as HTMLElement,
@@ -90,7 +97,19 @@ const setup = (options: {
     shortcutsError: new FakeElement() as unknown as HTMLElement,
     localization: {
       getMessage: (name: string) => name,
+      setLanguage: vi.fn(async () => undefined),
     } as never,
+    loadSettings: settingsActions.load,
+    loadPointCount: settingsActions.loadPointCount,
+    shouldSkipPointCountConfirmation: settingsActions.shouldSkipPointCountConfirmation,
+    saveTheme: settingsActions.saveTheme,
+    saveShortcuts: settingsActions.saveShortcuts,
+    savePointCount: settingsActions.savePointCount,
+    saveSkipPointCountConfirmation: settingsActions.saveSkipPointCountConfirmation,
+    saveSpectrumEnabled: settingsActions.saveSpectrumEnabled,
+    saveHideDefaultPresets: settingsActions.saveHideDefaultPresets,
+    importPresets: presetActions.importPresets,
+    exportPresets: presetActions.exportPresets,
     addPresetToDropdown,
     initPoints: vi.fn(),
     redraw: vi.fn(),
@@ -149,12 +168,7 @@ describe("preset import settings", () => {
         New: [{ freq: "1000", gain: "2" }],
       },
     });
-    const {
-      addPresetToDropdown,
-      importInput,
-      refreshDynamicContent,
-      storage,
-    } = setup({
+    const { addPresetToDropdown, importInput, refreshDynamicContent, storage } = setup({
       contents,
       storedPresetNames: ["Existing"],
       storedPresets: { Existing: existingFilters },
@@ -180,13 +194,10 @@ describe("preset import settings", () => {
       presetNames: ["Mine"],
       presets: { Mine: [{ freq: 1000, gain: 2 }] },
     });
-    const {
-      addPresetToDropdown,
-      alert,
-      importInput,
-      refreshDynamicContent,
-      storage,
-    } = setup({ contents, rejectSet: true });
+    const { addPresetToDropdown, alert, importInput, refreshDynamicContent, storage } = setup({
+      contents,
+      rejectSet: true,
+    });
 
     importInput.dispatchEvent(new Event("change"));
     await flushImport(importInput);

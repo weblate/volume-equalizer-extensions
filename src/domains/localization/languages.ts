@@ -30,8 +30,7 @@ const LANGUAGE_NAMES = new Intl.DisplayNames(["en"], { type: "language" });
 export const getLanguageName = (code: AvailableLanguageCode): string =>
   LANGUAGE_NAMES.of(code.replace("_", "-")) ?? code;
 
-export const getBrowserLanguage = (): AvailableLanguageCode => {
-  const locale = chrome.i18n.getMessage("@@ui_locale") || navigator.language;
+export const resolveLanguageCode = (locale: string): AvailableLanguageCode => {
   const exactMatch = AVAILABLE_LANGUAGE_CODES.find((code) => code === locale);
   if (exactMatch) return exactMatch;
 

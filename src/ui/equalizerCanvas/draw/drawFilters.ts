@@ -7,7 +7,7 @@ import {
   POINT_RADIUS,
   type EqualizerCanvasPoint,
 } from "../equalizerEditorState";
-import type { ThemeColors } from "../../../domains/theme/themeColors";
+import type { ThemeColors } from "../../theme/themeColors";
 import type { EqualizerCanvasRenderOptions } from "../types";
 import { drawBiquadFilter } from "./drawBiquadFilter";
 

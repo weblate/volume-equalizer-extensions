@@ -1,31 +1,13 @@
-import { attachModalFocus } from "./modalFocus";
 import { clampPointCount } from "../../domains/equalizer/equalizerMath";
-import { type LocalizationService } from "../../domains/localization/localizationService";
-import {
-  formatShortcut,
-  isModifierShortcutKey,
-  normalizeShortcutFromKeyboardEvent,
-  SHORTCUT_ACTION_MUTE_NAME,
-  SHORTCUT_ACTION_TOGGLE_EQ_NAME,
-  resolveShortcuts,
-  type Shortcut,
-  type ShortcutActionName,
-  type ShortcutMap,
-  validateShortcutConfig,
-} from "../../domains/shortcuts/shortcuts";
-import { parsePresetImport } from "../../domains/presets/presetImport";
-import { isDefaultPresetName } from "../../domains/presets/defaultPresets";
-import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
+import type { ShortcutMap } from "../../domains/shortcuts/shortcuts";
+import { attachModalFocus } from "./modalFocus";
+import { createShortcutSettingsView } from "./shortcutSettingsView";
 
 type ThemeName = "dark" | "light";
 
-const DEFAULT_THEME: ThemeName = "dark";
+const resolveTheme = (theme: unknown): ThemeName => (theme === "light" ? "light" : "dark");
 
-const isThemeName = (theme: unknown): theme is ThemeName => {
-  return theme === "dark" || theme === "light";
-};
-
-const saveTextAsFile = (text: string, filename = "file.txt"): void => {
+const saveTextAsFile = (text: string, filename: string): void => {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
@@ -56,7 +38,38 @@ export const createSettingsView = (deps: {
   shortcutMute: HTMLInputElement;
   shortcutToggleEq: HTMLInputElement;
   shortcutsError: HTMLElement;
-  localization: LocalizationService;
+  localization: {
+    getMessage(messageName: string): string;
+    setLanguage(
+      language: string,
+      options?: {
+        save?: boolean;
+        refreshDynamicContent?: () => Promise<void>;
+      },
+    ): Promise<void>;
+  };
+  loadSettings(): Promise<{
+    theme: ThemeName;
+    pointCount: number;
+    shortcuts: ShortcutMap;
+    enableSpectrum: boolean;
+    hideDefaultPresets: boolean;
+  }>;
+  loadPointCount(): Promise<number>;
+  shouldSkipPointCountConfirmation(): Promise<boolean>;
+  saveTheme(theme: ThemeName): Promise<void>;
+  saveShortcuts(shortcuts: ShortcutMap): Promise<void>;
+  savePointCount(count: number): Promise<void>;
+  saveSkipPointCountConfirmation(skip: boolean): Promise<void>;
+  saveSpectrumEnabled(enabled: boolean): Promise<void>;
+  saveHideDefaultPresets(hidden: boolean): Promise<void>;
+  importPresets(
+    text: string,
+  ): Promise<
+    | { ok: true; namesAdded: string[]; presetNames: string[] }
+    | { ok: false; error: "syntax" | "structure" | "name" | "filter" }
+  >;
+  exportPresets(): Promise<string>;
   addPresetToDropdown(name: string): void;
   initPoints(count: number): void;
   redraw(): void;
@@ -67,36 +80,26 @@ export const createSettingsView = (deps: {
   const settingsFocus = attachModalFocus(deps.settingsModal, deps.settingsButton);
   const pointsFocus = attachModalFocus(deps.pointsResetModal, deps.pointsCount);
   let pendingPointCount: number | null = null;
-  let shortcutSettings: ShortcutMap = resolveShortcuts(null);
+  const shortcuts = createShortcutSettingsView({
+    muteInput: deps.shortcutMute,
+    toggleEqInput: deps.shortcutToggleEq,
+    error: deps.shortcutsError,
+    getMessage: deps.localization.getMessage,
+    saveShortcuts: deps.saveShortcuts,
+  });
 
   const applyTheme = (theme: unknown): ThemeName => {
-    const chosenTheme = isThemeName(theme) ? theme : DEFAULT_THEME;
+    const chosenTheme = resolveTheme(theme);
     document.documentElement.dataset.theme = chosenTheme;
     deps.themeSelect.value = chosenTheme;
     deps.redraw();
     return chosenTheme;
   };
 
-  const saveTheme = (theme: ThemeName): Promise<void> => {
-    return chrome.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
-  };
-
   const setTheme = async (theme: unknown): Promise<void> => {
-    await saveTheme(applyTheme(theme));
-  };
-
-  const shouldSkipPointsResetConfirm = async (): Promise<boolean> => {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.SKIP_POINTS_CONFIRM]);
-    return (
-      result[STORAGE_KEYS.SKIP_POINTS_CONFIRM] === "true" ||
-      result[STORAGE_KEYS.SKIP_POINTS_CONFIRM] === true
-    );
-  };
-
-  const setSkipPointsResetConfirm = (value: boolean): Promise<void> => {
-    return chrome.storage.local.set({
-      [STORAGE_KEYS.SKIP_POINTS_CONFIRM]: Boolean(value),
-    });
+    const chosenTheme = resolveTheme(theme);
+    await deps.saveTheme(chosenTheme);
+    applyTheme(chosenTheme);
   };
 
   const updatePointCountSelect = (count: unknown): void => {
@@ -104,177 +107,90 @@ export const createSettingsView = (deps: {
   };
 
   const applyPointCountChange = async (newCount: number): Promise<void> => {
-    await chrome.storage.local.set({ [STORAGE_KEYS.POINT_COUNT]: newCount });
+    await deps.savePointCount(newCount);
     deps.initPoints(newCount);
     deps.redraw();
     deps.refreshToolkitCaptureFilters();
     await deps.saveCurrentFilters();
   };
 
-  const setPointCount = (count: unknown): Promise<void> => {
-    return applyPointCountChange(
-      clampPointCount(Number.parseInt(String(count), 10)),
-    );
+  const setPointCount = (count: unknown): Promise<void> =>
+    applyPointCountChange(clampPointCount(Number.parseInt(String(count), 10)));
+  const closePointsResetModal = (): void => pointsFocus.close();
+  const resetPointCountSelect = async (): Promise<void> => {
+    updatePointCountSelect(await deps.loadPointCount());
   };
 
-  const closePointsResetModal = (): void => {
-    pointsFocus.close();
-  };
-
-  const resetPointCountSelectFromStorage = async (): Promise<void> => {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.POINT_COUNT]);
-    updatePointCountSelect(result[STORAGE_KEYS.POINT_COUNT]);
-  };
-
-  const setShortcutsError = (messageName: string | null): void => {
-    if (!messageName) {
-      deps.shortcutsError.style.display = "none";
-      deps.shortcutsError.textContent = "";
-      return;
-    }
-
-    deps.shortcutsError.textContent = deps.localization.getMessage(messageName);
-    deps.shortcutsError.style.display = "block";
-  };
-
-  const shortcutInputs: Record<ShortcutActionName, HTMLInputElement> = {
-    [SHORTCUT_ACTION_MUTE_NAME]: deps.shortcutMute,
-    [SHORTCUT_ACTION_TOGGLE_EQ_NAME]: deps.shortcutToggleEq,
-  };
-
-  const renderShortcutInputs = (
-    invalidAction: ShortcutActionName | null = null,
-  ): void => {
-    Object.entries(shortcutInputs).forEach(([action, input]) => {
-      input.value = formatShortcut(
-        shortcutSettings[action as ShortcutActionName],
-      );
-      input.classList.toggle("invalid", action === invalidAction);
-    });
-  };
-
-  const startShortcutEdit = (input: HTMLInputElement): void => {
-    input.value = "?";
-    input.classList.remove("invalid");
-    setShortcutsError(null);
-  };
-
-  const saveShortcut = async (
-    action: ShortcutActionName,
-    shortcut: Shortcut,
-  ): Promise<boolean> => {
-    const nextShortcuts = {
-      ...shortcutSettings,
-      [action]: shortcut,
-    };
-    const validationError = validateShortcutConfig(nextShortcuts);
-
-    if (validationError) {
-      const messageName =
-        validationError === "duplicate"
-          ? "shortcut_duplicate_error"
-          : "shortcut_validation_error";
-      setShortcutsError(messageName);
-      renderShortcutInputs(action);
-      return false;
-    }
-
-    shortcutSettings = resolveShortcuts(nextShortcuts);
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.SHORTCUTS]: shortcutSettings,
-    });
-    setShortcutsError(null);
-    renderShortcutInputs();
-    return true;
-  };
-
-  deps.settingsButton.addEventListener("click", () => {
-    settingsFocus.open();
-  });
-
-  deps.closeSettingsButton.addEventListener("click", () => {
-    settingsFocus.close();
-  });
-
+  deps.settingsButton.addEventListener("click", () => settingsFocus.open());
+  deps.closeSettingsButton.addEventListener("click", () => settingsFocus.close());
   window.addEventListener("click", (event) => {
-    if (event.target === deps.settingsModal) {
-      settingsFocus.close();
-    }
+    if (event.target === deps.settingsModal) settingsFocus.close();
   });
-
   deps.themeSelect.addEventListener("change", () => {
-    void setTheme(deps.themeSelect.value);
+    void setTheme(deps.themeSelect.value).catch((error: unknown) => {
+      console.error("Failed to save theme", { error });
+    });
   });
-
   deps.pointsCount.addEventListener("change", () => {
     void (async () => {
       const newCount = clampPointCount(Number.parseInt(deps.pointsCount.value, 10));
-      if (Number.isNaN(newCount)) return;
-
-      if (await shouldSkipPointsResetConfirm()) {
+      if (await deps.shouldSkipPointCountConfirmation()) {
         await applyPointCountChange(newCount);
         return;
       }
-
       pendingPointCount = newCount;
-      deps.skipResetConfirm.checked = await shouldSkipPointsResetConfirm();
+      deps.skipResetConfirm.checked = await deps.shouldSkipPointCountConfirmation();
       pointsFocus.open();
-    })();
+    })().catch((error: unknown) => {
+      console.error("Failed to change equalizer point count", { error });
+    });
   });
-
   deps.pointsResetModal.addEventListener("modal-closed", () => {
     if (pendingPointCount == null) return;
     pendingPointCount = null;
-    void resetPointCountSelectFromStorage();
+    void resetPointCountSelect().catch((error: unknown) => {
+      console.error("Failed to restore equalizer point count", { error });
+    });
   });
-
   deps.pointsResetConfirm.addEventListener("click", () => {
     void (async () => {
-      await setSkipPointsResetConfirm(deps.skipResetConfirm.checked);
-      if (pendingPointCount != null) {
-        await applyPointCountChange(pendingPointCount);
-      }
+      await deps.saveSkipPointCountConfirmation(deps.skipResetConfirm.checked);
+      if (pendingPointCount != null) await applyPointCountChange(pendingPointCount);
       pendingPointCount = null;
       closePointsResetModal();
-    })();
+    })().catch((error: unknown) => {
+      console.error("Failed to confirm equalizer point count", { error });
+    });
   });
-
-  deps.pointsResetCancel.addEventListener("click", () => {
-    void (async () => {
-      await resetPointCountSelectFromStorage();
-      pendingPointCount = null;
-      closePointsResetModal();
-    })();
-  });
-
+  const cancelPointCountChange = (): void => {
+    void resetPointCountSelect()
+      .then(() => {
+        pendingPointCount = null;
+        closePointsResetModal();
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to cancel equalizer point count", { error });
+      });
+  };
+  deps.pointsResetCancel.addEventListener("click", cancelPointCountChange);
   deps.pointsResetModal.addEventListener("click", (event) => {
-    void (async () => {
-      if (event.target !== deps.pointsResetModal) return;
-
-      await resetPointCountSelectFromStorage();
-      pendingPointCount = null;
-      closePointsResetModal();
-    })();
+    if (event.target === deps.pointsResetModal) cancelPointCountChange();
   });
 
   deps.exportPresetsButton.addEventListener("click", () => {
-    void (async () => {
-      const result = await chrome.storage.local.get([
-        STORAGE_KEYS.PRESETS,
-        STORAGE_KEYS.PRESET_NAMES,
-      ]);
-      saveTextAsFile(JSON.stringify(result), "eq_toolkit_presets.json");
-    })();
+    void deps
+      .exportPresets()
+      .then((text) => {
+        saveTextAsFile(text, "eq_toolkit_presets.json");
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to export presets", { error });
+      });
   });
-
-  deps.importPresetsButton.addEventListener("click", () => {
-    deps.importInput.click();
-  });
-
+  deps.importPresetsButton.addEventListener("click", () => deps.importInput.click());
   deps.importInput.addEventListener("change", () => {
     const file = deps.importInput.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     const showImportError = (messageName: string): void => {
       alert(deps.localization.getMessage(messageName));
@@ -290,32 +206,16 @@ export const createSettingsView = (deps: {
             showImportError("preset_import_read_error");
             return;
           }
-          const parsed = parsePresetImport(reader.result);
-          if (!parsed.ok) {
-            showImportError(`preset_import_${parsed.error}_error`);
+          const result = await deps.importPresets(reader.result);
+          if (!result.ok) {
+            showImportError(`preset_import_${result.error}_error`);
             return;
           }
-          const prefs = await chrome.storage.local.get([
-            STORAGE_KEYS.PRESETS,
-            STORAGE_KEYS.PRESET_NAMES,
-          ]);
-          const presets = (prefs[STORAGE_KEYS.PRESETS] ?? {}) as Record<string, unknown>;
-          const presetNames = [...((prefs[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[])];
-          const namesToAdd = parsed.presetNames.filter((name) => {
-            return !isDefaultPresetName(name) && !presetNames.includes(name);
-          });
-          namesToAdd.forEach((name) => {
-            presetNames.push(name);
-            presets[name] = parsed.presets[name];
-          });
-          await chrome.storage.local.set({
-            [STORAGE_KEYS.PRESETS]: presets,
-            [STORAGE_KEYS.PRESET_NAMES]: presetNames,
-          });
-          namesToAdd.forEach((name) => deps.addPresetToDropdown(name));
+          result.namesAdded.forEach((name) => deps.addPresetToDropdown(name));
           await deps.refreshDynamicContent();
-        } catch {
+        } catch (error) {
           showImportError("preset_import_save_error");
+          console.error("Failed to import presets", { error });
         } finally {
           deps.importInput.value = "";
         }
@@ -325,20 +225,22 @@ export const createSettingsView = (deps: {
   });
 
   deps.enableSpectrum.addEventListener("change", () => {
-    void chrome.storage.local.set({
-      [STORAGE_KEYS.ENABLE_SPECTRUM]: deps.enableSpectrum.checked,
+    const enabled = deps.enableSpectrum.checked;
+    void deps.saveSpectrumEnabled(enabled).catch((error: unknown) => {
+      deps.enableSpectrum.checked = !enabled;
+      console.error("Failed to save spectrum setting", { error });
     });
   });
-
   deps.hideDefaultPresets.addEventListener("change", () => {
-    void (async () => {
-      await chrome.storage.local.set({
-        [STORAGE_KEYS.HIDE_DEFAULT_PRESETS]: deps.hideDefaultPresets.checked,
+    const hidden = deps.hideDefaultPresets.checked;
+    void deps
+      .saveHideDefaultPresets(hidden)
+      .then(deps.refreshDynamicContent)
+      .catch((error: unknown) => {
+        deps.hideDefaultPresets.checked = !hidden;
+        console.error("Failed to save preset visibility", { error });
       });
-      await deps.refreshDynamicContent();
-    })();
   });
-
   deps.languageSelect.addEventListener("change", () => {
     void deps.localization.setLanguage(deps.languageSelect.value, {
       save: true,
@@ -346,55 +248,20 @@ export const createSettingsView = (deps: {
     });
   });
 
-  Object.entries(shortcutInputs).forEach(([action, input]) => {
-    const shortcutAction = action as ShortcutActionName;
-
-    input.addEventListener("focus", () => {
-      startShortcutEdit(input);
-    });
-
-    input.addEventListener("blur", () => {
-      setShortcutsError(null);
-      renderShortcutInputs();
-    });
-
-    input.addEventListener("keydown", (event) => {
-      void (async () => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (isModifierShortcutKey(event.key)) return;
-
-        const shortcut = normalizeShortcutFromKeyboardEvent(event);
-        if (!shortcut) {
-          setShortcutsError("shortcut_validation_error");
-          input.classList.add("invalid");
-          return;
-        }
-
-        const saved = await saveShortcut(shortcutAction, shortcut);
-        if (!saved) input.value = "?";
-      })();
-    });
-  });
-
   return {
     init: async () => {
-      const stored = await chrome.storage.local.get([
-        STORAGE_KEYS.SHORTCUTS,
-        STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
-      ]);
-      deps.hideDefaultPresets.checked =
-        stored[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] === true;
-      shortcutSettings = resolveShortcuts(
-        stored[STORAGE_KEYS.SHORTCUTS] as Partial<ShortcutMap>,
-      );
-      renderShortcutInputs();
+      const stored = await deps.loadSettings();
+      applyTheme(stored.theme);
+      updatePointCountSelect(stored.pointCount);
+      deps.hideDefaultPresets.checked = stored.hideDefaultPresets;
+      deps.enableSpectrum.checked = stored.enableSpectrum;
+      shortcuts.setShortcuts(stored.shortcuts);
+      return stored;
     },
     applyTheme,
     setTheme,
     setPointCount,
     updatePointCountSelect,
-    getShortcutSettings: () => shortcutSettings,
+    getShortcutSettings: shortcuts.getShortcuts,
   };
 };

@@ -1,21 +1,9 @@
-import { attachModalFocus } from "./modalFocus";
 import {
-  createWhitelistEntry,
   getWhitelistDomain,
   normalizeWhitelistUrl,
-  type AutostartEntryType,
   type AutostartWhitelistEntry,
 } from "../../domains/autostart/autostartRules";
-import { getAvailablePresetNames } from "../../domains/presets/defaultPresets";
-import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
-
-const getActiveTab = async (): Promise<chrome.tabs.Tab | null> => {
-  const [tab] = await chrome.tabs.query({
-    active: true,
-    lastFocusedWindow: true,
-  });
-  return tab ?? null;
-};
+import { attachModalFocus } from "./modalFocus";
 
 export const createAutostartView = (deps: {
   addToWhitelistButton: HTMLElement;
@@ -35,6 +23,15 @@ export const createAutostartView = (deps: {
   settingsError: HTMLElement;
   isToolkitWindow: boolean;
   getMessage(messageName: string): string;
+  getActiveTab(): Promise<{ url?: string } | null>;
+  loadRules(): Promise<AutostartWhitelistEntry[]>;
+  loadPresetNames(): Promise<string[]>;
+  addRule(
+    type: string | undefined,
+    value: string | undefined,
+    presetName: string,
+  ): Promise<{ ok: true; entries: AutostartWhitelistEntry[] } | { ok: false }>;
+  removeRule(id: string): Promise<AutostartWhitelistEntry[]>;
 }) => {
   const modalFocus = attachModalFocus(deps.modal, deps.addToWhitelistButton);
   const setError = (element: HTMLElement, messageName: string): void => {
@@ -48,36 +45,21 @@ export const createAutostartView = (deps: {
     selectedName = "",
   ): void => {
     select.textContent = "";
-
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
-    emptyOption.textContent = deps.getMessage(
-      "autostart_settings_select_preset_placeholder",
-    );
+    emptyOption.textContent = deps.getMessage("autostart_settings_select_preset_placeholder");
     select.appendChild(emptyOption);
-
     presetNames.forEach((name) => {
       const option = document.createElement("option");
       option.value = name;
       option.textContent = name;
       select.appendChild(option);
     });
-
     select.value = selectedName;
   };
 
   const refreshPresetSelects = async (): Promise<void> => {
-    const stored = await chrome.storage.local.get([
-      STORAGE_KEYS.PRESET_NAMES,
-      STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
-    ]);
-    const presetNames = getAvailablePresetNames(
-      (stored[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[],
-      {
-        includeDefaultPresets:
-          stored[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] !== true,
-      },
-    );
+    const presetNames = await deps.loadPresetNames();
     fillPresetSelect(deps.modalPreset, presetNames);
     fillPresetSelect(deps.settingsAddPreset, presetNames);
   };
@@ -90,43 +72,9 @@ export const createAutostartView = (deps: {
     return `${typeLabel}: ${entry.value}`;
   };
 
-  const saveWhitelistEntry = async (
-    type: string | undefined,
-    value: string | undefined,
-    presetName: string,
-    errorElement: HTMLElement,
-  ): Promise<boolean> => {
-    const entry = createWhitelistEntry(
-      type as AutostartEntryType,
-      value ?? "",
-      presetName,
-    );
-    if (!entry) {
-      setError(errorElement, "autostart_validation_error");
-      return false;
-    }
-
-    const stored = await chrome.storage.local.get([STORAGE_KEYS.AUTOSTART_RULES]);
-    const entries = ((stored[STORAGE_KEYS.AUTOSTART_RULES] ?? []) as AutostartWhitelistEntry[])
-      .filter((item) => item.id !== entry.id);
-    entries.push(entry);
-    await chrome.storage.local.set({ [STORAGE_KEYS.AUTOSTART_RULES]: entries });
-    setError(errorElement, "");
-    return true;
-  };
-
-  const removeWhitelistEntry = async (id: string): Promise<void> => {
-    const stored = await chrome.storage.local.get([STORAGE_KEYS.AUTOSTART_RULES]);
-    const entries = ((stored[STORAGE_KEYS.AUTOSTART_RULES] ?? []) as AutostartWhitelistEntry[])
-      .filter((entry) => entry.id !== id);
-    await chrome.storage.local.set({ [STORAGE_KEYS.AUTOSTART_RULES]: entries });
-  };
-
-  const renderWhitelist = async (): Promise<void> => {
-    const stored = await chrome.storage.local.get([STORAGE_KEYS.AUTOSTART_RULES]);
-    const entries = (stored[STORAGE_KEYS.AUTOSTART_RULES] ?? []) as AutostartWhitelistEntry[];
+  const renderWhitelist = async (resolvedEntries?: AutostartWhitelistEntry[]): Promise<void> => {
+    const entries = resolvedEntries ?? (await deps.loadRules());
     deps.settingsList.textContent = "";
-
     if (entries.length === 0) {
       const empty = document.createElement("div");
       empty.id = "whitelist-empty";
@@ -139,43 +87,57 @@ export const createAutostartView = (deps: {
     entries.forEach((entry) => {
       const item = document.createElement("div");
       item.className = "whitelist-item";
-
       const text = document.createElement("div");
       text.className = "whitelist-item-text";
-
       const value = document.createElement("span");
       value.textContent = formatWhitelistEntry(entry);
-
       const preset = document.createElement("small");
-      preset.textContent = `${deps.getMessage("autostart_modal_preset_label")}: ${
-        entry.presetName
-      }`;
-
+      preset.textContent = `${deps.getMessage("autostart_modal_preset_label")}: ${entry.presetName}`;
       text.append(value, preset);
-
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
       deleteButton.className = "whitelist-delete";
       deleteButton.textContent = "\u00d7";
       deleteButton.setAttribute("aria-label", deps.getMessage("delete"));
       deleteButton.addEventListener("click", () => {
-        void removeWhitelistEntry(entry.id);
+        void deps
+          .removeRule(entry.id)
+          .then(async (nextEntries) => {
+            await renderWhitelist(nextEntries);
+            await refreshPresetSelects();
+          })
+          .catch((error: unknown) => {
+            console.error("Failed to remove autostart rule", { id: entry.id, error });
+          });
       });
-
       item.append(text, deleteButton);
       deps.settingsList.appendChild(item);
     });
   };
 
-  const closeModal = (): void => {
-    modalFocus.close();
+  const saveWhitelistEntry = async (
+    type: string | undefined,
+    value: string | undefined,
+    presetName: string,
+    errorElement: HTMLElement,
+  ): Promise<boolean> => {
+    const result = await deps.addRule(type, value, presetName);
+    if (!result.ok) {
+      setError(errorElement, "autostart_validation_error");
+      return false;
+    }
+    setError(errorElement, "");
+    await renderWhitelist(result.entries);
+    await refreshPresetSelects();
+    return true;
   };
+
+  const closeModal = (): void => modalFocus.close();
 
   deps.addToWhitelistButton.addEventListener("click", () => {
     void (async () => {
       if (deps.isToolkitWindow) return;
-
-      const tab = await getActiveTab();
+      const tab = await deps.getActiveTab();
       deps.modalDomainValue.textContent = getWhitelistDomain(tab?.url ?? "");
       deps.modalUrlValue.textContent = normalizeWhitelistUrl(tab?.url ?? "");
       await refreshPresetSelects();
@@ -183,50 +145,43 @@ export const createAutostartView = (deps: {
       modalFocus.open();
     })();
   });
-
   deps.closeButton.addEventListener("click", closeModal);
   deps.cancelButton.addEventListener("click", closeModal);
   deps.modal.addEventListener("click", (event) => {
     if (event.target === deps.modal) closeModal();
   });
-
   deps.confirmButton.addEventListener("click", () => {
     void (async () => {
-      const tab = await getActiveTab();
+      const tab = await deps.getActiveTab();
       const selectedType = deps.modal.querySelector<HTMLInputElement>(
         "input[name='autostart-modal-add-type']:checked",
       )?.value;
-      const saved = await saveWhitelistEntry(
-        selectedType,
-        tab?.url,
-        deps.modalPreset.value,
-        deps.modalError,
-      );
-      if (saved) closeModal();
+      try {
+        if (
+          await saveWhitelistEntry(selectedType, tab?.url, deps.modalPreset.value, deps.modalError)
+        )
+          closeModal();
+      } catch (error) {
+        console.error("Failed to add autostart rule", { error });
+      }
     })();
   });
-
   deps.settingsAddButton.addEventListener("click", () => {
     void (async () => {
-      const saved = await saveWhitelistEntry(
-        deps.settingsType.value,
-        deps.settingsAddValue.value,
-        deps.settingsAddPreset.value,
-        deps.settingsError,
-      );
-      if (saved) deps.settingsAddValue.value = "";
+      try {
+        if (
+          await saveWhitelistEntry(
+            deps.settingsType.value,
+            deps.settingsAddValue.value,
+            deps.settingsAddPreset.value,
+            deps.settingsError,
+          )
+        )
+          deps.settingsAddValue.value = "";
+      } catch (error) {
+        console.error("Failed to add autostart rule", { error });
+      }
     })();
-  });
-
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local") return;
-    if (changes[STORAGE_KEYS.AUTOSTART_RULES]) void renderWhitelist();
-    if (
-      changes[STORAGE_KEYS.PRESET_NAMES] ||
-      changes[STORAGE_KEYS.HIDE_DEFAULT_PRESETS]
-    ) {
-      void refreshPresetSelects();
-    }
   });
 
   return {

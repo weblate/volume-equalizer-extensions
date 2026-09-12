@@ -3,14 +3,14 @@ import type { EqualizerFilter } from "../../domains/equalizer/types";
 import { readPersistedFilters } from "../../domains/equalizer/persistedFilters";
 import type { EqualizerState } from "../../ui/equalizerCanvas/equalizerEditorState";
 import { clampPointCount } from "../../domains/equalizer/equalizerMath";
-import { type LocalizationService } from "../../domains/localization/localizationService";
+import { type LocalizationService } from "./localizationController";
 import {
   isEditableShortcutTarget,
   matchesShortcut,
   SHORTCUT_ACTION_MUTE_NAME,
   SHORTCUT_ACTION_TOGGLE_EQ_NAME,
 } from "../../domains/shortcuts/shortcuts";
-import type { ThemeColors } from "../../domains/theme/themeColors";
+import type { ThemeColors } from "../../ui/theme/themeColors";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import {
   RUNTIME_MESSAGES,
@@ -19,10 +19,13 @@ import {
   type RelayedSpectrumMessage,
   type SpectrumMetaPayload,
 } from "../../infrastructure/chrome/runtimeMessages";
-import type { PopupElements } from "../../infrastructure/dom/popupElements";
+import type { PopupElements } from "../../ui/popup/popupElements";
 import { createToolkitWindowController } from "../window-mode/createToolkitWindowController";
 import { createEqualizerCanvas } from "../../ui/equalizerCanvas/createEqualizerCanvas";
 import { createFilterPersistence } from "./filterPersistence";
+import { createPresetActions } from "./presetActions";
+import { createSettingsActions } from "./settingsActions";
+import { createAutostartActions } from "./autostartActions";
 import { createSpectrumRenderer } from "../../ui/equalizerCanvas/draw/drawSpectrum";
 import { createAutostartView } from "../../ui/popup/autostartView";
 import { createControlsView, formatGainValue } from "../../ui/popup/controlsView";
@@ -146,10 +149,11 @@ export const createPopupApp = ({
   spectrumCtx.imageSmoothingEnabled = true;
   spectrumCtx.imageSmoothingQuality = "high";
 
-  let controlsView: ReturnType<typeof createControlsView>;
-  let presetsView: ReturnType<typeof createPresetsView>;
-  let settingsView: ReturnType<typeof createSettingsView>;
+  let controlsView: ReturnType<typeof createControlsView> | undefined = undefined;
+  let presetsView: ReturnType<typeof createPresetsView> | undefined = undefined;
+  let settingsView: ReturnType<typeof createSettingsView> | undefined = undefined;
   let spectrumPortClient: ReturnType<typeof createSpectrumPortClient> | null = null;
+  const settingsActions = createSettingsActions();
 
   const getColors = (): ThemeColors => readThemeColors(document.documentElement);
   const filterPersistence = createFilterPersistence(async (tabId, filters) => {
@@ -163,10 +167,7 @@ export const createPopupApp = ({
     await chrome.storage.local.set(values);
   });
 
-  const getPointCount = async (): Promise<number> => {
-    const stored = await chrome.storage.local.get([STORAGE_KEYS.POINT_COUNT]);
-    return clampPointCount(Number.parseInt(String(stored[STORAGE_KEYS.POINT_COUNT]), 10));
-  };
+  const getPointCount = settingsActions.loadPointCount;
 
   const equalizerCanvas = createEqualizerCanvas({
     canvas: elements.eqCanvas,
@@ -254,6 +255,13 @@ export const createPopupApp = ({
   const getCurrentTabId = (): Promise<number | null> => {
     return toolkitController.getCurrentTabId();
   };
+  const presetActions = createPresetActions({ getCurrentTabId, getCurrentFilters });
+  const autostartActions = createAutostartActions({
+    getActiveTab: async () => {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      return tab ?? null;
+    },
+  });
 
   const saveCurrentFilters = async (
     options: { enableCurrentTab?: boolean } = {},
@@ -290,12 +298,9 @@ export const createPopupApp = ({
   };
 
   const refreshPresetDropdown = async (): Promise<void> => {
-    const stored = await chrome.storage.local.get([
-      STORAGE_KEYS.PRESET_NAMES,
-      STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
-    ]);
-    presetsView.renderPresetNames((stored[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[], {
-      includeDefaultPresets: stored[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] !== true,
+    const current = await presetActions.load();
+    presetsView?.renderPresetNames(current.presetNames, {
+      includeDefaultPresets: current.includeDefaultPresets,
     });
   };
 
@@ -426,10 +431,11 @@ export const createPopupApp = ({
     nameInput: elements.presetName,
     saveError: elements.presetSaveError,
     saveCancel: elements.presetSaveCancel,
-    isToolkitWindow: toolkitController.isToolkitWindow,
     getMessage: localization.getMessage,
-    getCurrentTabId,
     getCurrentFilters,
+    savePreset: presetActions.savePreset,
+    deletePreset: presetActions.deletePreset,
+    selectPreset: presetActions.selectPreset,
     setCurrentFilters,
     saveLoadedFilters,
     redraw: resize,
@@ -454,6 +460,11 @@ export const createPopupApp = ({
     settingsError: elements.autostartSettingsError,
     isToolkitWindow: toolkitController.isToolkitWindow,
     getMessage: localization.getMessage,
+    getActiveTab: autostartActions.getActiveTab,
+    loadRules: autostartActions.load,
+    loadPresetNames: presetActions.loadAvailablePresetNames,
+    addRule: autostartActions.add,
+    removeRule: autostartActions.remove,
   });
 
   settingsView = createSettingsView({
@@ -476,6 +487,17 @@ export const createPopupApp = ({
     shortcutToggleEq: elements.shortcutToggleEq,
     shortcutsError: elements.shortcutsSettingsError,
     localization,
+    loadSettings: settingsActions.load,
+    loadPointCount: settingsActions.loadPointCount,
+    shouldSkipPointCountConfirmation: settingsActions.shouldSkipPointCountConfirmation,
+    saveTheme: settingsActions.saveTheme,
+    saveShortcuts: settingsActions.saveShortcuts,
+    savePointCount: settingsActions.savePointCount,
+    saveSkipPointCountConfirmation: settingsActions.saveSkipPointCountConfirmation,
+    saveSpectrumEnabled: settingsActions.saveSpectrumEnabled,
+    saveHideDefaultPresets: settingsActions.saveHideDefaultPresets,
+    importPresets: presetActions.importPresets,
+    exportPresets: presetActions.exportPresets,
     addPresetToDropdown: presetsView.addPresetToDropdown,
     initPoints,
     redraw: resize,
@@ -552,6 +574,17 @@ export const createPopupApp = ({
     void (async () => {
       await toolkitController.handleStorageChange(changes);
 
+      if (changes[STORAGE_KEYS.AUTOSTART_RULES]) {
+        await autostartView.renderWhitelist();
+      }
+      if (
+        changes[STORAGE_KEYS.PRESET_NAMES] ||
+        changes[STORAGE_KEYS.HIDE_DEFAULT_PRESETS]
+      ) {
+        await autostartView.refreshPresetSelects();
+        await refreshPresetDropdown();
+      }
+
       const tabId = await getCurrentTabId();
       if (tabId == null) return;
 
@@ -579,17 +612,13 @@ export const createPopupApp = ({
 
   const start = async (): Promise<void> => {
     await localization.ready;
-    await settingsView.init();
+    const loadedSettings = await settingsView.init();
     await autostartView.init();
 
     const stored = await chrome.storage.local.get([
-      STORAGE_KEYS.POINT_COUNT,
-      STORAGE_KEYS.THEME,
-      STORAGE_KEYS.SKIP_POINTS_CONFIRM,
       STORAGE_KEYS.INSTALL_UPDATE_NOTICE,
       STORAGE_KEYS.DONATION_REMINDER_AT,
     ]);
-    settingsView.applyTheme(stored[STORAGE_KEYS.THEME]);
 
     const tabId = await getCurrentTabId();
     if (await toolkitController.shouldShowToolkitWindowNotice(tabId)) {
@@ -610,10 +639,7 @@ export const createPopupApp = ({
     }
 
     resize();
-    const savedPointCount = clampPointCount(
-      Number.parseInt(String(stored[STORAGE_KEYS.POINT_COUNT]), 10),
-    );
-    settingsView.updatePointCountSelect(savedPointCount);
+    const savedPointCount = loadedSettings.pointCount;
 
     if (tabId == null) {
       initPoints(savedPointCount);
@@ -625,12 +651,8 @@ export const createPopupApp = ({
       STORAGE_KEYS.FILTERS,
       STORAGE_KEYS.tabFilters(tabId),
       STORAGE_KEYS.tabGain(tabId),
-      STORAGE_KEYS.PRESETS,
-      STORAGE_KEYS.PRESET_NAMES,
-      STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
       STORAGE_KEYS.tabEnabled(tabId),
       STORAGE_KEYS.tabMute(tabId),
-      STORAGE_KEYS.ENABLE_SPECTRUM,
       STORAGE_KEYS.tabCaptureError(tabId),
     ]);
 
@@ -661,13 +683,7 @@ export const createPopupApp = ({
     controlsView.setEnableButtonClass(result[STORAGE_KEYS.tabEnabled(tabId)] === true);
     controlsView.setMuteButtonClass(result[STORAGE_KEYS.tabMute(tabId)] === true);
 
-    if (result[STORAGE_KEYS.ENABLE_SPECTRUM] === true) {
-      elements.enableSpectrum.checked = true;
-    }
-
-    presetsView.renderPresetNames((result[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[], {
-      includeDefaultPresets: result[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] !== true,
-    });
+    await refreshPresetDropdown();
 
     renderCaptureError(
       typeof result[STORAGE_KEYS.tabCaptureError(tabId)] === "string"
