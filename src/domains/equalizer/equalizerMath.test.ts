@@ -1,13 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import {
-  clampPointCount,
-  dbToGain,
-  ensureQFactor,
-  frequencyToX,
-  xToFrequency,
-  yToDb,
-} from "./equalizerMath";
+import { clampPointCount, ensureQFactor, frequencyToX, xToFrequency, yToDb } from "./equalizerMath";
 
 describe("equalizerMath", () => {
   test("clamps point counts to the supported range", () => {
