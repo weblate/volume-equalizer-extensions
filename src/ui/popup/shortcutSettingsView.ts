@@ -17,8 +17,10 @@ export const createShortcutSettingsView = (deps: {
   getMessage(messageName: string): string;
   saveShortcuts(shortcuts: ShortcutMap): Promise<void>;
 }) => {
-  let shortcuts = resolveShortcuts(null);
-  let saveGeneration = 0;
+  let savedShortcuts = resolveShortcuts(null);
+  let displayedShortcuts = savedShortcuts;
+  let requestedShortcuts = savedShortcuts;
+  let interactionGeneration = 0;
   let saveQueue = Promise.resolve();
   const inputs: Record<ShortcutActionName, HTMLInputElement> = {
     [SHORTCUT_ACTION_MUTE_NAME]: deps.muteInput,
@@ -31,7 +33,7 @@ export const createShortcutSettingsView = (deps: {
   };
   const render = (invalidAction: ShortcutActionName | null = null): void => {
     Object.entries(inputs).forEach(([action, input]) => {
-      input.value = formatShortcut(shortcuts[action as ShortcutActionName]);
+      input.value = formatShortcut(displayedShortcuts[action as ShortcutActionName]);
       input.classList.toggle("invalid", action === invalidAction);
     });
   };
@@ -52,13 +54,14 @@ export const createShortcutSettingsView = (deps: {
       event.preventDefault();
       event.stopPropagation();
       if (isModifierShortcutKey(event.key)) return;
+      const generation = ++interactionGeneration;
       const shortcut = normalizeShortcutFromKeyboardEvent(event);
       if (!shortcut) {
         setError("shortcut_validation_error");
         input.classList.add("invalid");
         return;
       }
-      const next = resolveShortcuts({ ...shortcuts, [action]: shortcut });
+      const next = resolveShortcuts({ ...requestedShortcuts, [action]: shortcut });
       const validation = validateShortcutConfig(next);
       if (validation) {
         setError(
@@ -67,32 +70,38 @@ export const createShortcutSettingsView = (deps: {
         render(action);
         return;
       }
-      const generation = ++saveGeneration;
+      requestedShortcuts = next;
       saveQueue = saveQueue.then(
         () => deps.saveShortcuts(next),
         () => deps.saveShortcuts(next),
       );
       void saveQueue
         .then(() => {
-          if (generation !== saveGeneration) return;
-          shortcuts = next;
+          savedShortcuts = next;
+          if (generation !== interactionGeneration) return;
+          requestedShortcuts = next;
+          displayedShortcuts = next;
           setError(null);
           render();
         })
         .catch((error: unknown) => {
-          if (generation !== saveGeneration) return;
+          console.error("Failed to save shortcut settings", { action, error });
+          if (generation !== interactionGeneration) return;
+          requestedShortcuts = savedShortcuts;
+          displayedShortcuts = savedShortcuts;
           setError("shortcut_validation_error");
           render(action);
-          console.error("Failed to save shortcut settings", { action, error });
         });
     });
   });
 
   return {
     setShortcuts: (value: Partial<ShortcutMap> | null | undefined): void => {
-      shortcuts = resolveShortcuts(value);
+      savedShortcuts = resolveShortcuts(value);
+      displayedShortcuts = savedShortcuts;
+      requestedShortcuts = savedShortcuts;
       render();
     },
-    getShortcuts: (): ShortcutMap => shortcuts,
+    getShortcuts: (): ShortcutMap => displayedShortcuts,
   };
 };

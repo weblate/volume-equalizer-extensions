@@ -96,3 +96,73 @@ test("shortcut saves are serialized and only the latest result updates the view"
   resolveSecond();
   await vi.waitFor(() => expect(view.getShortcuts().toggleEq?.key).toBe("F"));
 });
+
+test("rapid edits to different shortcuts preserve both requested values", async () => {
+  vi.stubGlobal("KeyboardEvent", FakeKeyboardEvent);
+  const mute = new FakeInput();
+  const toggle = new FakeInput();
+  let resolveFirst = (): void => undefined;
+  let resolveSecond = (): void => undefined;
+  const first = new Promise<void>((resolve) => {
+    resolveFirst = resolve;
+  });
+  const second = new Promise<void>((resolve) => {
+    resolveSecond = resolve;
+  });
+  const saveShortcuts = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
+  const view = createShortcutSettingsView({
+    muteInput: mute as unknown as HTMLInputElement,
+    toggleEqInput: toggle as unknown as HTMLInputElement,
+    error: { textContent: "", style: { display: "" } } as HTMLElement,
+    getMessage: (key) => key,
+    saveShortcuts,
+  });
+  view.setShortcuts(resolveShortcuts(null));
+
+  mute.dispatchEvent(new KeyboardEvent("keydown", { key: "u", altKey: true }));
+  toggle.dispatchEvent(new KeyboardEvent("keydown", { key: "f", altKey: true }));
+
+  await vi.waitFor(() => expect(saveShortcuts).toHaveBeenCalledOnce());
+  expect(saveShortcuts.mock.calls[0][0].mute?.key).toBe("U");
+  resolveFirst();
+  await vi.waitFor(() => expect(saveShortcuts).toHaveBeenCalledTimes(2));
+  expect(saveShortcuts.mock.calls[1][0].mute?.key).toBe("U");
+  expect(saveShortcuts.mock.calls[1][0].toggleEq?.key).toBe("F");
+  resolveSecond();
+  await vi.waitFor(() => {
+    expect(view.getShortcuts().mute?.key).toBe("U");
+    expect(view.getShortcuts().toggleEq?.key).toBe("F");
+  });
+});
+
+test("a pending valid save cannot clear a newer validation error", async () => {
+  vi.stubGlobal("KeyboardEvent", FakeKeyboardEvent);
+  const mute = new FakeInput();
+  const toggle = new FakeInput();
+  const error = { textContent: "", style: { display: "" } } as HTMLElement;
+  let resolveSave = (): void => undefined;
+  const saveShortcuts = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      }),
+  );
+  const view = createShortcutSettingsView({
+    muteInput: mute as unknown as HTMLInputElement,
+    toggleEqInput: toggle as unknown as HTMLInputElement,
+    error,
+    getMessage: (key) => key,
+    saveShortcuts,
+  });
+  view.setShortcuts(resolveShortcuts(null));
+
+  toggle.dispatchEvent(new KeyboardEvent("keydown", { key: "e", altKey: true }));
+  await vi.waitFor(() => expect(saveShortcuts).toHaveBeenCalledOnce());
+  mute.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  expect(error.textContent).toBe("shortcut_validation_error");
+
+  resolveSave();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(error.textContent).toBe("shortcut_validation_error");
+});
