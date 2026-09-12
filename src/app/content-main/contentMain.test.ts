@@ -204,6 +204,11 @@ const loadContentMain = async (
       if (type === "pause") pauseListener = listener;
       if (type === "pagehide") pagehideListener = listener;
     }),
+    removeEventListener: vi.fn((type: string, listener: EventListener) => {
+      if (type === "playing" && playingListener === listener) playingListener = null;
+      if (type === "pause" && pauseListener === listener) pauseListener = null;
+      if (type === "pagehide" && pagehideListener === listener) pagehideListener = null;
+    }),
     Audio: FakeHTMLMediaElement,
   });
   vi.stubGlobal("self", globalThis.window);

@@ -1,29 +1,15 @@
 import type { EqualizerFilter } from "../../domains/equalizer/types";
 import { readPersistedFilters } from "../../domains/equalizer/persistedFilters";
-import type { EqualizerState } from "../../ui/equalizerCanvas/equalizerEditorState";
-import {
-  applyBiquadSettings,
-  createBiquadFilter,
-  getBiquadHeadroomGain,
-} from "../../domains/audio/biquadChain";
-import { dbToGain } from "../../domains/equalizer/equalizerMath";
 import { isEqualizerFilterEnabled } from "../../domains/equalizer/defaultFilters";
 import { createSpectrumSampler } from "../../infrastructure/audio/spectrumSampler";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import { createCapturedTabsView } from "../../ui/popup/capturedTabsView";
-
-interface ToolkitCapture {
-  streamId: string;
-  stream: MediaStream;
-  source: MediaStreamAudioSourceNode;
-  enabled: boolean;
-  gainValue: number;
-  muted: boolean;
-  preamp: GainNode | null;
-  filters: BiquadFilterNode[];
-  output: AudioNode | null;
-  filterSettings: EqualizerFilter[];
-}
+import {
+  createTabSettingsController,
+  readStoredGain,
+} from "../popup/tabSettingsController";
+import { createCaptureGraph, type CaptureGraph } from "./captureGraph";
+import { createCaptureSession } from "./captureSession";
 
 export interface ToolkitSpectrumMeta {
   type: "meta";
@@ -34,19 +20,10 @@ export interface ToolkitSpectrumMeta {
   frequencyBinCount: number;
 }
 
-const toBiquadInput = (filter: EqualizerFilter) => ({
-  freq: filter.freq,
-  gain: filter.gain,
-  q: filter.q,
-  type: filter.type,
-});
-
 export const createToolkitWindowController = (deps: {
   body: HTMLElement;
   capturedTabs: HTMLElement;
   audioContext: AudioContext;
-  equalizerState: EqualizerState;
-  getDimensions(): { canvasWidth: number; canvasHeight: number };
   getPointCount(): Promise<number>;
   getFilters(): EqualizerFilter[];
   setFilters(filters: EqualizerFilter[]): void;
@@ -63,11 +40,6 @@ export const createToolkitWindowController = (deps: {
   onSpectrumFrame?(buffer: Float32Array | null, clipping?: boolean): void;
 }) => {
   const isToolkitWindow = new URLSearchParams(window.location.search).get("mode") === "window";
-  let activeTabId: number | null = null;
-  let settingsGeneration = 0;
-  let selectionWrites = 0;
-  let selectionReadGeneration = 0;
-  const captures = new Map<string, ToolkitCapture>();
   let capturedTabsView: ReturnType<typeof createCapturedTabsView> | null = null;
   let spectrumEnabled = false;
   let spectrumDemand = false;
@@ -76,6 +48,80 @@ export const createToolkitWindowController = (deps: {
     (meta) => deps.onSpectrumMeta?.(meta),
     (buffer, clipping) => deps.onSpectrumFrame?.(buffer, clipping),
   );
+  const captureSession = createCaptureSession({
+    acquireStream: (_tabId, streamId) => navigator.mediaDevices.getUserMedia({
+      audio: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: streamId,
+        },
+      } as MediaTrackConstraints,
+      video: false,
+    }),
+    createGraph: async (tabId, _streamId, stream) => {
+      const settings = await chrome.storage.local.get([
+        STORAGE_KEYS.FILTERS,
+        STORAGE_KEYS.tabFilters(tabId),
+        STORAGE_KEYS.tabGain(tabId),
+        STORAGE_KEYS.tabMute(tabId),
+      ]);
+      const tabFilters = readPersistedFilters(settings[STORAGE_KEYS.tabFilters(tabId)]);
+      const defaultFilters = readPersistedFilters(settings[STORAGE_KEYS.FILTERS]);
+      const source = deps.audioContext.createMediaStreamSource(stream);
+      return createCaptureGraph({
+        audioContext: deps.audioContext,
+        source,
+        enabled: true,
+        gainValue: readStoredGain(settings[STORAGE_KEYS.tabGain(tabId)]),
+        muted: settings[STORAGE_KEYS.tabMute(tabId)] === true,
+        filterSettings: (tabFilters?.length
+          ? tabFilters
+          : defaultFilters?.length
+            ? defaultFilters
+            : deps.getFilters()
+        ).filter(isEqualizerFilterEnabled),
+        onBeforeOutputChange: (output) => {
+          if (output === spectrumOutput) stopSpectrum();
+        },
+        onOutputChange: () => {
+          if (
+            spectrumEnabled &&
+            tabId === tabSettingsController.getActiveTabId()
+          ) {
+            startSpectrum(tabId);
+          }
+        },
+      });
+    },
+  });
+  const captures = captureSession.captures;
+  const tabSettingsController = createTabSettingsController({
+    localStorage: chrome.storage.local,
+    sessionStorage: chrome.storage.session,
+    getPointCount: deps.getPointCount,
+    getCapture: (tabId) => {
+      const capture = captureSession.get(tabId);
+      return capture
+        ? {
+            enabled: capture.graph.enabled,
+            filterSettings: capture.graph.filterSettings,
+          }
+        : undefined;
+    },
+    updateCapture: (tabId, settings) => {
+      captureSession.get(tabId)?.graph.update(settings);
+    },
+    setFilters: deps.setFilters,
+    initPoints: deps.initPoints,
+    resize: deps.resize,
+    setGainValue: deps.setGainValue,
+    setEnableButtonClass: deps.setEnableButtonClass,
+    setMuteButtonClass: deps.setMuteButtonClass,
+    renderCaptureError: deps.renderCaptureError,
+    refreshCaptureFilters: (tabId) => refreshCaptureFilters(tabId),
+    renderCapturedTabs: () => renderCapturedTabs(),
+    restartSpectrum: (tabId) => startSpectrum(tabId),
+  });
 
   if (isToolkitWindow) {
     deps.body.classList.add("toolkit-window-body");
@@ -83,23 +129,26 @@ export const createToolkitWindowController = (deps: {
 
   const getCurrentTabId = async (): Promise<number | null> => {
     if (isToolkitWindow) {
+      const activeTabId = tabSettingsController.getActiveTabId();
       if (activeTabId != null) return activeTabId;
 
       const stored = await chrome.storage.session.get(
         STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID,
       );
-      activeTabId =
+      const storedTabId =
         (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ??
         null;
-      return activeTabId;
+      tabSettingsController.setActiveTabId(storedTabId);
+      return storedTabId;
     }
 
     const [tab] = await chrome.tabs.query({
       active: true,
       lastFocusedWindow: true,
     });
-    activeTabId = tab?.id ?? null;
-    return activeTabId;
+    const tabId = tab?.id ?? null;
+    tabSettingsController.setActiveTabId(tabId);
+    return tabId;
   };
 
   const shouldShowToolkitWindowNotice = async (
@@ -149,50 +198,19 @@ export const createToolkitWindowController = (deps: {
     spectrumOutput = null;
   };
 
-  const disconnectCaptureGraph = (capture: ToolkitCapture): void => {
-    if (capture.output && capture.output === spectrumOutput) stopSpectrum();
-
-    try {
-      capture.source.disconnect();
-    } catch (e) {
-      // A node can already be disconnected when the stream is being replaced.
-    }
-
-    if (capture.preamp) {
-      try {
-        capture.preamp.disconnect();
-      } catch (e) {
-        // A node can already be disconnected when the stream is being replaced.
-      }
-    }
-
-    capture.filters.forEach((filter) => {
-      try {
-        filter.disconnect();
-      } catch (e) {
-        // A node can already be disconnected when the stream is being replaced.
-      }
-    });
-    capture.preamp = null;
-    capture.filters = [];
-    capture.output = null;
-  };
-
-  const stopCaptureEntry = (capture: ToolkitCapture): void => {
-    disconnectCaptureGraph(capture);
-    capture.stream.getTracks().forEach((track) => track.stop());
-  };
-
   const getCaptureFilterSettings = (
-    tabId: number | string | null = activeTabId,
+    tabId: number | string | null = tabSettingsController.getActiveTabId(),
   ): EqualizerFilter[] => {
     let filters: EqualizerFilter[];
-    if (tabId != null && Number(tabId) === activeTabId) {
+    if (
+      tabId != null &&
+      Number(tabId) === tabSettingsController.getActiveTabId()
+    ) {
       filters = deps.getFilters();
     } else {
       const capture = captures.get(String(tabId));
-      filters = capture?.filterSettings?.length
-        ? capture.filterSettings
+      filters = capture?.graph.filterSettings.length
+        ? capture.graph.filterSettings
         : deps.getFilters();
     }
 
@@ -201,183 +219,66 @@ export const createToolkitWindowController = (deps: {
     });
   };
 
-  const getCaptureGain = (capture: ToolkitCapture): number => {
-    if (capture.muted) return 0;
-    if (!capture.enabled) return 1;
-
-    return dbToGain(capture.gainValue) * getBiquadHeadroomGain(
-      capture.filters,
-      deps.audioContext.sampleRate,
-    );
-  };
-
   const applyCaptureSettings = (
-    tabId: number | string | null = activeTabId,
+    tabId: number | string | null = tabSettingsController.getActiveTabId(),
   ): void => {
     const capture = captures.get(String(tabId));
-    if (!capture?.preamp) return;
+    if (!capture) return;
 
-    if (Number(tabId) === activeTabId) {
-      capture.gainValue = deps.getGainValue();
-      capture.muted = deps.isMuted();
+    const settings: Parameters<CaptureGraph["update"]>[0] = {
+      filterSettings: getCaptureFilterSettings(tabId),
+    };
+    if (Number(tabId) === tabSettingsController.getActiveTabId()) {
+      settings.gainValue = deps.getGainValue();
+      settings.muted = deps.isMuted();
     }
-    const filterSettings = getCaptureFilterSettings(tabId);
-    capture.filterSettings = filterSettings;
-    filterSettings.forEach((filter, index) => {
-      if (!capture.filters[index]) return;
-      applyBiquadSettings(capture.filters[index], toBiquadInput(filter));
-    });
-    capture.preamp.gain.value = getCaptureGain(capture);
-  };
-
-  const buildCaptureGraph = (tabId: number | string): void => {
-    const capture = captures.get(String(tabId));
-    if (!capture?.source) return;
-
-    disconnectCaptureGraph(capture);
-    capture.preamp = deps.audioContext.createGain();
-    capture.source.connect(capture.preamp);
-
-    let previousNode: AudioNode = capture.preamp;
-    const filterSettings = getCaptureFilterSettings(tabId);
-    capture.filters = capture.enabled
-      ? filterSettings.map((filter) => {
-          const biquadFilter = createBiquadFilter(
-            deps.audioContext,
-            toBiquadInput(filter),
-          );
-          previousNode.connect(biquadFilter);
-          previousNode = biquadFilter;
-          return biquadFilter;
-        })
-      : [];
-
-    capture.output = previousNode;
-    capture.output.connect(deps.audioContext.destination);
-    capture.preamp.gain.value = getCaptureGain(capture);
-
-    if (spectrumEnabled && Number(tabId) === activeTabId) {
-      startSpectrum(tabId);
-    }
+    capture.graph.update(settings);
   };
 
   const refreshCaptureFilters = (
-    tabId: number | string | null = activeTabId,
+    tabId: number | string | null = tabSettingsController.getActiveTabId(),
   ): void => {
     const capture = captures.get(String(tabId));
-    if (!capture?.source) return;
+    if (!capture) return;
 
     const filterSettings = getCaptureFilterSettings(tabId);
-    capture.filterSettings = filterSettings;
-    if (!capture.enabled) {
-      applyCaptureSettings(tabId);
-      return;
-    }
+    capture.graph.update({ filterSettings });
 
-    if (capture.filters.length !== filterSettings.length) {
-      buildCaptureGraph(tabId ?? activeTabId ?? "");
-      return;
-    }
-
-    applyCaptureSettings(tabId);
-
-    if (spectrumEnabled && Number(tabId) === activeTabId) {
+    if (
+      spectrumEnabled &&
+      Number(tabId) === tabSettingsController.getActiveTabId()
+    ) {
       startSpectrum(tabId);
     }
   };
 
-  function startSpectrum(tabId: number | string | null = activeTabId): void {
+  function startSpectrum(
+    tabId: number | string | null = tabSettingsController.getActiveTabId(),
+  ): void {
     if (!isToolkitWindow || !spectrumEnabled || !spectrumDemand || tabId == null) {
       stopSpectrum();
       return;
     }
 
     const capture = captures.get(String(tabId));
-    if (!capture?.output) {
+    if (!capture) {
       stopSpectrum();
       return;
     }
 
-    spectrumSampler.start(deps.audioContext, capture.output);
-    spectrumOutput = capture.output;
+    spectrumSampler.start(deps.audioContext, capture.graph.output);
+    spectrumOutput = capture.graph.output;
   }
 
-  const loadTabSettings = async (tabId: number | null): Promise<void> => {
-    const generation = ++settingsGeneration;
-    activeTabId = tabId;
-    if (tabId == null) return;
-
-    const result = await chrome.storage.local.get([
-      STORAGE_KEYS.FILTERS,
-      STORAGE_KEYS.tabFilters(tabId),
-      STORAGE_KEYS.tabGain(tabId),
-      STORAGE_KEYS.tabMute(tabId),
-      STORAGE_KEYS.tabCaptureError(tabId),
-    ]);
-    const tabFilters = readPersistedFilters(result[STORAGE_KEYS.tabFilters(tabId)]);
-    const defaultFilters = readPersistedFilters(result[STORAGE_KEYS.FILTERS]);
-    const filters = tabFilters?.length ? tabFilters : defaultFilters?.length ? defaultFilters : null;
-    const pointCount = filters ? null : await deps.getPointCount();
-    if (generation !== settingsGeneration) return;
-
-    const gain = result[STORAGE_KEYS.tabGain(tabId)];
-    const gainValue = typeof gain === "string" || typeof gain === "number" ? Number(gain) : 0;
-    const muted = result[STORAGE_KEYS.tabMute(tabId)] === true;
-    const capture = captures.get(String(tabId));
-    if (capture) {
-      capture.filterSettings = filters ?? capture.filterSettings;
-      capture.gainValue = gainValue;
-      capture.muted = muted;
-    }
-
-    deps.setGainValue(gainValue);
-    if (filters) deps.setFilters(filters);
-    else deps.initPoints(pointCount as number);
-    deps.resize();
-    deps.setEnableButtonClass(capture?.enabled === true);
-    deps.setMuteButtonClass(muted);
-    deps.renderCaptureError(
-      typeof result[STORAGE_KEYS.tabCaptureError(tabId)] === "string"
-        ? result[STORAGE_KEYS.tabCaptureError(tabId)] as string
-        : null,
-    );
-    refreshCaptureFilters(tabId);
-  };
-
-  const reconcileSelectedTab = async (): Promise<void> => {
-    const readGeneration = ++selectionReadGeneration;
-    if (selectionWrites > 0) return;
-    const generation = settingsGeneration;
-    const stored = await chrome.storage.session.get(STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID);
-    if (selectionWrites > 0 || generation !== settingsGeneration || readGeneration !== selectionReadGeneration) return;
-    const tabId = (stored[STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID] as number | undefined) ?? null;
-    if (tabId === activeTabId) return;
-    await loadTabSettings(tabId);
-    await renderCapturedTabs();
-    startSpectrum(activeTabId);
-  };
-
-  const selectTab = async (tabId: number): Promise<void> => {
-    const loading = loadTabSettings(tabId);
-    selectionWrites++;
-    try {
-      await Promise.all([
-        loading,
-        chrome.storage.session.set({ [STORAGE_KEYS.TOOLKIT_WINDOW_ACTIVE_TAB_ID]: tabId }),
-      ]);
-    } finally {
-      selectionWrites--;
-    }
-    await reconcileSelectedTab();
-    await renderCapturedTabs();
-    startSpectrum(activeTabId);
-  };
+  const loadTabSettings = tabSettingsController.load;
+  const reconcileSelectedTab = tabSettingsController.reconcile;
+  const selectTab = tabSettingsController.select;
 
   const startTabCapture = async (): Promise<void> => {
     if (!isToolkitWindow) return;
     spectrumDemand = true;
 
-    activeTabId = await getCurrentTabId();
+    const activeTabId = await getCurrentTabId();
     const spectrumSettings = await chrome.storage.local.get([
       STORAGE_KEYS.ENABLE_SPECTRUM,
     ]);
@@ -389,72 +290,14 @@ export const createToolkitWindowController = (deps: {
     try {
       await deps.audioContext.resume();
 
-      const activeTabIds = new Set(streamEntries.map(([tabId]) => tabId));
-      captures.forEach((capture, tabId) => {
-        if (activeTabIds.has(tabId)) return;
-        stopCaptureEntry(capture);
-        captures.delete(tabId);
-      });
-
-      await Promise.all(
-        streamEntries.map(async ([tabId, streamId]) => {
-          const existing = captures.get(tabId);
-          if (existing?.streamId === streamId) return;
-
-          if (existing) {
-            stopCaptureEntry(existing);
-            captures.delete(tabId);
-          }
-
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              mandatory: {
-                chromeMediaSource: "tab",
-                chromeMediaSourceId: streamId,
-              },
-            } as MediaTrackConstraints,
-            video: false,
-          });
-          const source = deps.audioContext.createMediaStreamSource(stream);
-          const settings = await chrome.storage.local.get([
-            STORAGE_KEYS.FILTERS,
-            STORAGE_KEYS.tabFilters(Number(tabId)),
-            STORAGE_KEYS.tabGain(Number(tabId)),
-            STORAGE_KEYS.tabMute(Number(tabId)),
-          ]);
-          const tabFilters = readPersistedFilters(
-            settings[STORAGE_KEYS.tabFilters(Number(tabId))],
-          );
-          const defaultFilters = readPersistedFilters(settings[STORAGE_KEYS.FILTERS]);
-          const gain = settings[STORAGE_KEYS.tabGain(Number(tabId))];
-          const capture: ToolkitCapture = {
-            streamId,
-            stream,
-            source,
-            enabled: true,
-            gainValue:
-              typeof gain === "string" || typeof gain === "number"
-                ? Number(gain)
-                : 0,
-            muted: settings[STORAGE_KEYS.tabMute(Number(tabId))] === true,
-            preamp: null,
-            filters: [],
-            output: null,
-            filterSettings: tabFilters?.length
-              ? tabFilters
-              : defaultFilters?.length
-                ? defaultFilters
-                : deps.getFilters(),
-          };
-          captures.set(tabId, capture);
-          buildCaptureGraph(tabId);
-          await chrome.storage.local.remove(STORAGE_KEYS.tabCaptureError(tabId));
-        }),
-      );
+      await captureSession.sync(streamIds);
+      await Promise.all(streamEntries
+        .filter(([tabId]) => captureSession.has(tabId))
+        .map(([tabId]) => chrome.storage.local.remove(STORAGE_KEYS.tabCaptureError(tabId))));
 
       deps.renderCaptureError(null);
       deps.setEnableButtonClass(
-        captures.get(String(activeTabId))?.enabled === true,
+        captures.get(String(activeTabId))?.graph.enabled === true,
       );
       if (spectrumEnabled) {
         startSpectrum(activeTabId);
@@ -491,23 +334,19 @@ export const createToolkitWindowController = (deps: {
     spectrumDemand = false;
     spectrumSampler.dispose();
     spectrumOutput = null;
-    captures.forEach((capture) => stopCaptureEntry(capture));
-    captures.clear();
+    captureSession.stop();
   };
 
   const stopCapturedTabCapture = async (tabId: number): Promise<void> => {
     if (!isToolkitWindow) return;
 
+    const activeTabId = tabSettingsController.getActiveTabId();
     if (activeTabId === tabId) {
-      settingsGeneration++;
+      tabSettingsController.invalidate();
       stopSpectrum();
     }
 
-    const capture = captures.get(String(tabId));
-    if (capture) {
-      stopCaptureEntry(capture);
-      captures.delete(String(tabId));
-    }
+    captureSession.stopTab(tabId);
 
     const stored = await chrome.storage.session.get([
       STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS,
@@ -541,16 +380,17 @@ export const createToolkitWindowController = (deps: {
     await reconcileSelectedTab();
   };
 
-  const toggleEqualizer = (targetTabId: number | null = activeTabId): void => {
+  const toggleEqualizer = (
+    targetTabId: number | null = tabSettingsController.getActiveTabId(),
+  ): void => {
     if (targetTabId == null) return;
 
     const capture = captures.get(String(targetTabId));
     if (!capture) return;
 
-    capture.enabled = !capture.enabled;
-    buildCaptureGraph(targetTabId);
-    if (targetTabId === activeTabId) {
-      deps.setEnableButtonClass(capture.enabled);
+    capture.graph.update({ enabled: !capture.graph.enabled });
+    if (targetTabId === tabSettingsController.getActiveTabId()) {
+      deps.setEnableButtonClass(capture.graph.enabled);
     }
   };
 
@@ -558,10 +398,8 @@ export const createToolkitWindowController = (deps: {
 
   const setCaptureMuted = (tabId: number, muted: boolean): void => {
     const capture = captures.get(String(tabId));
-    if (!capture?.preamp) return;
-
-    capture.muted = muted;
-    capture.preamp.gain.value = getCaptureGain(capture);
+    if (!capture) return;
+    capture.graph.update({ muted });
   };
 
   window.addEventListener("beforeunload", stopTabCapture);
@@ -569,7 +407,7 @@ export const createToolkitWindowController = (deps: {
   return {
     isToolkitWindow,
     getCurrentTabId,
-    getResolvedTabId: () => activeTabId,
+    getResolvedTabId: tabSettingsController.getActiveTabId,
     shouldShowToolkitWindowNotice,
     showToolkitWindowNotice,
     loadTabSettings,
@@ -598,7 +436,7 @@ export const createToolkitWindowController = (deps: {
       if (isToolkitWindow && changes[STORAGE_KEYS.ENABLE_SPECTRUM]) {
         spectrumEnabled = changes[STORAGE_KEYS.ENABLE_SPECTRUM].newValue === true;
         if (spectrumEnabled) {
-          startSpectrum(activeTabId);
+          startSpectrum(tabSettingsController.getActiveTabId());
         } else {
           stopSpectrum();
         }

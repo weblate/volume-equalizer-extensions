@@ -25,6 +25,8 @@ window.addEventListener("load", () => {
     readThemeColors,
   });
 
-  window.addEventListener("resize", app.resize);
-  void app.start();
+  void app.start().catch((error: unknown) => {
+    console.error("Failed to start popup", { error });
+    app.dispose();
+  });
 });

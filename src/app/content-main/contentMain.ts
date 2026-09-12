@@ -7,6 +7,7 @@ import {
 } from "../../domains/audio/biquadChain";
 import { createMediaGraphRegistry } from "../../infrastructure/audio/mediaGraphRegistry";
 import { createSpectrumSampler } from "../../infrastructure/audio/spectrumSampler";
+import { attachMediaInterception } from "./mediaInterception";
 
 import type { EqualizerFilter } from "../../domains/equalizer/types";
 
@@ -277,23 +278,6 @@ const updateSpectrumState = (): void => {
 
 port.addEventListener("spectrum-state-changed", updateSpectrumState);
 
-AudioNode.prototype.connect = new Proxy(nativeConnect, {
-  apply(target, self, args) {
-    const [node] = args;
-
-    if (node && node instanceof AudioDestinationNode) {
-      try {
-        return attach(self as AudioNode);
-      } catch (error) {
-        console.warn("cannot equalize;", getErrorMessage(error, ""));
-        port.dispatchEvent(new Event("cannot-attach"));
-      }
-    }
-
-    return Reflect.apply(target, self, args);
-  },
-});
-
 const convert = async (target: EventTarget | null): Promise<void> => {
   if (!(target instanceof HTMLMediaElement)) return;
 
@@ -348,33 +332,25 @@ const startConversion = (target: EventTarget | null): void => {
   });
 };
 
-window.addEventListener("playing", (event) => startConversion(event.target), true);
-window.addEventListener("pause", () => selectSpectrumGraph(), true);
-window.addEventListener("ended", () => selectSpectrumGraph(), true);
 const existingMedia = document.querySelectorAll("audio, video");
 console.log("[contentMain] Loaded", {
   media: existingMedia.length,
   enabled: port.dataset.enabled,
   filtersReady: port.dataset.freqs !== undefined,
 });
-existingMedia.forEach(startConversion);
-
-window.Audio = new Proxy(window.Audio, {
-  construct(target, args, newTarget) {
-    const result = Reflect.construct(target, args, newTarget) as HTMLAudioElement;
-    startConversion(result);
-    return result;
+const disposeMediaInterception = attachMediaInterception({
+  onMedia: (target, activity) => {
+    if (activity === "playing") startConversion(target);
+    else selectSpectrumGraph();
   },
-});
-
-HTMLMediaElement.prototype.play = new Proxy(HTMLMediaElement.prototype.play, {
-  apply(target, self, args) {
-    const mediaElement = self as HTMLMediaElement;
-    if (mediaElement.isConnected === false) {
-      startConversion(mediaElement);
+  onDestinationConnect: (source) => {
+    try {
+      return attach(source);
+    } catch (error) {
+      console.warn("cannot equalize;", getErrorMessage(error, ""));
+      port.dispatchEvent(new Event("cannot-attach"));
+      return Reflect.apply(nativeConnect, source, [source.context.destination]) as AudioNode;
     }
-
-    return Reflect.apply(target, self, args) as Promise<void>;
   },
 });
 
@@ -436,6 +412,7 @@ port.addEventListener("enabled-changed", () => {
 window.addEventListener("pagehide", (event) => {
   stopSpectrum();
   if ((event as PageTransitionEvent).persisted) return;
+  disposeMediaInterception();
   spectrumSampler.dispose();
   currentGraphSource = null;
   equalizerGraphs.clear();
