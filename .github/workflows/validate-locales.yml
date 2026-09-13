@@ -9,6 +9,10 @@ on:
       - "package-lock.json"
       - "popup.html"
       - "resources/styles/popup.css"
+      - "src/app/popup/**"
+      - "src/domains/localization/**"
+      - "src/infrastructure/localization/**"
+      - "src/ui/popup/**"
       - ".github/workflows/validate-locales.yml"
 
   push:
@@ -21,6 +25,10 @@ on:
       - "package-lock.json"
       - "popup.html"
       - "resources/styles/popup.css"
+      - "src/app/popup/**"
+      - "src/domains/localization/**"
+      - "src/infrastructure/localization/**"
+      - "src/ui/popup/**"
       - ".github/workflows/validate-locales.yml"
 
 jobs:
