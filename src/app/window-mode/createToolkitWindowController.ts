@@ -41,6 +41,7 @@ export const createToolkitWindowController = (deps: {
   let spectrumEnabled = false;
   let spectrumDemand = false;
   let spectrumOutput: AudioNode | null = null;
+  let captureStartRevision = 0;
   const spectrumSampler = createSpectrumSampler(
     (meta) => deps.onSpectrumMeta?.(meta),
     (buffer, clipping) => deps.onSpectrumFrame?.(buffer, clipping),
@@ -251,26 +252,35 @@ export const createToolkitWindowController = (deps: {
   const reconcileSelectedTab = tabSettingsController.reconcile;
   const selectTab = tabSettingsController.select;
 
-  const startTabCapture = async (): Promise<void> => {
-    if (!isToolkitWindow) return;
+  const startTabCapture = async (): Promise<boolean> => {
+    if (!isToolkitWindow) return false;
+    const revision = ++captureStartRevision;
+    const isCurrent = (): boolean => revision === captureStartRevision;
     spectrumDemand = true;
 
     const activeTabId = await getCurrentTabId();
+    if (!isCurrent()) return false;
     const spectrumSettings = await chrome.storage.local.get([STORAGE_KEYS.ENABLE_SPECTRUM]);
-    spectrumEnabled = spectrumSettings[STORAGE_KEYS.ENABLE_SPECTRUM] === true;
+    if (!isCurrent()) return false;
+    const nextSpectrumEnabled = spectrumSettings[STORAGE_KEYS.ENABLE_SPECTRUM] === true;
 
     const streamIds = await getCaptureStreamIds();
+    if (!isCurrent()) return false;
     const streamEntries = Object.entries(streamIds);
 
     try {
       await deps.audioContext.resume();
+      if (!isCurrent()) return false;
 
+      spectrumEnabled = nextSpectrumEnabled;
       await captureSession.sync(streamIds);
+      if (!isCurrent()) return false;
       await Promise.all(
         streamEntries
           .filter(([tabId]) => captureSession.has(tabId))
           .map(([tabId]) => chrome.storage.local.remove(STORAGE_KEYS.tabCaptureError(tabId))),
       );
+      if (!isCurrent()) return false;
 
       deps.renderCaptureError(null);
       deps.setEnableButtonClass(captures.get(String(activeTabId))?.graph.enabled === true);
@@ -279,15 +289,20 @@ export const createToolkitWindowController = (deps: {
       } else {
         stopSpectrum();
       }
+      return true;
     } catch (e) {
+      if (!isCurrent()) return false;
       const tabId = await getCurrentTabId();
+      if (!isCurrent()) return false;
       const message = e instanceof Error ? e.message : "Tab audio capture failed";
       if (tabId != null) {
         await chrome.storage.local.set({
           [STORAGE_KEYS.tabCaptureError(tabId)]: message,
         });
+        if (!isCurrent()) return false;
       }
       deps.renderCaptureError(message);
+      return true;
     }
   };
 
@@ -306,6 +321,7 @@ export const createToolkitWindowController = (deps: {
   };
 
   const stopTabCapture = (): void => {
+    captureStartRevision += 1;
     spectrumDemand = false;
     spectrumSampler.dispose();
     spectrumOutput = null;
@@ -314,6 +330,7 @@ export const createToolkitWindowController = (deps: {
 
   const stopCapturedTabCapture = async (tabId: number): Promise<void> => {
     if (!isToolkitWindow) return;
+    captureStartRevision += 1;
 
     const activeTabId = tabSettingsController.getActiveTabId();
     if (activeTabId === tabId) {
@@ -399,8 +416,7 @@ export const createToolkitWindowController = (deps: {
       }
 
       if (isToolkitWindow && changes[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]) {
-        await startTabCapture();
-        await renderCapturedTabs();
+        if (await startTabCapture()) await renderCapturedTabs();
       }
 
       if (isToolkitWindow && changes[STORAGE_KEYS.ENABLE_SPECTRUM]) {

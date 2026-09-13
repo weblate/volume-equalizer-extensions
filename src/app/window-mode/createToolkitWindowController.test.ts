@@ -197,6 +197,7 @@ afterEach(() => {
 describe("createToolkitWindowController spectrum", () => {
   test("does not start a local sampler after capture demand is disposed", async () => {
     const storage = createChromeStorage();
+    const renderCaptureError = vi.fn();
     let resolveStream!: (stream: FakeMediaStream) => void;
     const getUserMedia = vi.fn(
       () =>
@@ -218,7 +219,7 @@ describe("createToolkitWindowController spectrum", () => {
       vi.fn(() => 1),
     );
     vi.stubGlobal("clearInterval", vi.fn());
-    const { controller } = createController();
+    const { controller } = createController({ renderCaptureError });
 
     const started = controller.startTabCapture();
     await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalled());
@@ -227,6 +228,142 @@ describe("createToolkitWindowController spectrum", () => {
     await started;
 
     expect(setInterval).not.toHaveBeenCalled();
+    expect(renderCaptureError).not.toHaveBeenCalled();
+  });
+
+  test("ignores a stale stream snapshot while allowing the same stream in a fresh start", async () => {
+    const storage = createChromeStorage();
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] = {
+      123: "stream-a",
+    };
+    const originalSessionGet = storage.session.get.getMockImplementation();
+    let captureReads = 0;
+    let resolveStaleSnapshot!: (value: Record<string, unknown>) => void;
+    storage.session.get.mockImplementation((keys) => {
+      if (keys !== STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS) {
+        return originalSessionGet?.(keys) ?? Promise.resolve({});
+      }
+
+      captureReads += 1;
+      const snapshot = {
+        [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: {
+          ...(storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] as Record<
+            string,
+            string
+          >),
+        },
+      };
+      if (captureReads === 1) {
+        return new Promise((resolve) => {
+          resolveStaleSnapshot = resolve;
+        });
+      }
+      return Promise.resolve(snapshot);
+    });
+    const getUserMedia = vi.fn(() => Promise.resolve(new FakeMediaStream()));
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", { mediaDevices: { getUserMedia } });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
+    vi.stubGlobal("clearInterval", vi.fn());
+    const { controller, audioContext } = createController();
+
+    const staleStart = controller.startTabCapture();
+    await vi.waitFor(() => expect(captureReads).toBe(1));
+
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] = {
+      123: "stream-b",
+    };
+    await controller.startTabCapture();
+    resolveStaleSnapshot({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: { 123: "stream-a" },
+    });
+    await staleStart;
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(getUserMedia).toHaveBeenLastCalledWith({
+      audio: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: "stream-b",
+        },
+      },
+      video: false,
+    });
+    expect(audioContext.createdSources).toHaveLength(1);
+
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS] = {
+      123: "stream-a",
+    };
+    await controller.startTabCapture();
+
+    expect(getUserMedia).toHaveBeenCalledTimes(2);
+    expect(getUserMedia).toHaveBeenLastCalledWith({
+      audio: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: "stream-a",
+        },
+      },
+      video: false,
+    });
+    expect(audioContext.createdSources).toHaveLength(2);
+  });
+
+  test("does not restore a capture from a start invalidated by stopping that tab", async () => {
+    const storage = createChromeStorage();
+    storage.sessionValues[STORAGE_KEYS.TOOLKIT_WINDOW_TAB_IDS] = [123];
+    const originalSessionGet = storage.session.get.getMockImplementation();
+    let resolveStreamSnapshot!: (value: Record<string, unknown>) => void;
+    storage.session.get.mockImplementation((keys) => {
+      if (keys === STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS) {
+        return new Promise((resolve) => {
+          resolveStreamSnapshot = resolve;
+        });
+      }
+      return originalSessionGet?.(keys) ?? Promise.resolve({});
+    });
+    const getUserMedia = vi.fn(() => Promise.resolve(new FakeMediaStream()));
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", { mediaDevices: { getUserMedia } });
+    vi.stubGlobal("chrome", {
+      storage,
+      runtime: { sendMessage: vi.fn(async () => ({ tabs: [], activeTabId: null })) },
+    });
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
+    vi.stubGlobal("clearInterval", vi.fn());
+    const { controller } = createController();
+
+    const staleStart = controller.startTabCapture();
+    await vi.waitFor(() => expect(resolveStreamSnapshot).toBeTypeOf("function"));
+    await controller.stopCapturedTabCapture(123);
+    resolveStreamSnapshot({
+      [STORAGE_KEYS.TOOLKIT_WINDOW_CAPTURE_STREAM_IDS]: { 123: "stream-123" },
+    });
+    await staleStart;
+
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(controller.hasCapture(123)).toBe(false);
   });
 
   test("keeps manual gain unchanged below the headroom threshold", async () => {
