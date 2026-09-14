@@ -4,14 +4,8 @@
   "description": "__MSG_extDescription__",
   "author": "maitrog",
   "version": "2.3.0",
-  "permissions": [
-    "storage",
-    "scripting",
-    "tabCapture"
-  ],
-  "host_permissions": [
-    "*://*/*"
-  ],
+  "permissions": ["storage", "scripting", "tabCapture"],
+  "host_permissions": ["*://*/*"],
   "action": {
     "_execute_action": {},
     "default_popup": "popup.html"
