@@ -11,6 +11,7 @@ class FakePort extends EventTarget {
   dataset: Record<string, string> = {
     enabled: "true",
     enableSpectrum: "false",
+    enableVolumeCompensation: "true",
     spectrumDemand: "true",
     freqs: filters,
     mute: "false",
@@ -525,6 +526,31 @@ describe("contentMain spectrum state", () => {
 
     const preamp = source.connections[0] as FakeGainNode;
     expect(preamp.gain.value).toBe(1);
+  });
+
+  test("reapplies graph gain when volume compensation is toggled", async () => {
+    const port = new FakePort();
+    port.dataset.enableVolumeCompensation = "false";
+    port.dataset.freqs = JSON.stringify(
+      Array.from({ length: 4 }, (_, index) => ({
+        freq: 1000 + index,
+        gain: 6,
+        q: 0.5,
+        type: "peaking",
+      })),
+    );
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "source");
+
+    source.connect(context.destination);
+    const preamp = source.connections[0] as FakeGainNode;
+    expect(preamp.gain.value).toBe(1);
+
+    port.dataset.enableVolumeCompensation = "true";
+    port.dispatchEvent(new Event("volume-compensation-changed"));
+
+    expect(preamp.gain.value).toBeCloseTo(0.49645513, 6);
   });
 
   test("marks the reusable main bridge as ready", async () => {

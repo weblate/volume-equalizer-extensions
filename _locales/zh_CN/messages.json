@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "无法打开窗口模式。请重试。"
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "自动音量补偿"
   }
 }

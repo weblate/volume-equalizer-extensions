@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   GAIN: "gain",
   FILTERS: "filters",
   ENABLE_SPECTRUM: "enableSpectrum",
+  ENABLE_VOLUME_COMPENSATION: "enableVolumeCompensation",
   THEME: "theme",
   UI_LANGUAGE: "uiLanguage",
   SHORTCUTS: "shortcuts",

@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "ไม่สามารถเปิดโหมดหน้าต่างได้ โปรดลองอีกครั้ง"
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "การชดเชยระดับเสียงอัตโนมัติ"
   }
 }

@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "De venstermodus kan niet worden geopend. Probeer het opnieuw."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Automatische volumecompensatie"
   }
 }

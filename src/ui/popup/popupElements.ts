@@ -37,6 +37,7 @@ export interface PopupElements {
   settingsHeader: HTMLHeadingElement;
   enableSpectrumLabel: HTMLElement;
   enableSpectrum: HTMLInputElement;
+  enableVolumeCompensation: HTMLInputElement;
   pointsCountLabel: HTMLSpanElement;
   pointsCount: HTMLSelectElement;
   themeLabel: HTMLSpanElement;
@@ -146,6 +147,11 @@ export const getPopupElements = (document: Document): PopupElements => ({
   settingsHeader: getRequiredElement(document, "settings-header", HTMLHeadingElement),
   enableSpectrumLabel: getRequiredElement(document, "enable-spectrum-label", HTMLElement),
   enableSpectrum: getRequiredElement(document, "enable-spectrum", HTMLInputElement),
+  enableVolumeCompensation: getRequiredElement(
+    document,
+    "enable-volume-compensation",
+    HTMLInputElement,
+  ),
   pointsCountLabel: getRequiredElement(document, "points-count-label", HTMLSpanElement),
   pointsCount: getRequiredElement(document, "points-count", HTMLSelectElement),
   themeLabel: getRequiredElement(document, "theme-label", HTMLSpanElement),

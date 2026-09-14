@@ -21,12 +21,14 @@ export interface CaptureGraph {
   readonly enabled: boolean;
   readonly gainValue: number;
   readonly muted: boolean;
+  readonly volumeCompensationEnabled: boolean;
   readonly filterSettings: EqualizerFilter[];
   update(
     settings: Partial<{
       enabled: boolean;
       gainValue: number;
       muted: boolean;
+      volumeCompensationEnabled: boolean;
       filterSettings: EqualizerFilter[];
     }>,
   ): void;
@@ -39,6 +41,7 @@ export const createCaptureGraph = (deps: {
   enabled: boolean;
   gainValue: number;
   muted: boolean;
+  volumeCompensationEnabled: boolean;
   filterSettings: EqualizerFilter[];
   onBeforeOutputChange(output: AudioNode): void;
   onOutputChange(output: AudioNode): void;
@@ -46,6 +49,7 @@ export const createCaptureGraph = (deps: {
   let enabled = deps.enabled;
   let gainValue = deps.gainValue;
   let muted = deps.muted;
+  let volumeCompensationEnabled = deps.volumeCompensationEnabled;
   let filterSettings = deps.filterSettings;
   let preamp: GainNode;
   let filters: BiquadFilterNode[] = [];
@@ -55,7 +59,10 @@ export const createCaptureGraph = (deps: {
   const calculateGain = (): number => {
     if (muted) return 0;
     if (!enabled) return 1;
-    return dbToGain(gainValue) * getBiquadHeadroomGain(filters, deps.audioContext.sampleRate);
+    const compensationGain = volumeCompensationEnabled
+      ? getBiquadHeadroomGain(filters, deps.audioContext.sampleRate)
+      : 1;
+    return dbToGain(gainValue) * compensationGain;
   };
 
   const disconnectOwnedNodes = (): void => {
@@ -108,6 +115,7 @@ export const createCaptureGraph = (deps: {
     enabled = settings.enabled ?? enabled;
     gainValue = settings.gainValue ?? gainValue;
     muted = settings.muted ?? muted;
+    volumeCompensationEnabled = settings.volumeCompensationEnabled ?? volumeCompensationEnabled;
     filterSettings = settings.filterSettings ?? filterSettings;
     if (enabled !== previousEnabled || (enabled && filterSettings.length !== previousCount)) {
       rebuild();
@@ -143,6 +151,9 @@ export const createCaptureGraph = (deps: {
     },
     get muted() {
       return muted;
+    },
+    get volumeCompensationEnabled() {
+      return volumeCompensationEnabled;
     },
     get filterSettings() {
       return filterSettings;

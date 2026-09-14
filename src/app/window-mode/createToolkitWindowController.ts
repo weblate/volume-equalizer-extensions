@@ -63,6 +63,7 @@ export const createToolkitWindowController = (deps: {
         STORAGE_KEYS.tabFilters(tabId),
         STORAGE_KEYS.tabGain(tabId),
         STORAGE_KEYS.tabMute(tabId),
+        STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION,
       ]);
       const tabFilters = readPersistedFilters(settings[STORAGE_KEYS.tabFilters(tabId)]);
       const defaultFilters = readPersistedFilters(settings[STORAGE_KEYS.FILTERS]);
@@ -73,6 +74,7 @@ export const createToolkitWindowController = (deps: {
         enabled: true,
         gainValue: readStoredGain(settings[STORAGE_KEYS.tabGain(tabId)]),
         muted: settings[STORAGE_KEYS.tabMute(tabId)] === true,
+        volumeCompensationEnabled: settings[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION] !== false,
         filterSettings: (tabFilters?.length
           ? tabFilters
           : defaultFilters?.length
@@ -426,6 +428,14 @@ export const createToolkitWindowController = (deps: {
         } else {
           stopSpectrum();
         }
+      }
+
+      if (isToolkitWindow && changes[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]) {
+        const volumeCompensationEnabled =
+          changes[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION].newValue !== false;
+        captures.forEach((capture) => {
+          capture.graph.update({ volumeCompensationEnabled });
+        });
       }
     },
   };

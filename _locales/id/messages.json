@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Mode jendela tidak dapat dibuka. Silakan coba lagi."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Kompensasi volume otomatis"
   }
 }

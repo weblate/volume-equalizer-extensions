@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Không thể mở chế độ cửa sổ. Vui lòng thử lại."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Tự động bù âm lượng"
   }
 }

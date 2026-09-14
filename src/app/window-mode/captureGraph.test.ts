@@ -29,7 +29,7 @@ class FakeBiquad extends FakeNode {
     magnitudes: Float32Array,
     phases: Float32Array,
   ): void {
-    magnitudes.fill(1);
+    magnitudes.fill(this.gain.value > 0 ? 10 : 1);
     phases.fill(0);
   }
 }
@@ -71,6 +71,7 @@ test("capture graph rebuilds owned nodes and disposes without stopping stream tr
     enabled: true,
     gainValue: 0,
     muted: false,
+    volumeCompensationEnabled: true,
     filterSettings: filters(1),
     onBeforeOutputChange: beforeOutputChange,
     onOutputChange: outputChange,
@@ -91,6 +92,35 @@ test("capture graph rebuilds owned nodes and disposes without stopping stream tr
   expect(createdGains.every((node) => node.disconnect.mock.calls.length > 0)).toBe(true);
   expect(createdFilters.every((node) => node.disconnect.mock.calls.length > 0)).toBe(true);
   expect(track.stop).not.toHaveBeenCalled();
+});
+
+test("capture graph applies volume compensation only when enabled", () => {
+  const source = new FakeNode();
+  const destination = new FakeNode();
+  const audioContext = {
+    sampleRate: 48000,
+    destination,
+    createGain: () => new FakeGain(),
+    createBiquadFilter: () => new FakeBiquad(),
+  } as unknown as AudioContext;
+
+  const graph = createCaptureGraph({
+    audioContext,
+    source: source as unknown as MediaStreamAudioSourceNode,
+    enabled: true,
+    gainValue: 0,
+    muted: false,
+    volumeCompensationEnabled: false,
+    filterSettings: [{ freq: 1000, gain: 6, q: 0.5, type: "peaking" }],
+    onBeforeOutputChange: vi.fn(),
+    onOutputChange: vi.fn(),
+  });
+
+  expect(graph.preamp.gain.value).toBe(1);
+
+  graph.update({ volumeCompensationEnabled: true });
+
+  expect(graph.preamp.gain.value).toBeCloseTo(0.7943282347242815, 6);
 });
 
 test("cleans a partial graph and preserves the construction error", () => {
@@ -119,6 +149,7 @@ test("cleans a partial graph and preserves the construction error", () => {
       enabled: true,
       gainValue: 0,
       muted: false,
+      volumeCompensationEnabled: true,
       filterSettings: filters(2),
       onBeforeOutputChange: vi.fn(),
       onOutputChange: vi.fn(),

@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "சாளரப் பயன்முறையைத் திறக்க முடியவில்லை. மீண்டும் முயலவும்."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "தானியங்கி ஒலியளவு ஈடுசெய்தல்"
   }
 }

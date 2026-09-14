@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Не удалось открыть оконный режим. Попробуйте ещё раз."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Автоматическая компенсация громкости"
   }
 }

@@ -400,6 +400,54 @@ describe("createToolkitWindowController spectrum", () => {
     expect(preamp.gain.value).toBeCloseTo(1.973822685184001, 10);
   });
 
+  test("updates active captures when volume compensation changes", async () => {
+    const storage = createChromeStorage();
+    storage.localValues[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION] = false;
+
+    vi.stubGlobal("window", {
+      location: { search: "?mode=window" },
+      addEventListener: vi.fn(),
+    });
+    vi.stubGlobal("document", {
+      createElement: () => new FakeElement(),
+    });
+    vi.stubGlobal("navigator", {
+      mediaDevices: {
+        getUserMedia: vi.fn(() => Promise.resolve(new FakeMediaStream())),
+      },
+    });
+    vi.stubGlobal("chrome", { storage });
+    vi.stubGlobal(
+      "setInterval",
+      vi.fn(() => 1),
+    );
+    vi.stubGlobal("clearInterval", vi.fn());
+
+    const boostedFilters = Array.from({ length: 4 }, (_, index) => ({
+      type: "peaking" as const,
+      freq: 1000 + index,
+      gain: 6,
+      q: 0.5,
+    }));
+    const { controller, audioContext } = createController({
+      getFilters: () => boostedFilters,
+    });
+
+    await controller.startTabCapture();
+
+    const preamp = audioContext.createdSource?.connections[0] as FakeGainNode;
+    expect(preamp.gain.value).toBe(1);
+
+    await controller.handleStorageChange({
+      [STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]: {
+        oldValue: false,
+        newValue: true,
+      },
+    });
+
+    expect(preamp.gain.value).toBeCloseTo(0.49645513, 6);
+  });
+
   test("does not add disabled crossover filters to the capture graph", async () => {
     const storage = createChromeStorage();
 

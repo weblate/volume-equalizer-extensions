@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Impossible d’ouvrir le mode fenêtre. Veuillez réessayer."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Compensation automatique du volume"
   }
 }

@@ -13,6 +13,7 @@ export const createSettingsActions = () => ({
       STORAGE_KEYS.POINT_COUNT,
       STORAGE_KEYS.SHORTCUTS,
       STORAGE_KEYS.ENABLE_SPECTRUM,
+      STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION,
       STORAGE_KEYS.HIDE_DEFAULT_PRESETS,
     ]);
     return {
@@ -20,6 +21,7 @@ export const createSettingsActions = () => ({
       pointCount: clampPointCount(Number(stored[STORAGE_KEYS.POINT_COUNT])),
       shortcuts: resolveShortcuts(stored[STORAGE_KEYS.SHORTCUTS] as Partial<ShortcutMap>),
       enableSpectrum: stored[STORAGE_KEYS.ENABLE_SPECTRUM] === true,
+      enableVolumeCompensation: stored[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION] !== false,
       hideDefaultPresets: stored[STORAGE_KEYS.HIDE_DEFAULT_PRESETS] === true,
     };
   },
@@ -44,6 +46,8 @@ export const createSettingsActions = () => ({
     chrome.storage.local.set({ [STORAGE_KEYS.SKIP_POINTS_CONFIRM]: skip }),
   saveSpectrumEnabled: (enabled: boolean): Promise<void> =>
     chrome.storage.local.set({ [STORAGE_KEYS.ENABLE_SPECTRUM]: enabled }),
+  saveVolumeCompensationEnabled: (enabled: boolean): Promise<void> =>
+    chrome.storage.local.set({ [STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]: enabled }),
   saveHideDefaultPresets: (hidden: boolean): Promise<void> =>
     chrome.storage.local.set({ [STORAGE_KEYS.HIDE_DEFAULT_PRESETS]: hidden }),
 });

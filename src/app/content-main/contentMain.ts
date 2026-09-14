@@ -50,7 +50,10 @@ const applyGraphGain = (filters: EqualizerNodeChain): void => {
     { length: getBiquadFilterCount(filters) },
     (_, index) => filters[index] as BiquadFilterNode,
   );
-  const headroomGain = getBiquadHeadroomGain(biquadFilters, filters.preamp.context.sampleRate);
+  const headroomGain =
+    port.dataset.enableVolumeCompensation === "false"
+      ? 1
+      : getBiquadHeadroomGain(biquadFilters, filters.preamp.context.sampleRate);
   filters.preamp.gain.value = port.dataset.mute === "true" ? 0 : preampValue * headroomGain;
 };
 
@@ -377,6 +380,12 @@ port.addEventListener("filters-changed", () => {
 });
 
 port.addEventListener("preamp-changed", () => {
+  equalizerGraphs.forEach((filters) => {
+    applyGraphGain(filters);
+  });
+});
+
+port.addEventListener("volume-compensation-changed", () => {
   equalizerGraphs.forEach((filters) => {
     applyGraphGain(filters);
   });

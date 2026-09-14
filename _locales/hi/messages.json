@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "विंडो मोड नहीं खुल सका। कृपया फिर से कोशिश करें।"
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "स्वचालित वॉल्यूम क्षतिपूर्ति"
   }
 }

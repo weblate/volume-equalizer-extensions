@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Pencere modu açılamadı. Lütfen tekrar deneyin."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Otomatik ses düzeyi dengeleme"
   }
 }

@@ -65,8 +65,12 @@ const setup = (options: {
   const alert = vi.fn();
   const addPresetToDropdown = vi.fn();
   const refreshDynamicContent = vi.fn(async () => undefined);
+  const enableVolumeCompensation = new FakeElement();
 
   vi.stubGlobal("window", new EventTarget());
+  vi.stubGlobal("document", {
+    documentElement: { dataset: {} },
+  });
   vi.stubGlobal("chrome", { storage: { local: storage } });
   vi.stubGlobal("alert", alert);
   vi.stubGlobal("FileReader", FakeFileReader);
@@ -76,7 +80,7 @@ const setup = (options: {
   });
   const settingsActions = createSettingsActions();
 
-  createSettingsView({
+  const settingsView = createSettingsView({
     settingsModal: new FakeElement() as unknown as HTMLElement,
     settingsButton: new FakeElement() as unknown as HTMLElement,
     closeSettingsButton: new FakeElement() as unknown as HTMLElement,
@@ -90,6 +94,7 @@ const setup = (options: {
     importPresetsButton: new FakeElement() as unknown as HTMLButtonElement,
     importInput: importInput as unknown as HTMLInputElement,
     enableSpectrum: new FakeElement() as unknown as HTMLInputElement,
+    enableVolumeCompensation: enableVolumeCompensation as unknown as HTMLInputElement,
     hideDefaultPresets: new FakeElement() as unknown as HTMLInputElement,
     languageSelect: new FakeElement() as unknown as HTMLSelectElement,
     shortcutMute: new FakeElement() as unknown as HTMLInputElement,
@@ -107,6 +112,7 @@ const setup = (options: {
     savePointCount: settingsActions.savePointCount,
     saveSkipPointCountConfirmation: settingsActions.saveSkipPointCountConfirmation,
     saveSpectrumEnabled: settingsActions.saveSpectrumEnabled,
+    saveVolumeCompensationEnabled: settingsActions.saveVolumeCompensationEnabled,
     saveHideDefaultPresets: settingsActions.saveHideDefaultPresets,
     importPresets: presetActions.importPresets,
     exportPresets: presetActions.exportPresets,
@@ -121,9 +127,11 @@ const setup = (options: {
   return {
     addPresetToDropdown,
     alert,
+    enableVolumeCompensation,
     file,
     importInput,
     refreshDynamicContent,
+    settingsView,
     storage,
   };
 };
@@ -220,5 +228,23 @@ describe("preset import settings", () => {
     await flushImport(importInput);
 
     expect(alert).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("volume compensation setting", () => {
+  test("starts enabled and persists checkbox changes", async () => {
+    const { enableVolumeCompensation, settingsView, storage } = setup({ contents: "" });
+
+    await settingsView.init();
+    expect(enableVolumeCompensation.checked).toBe(true);
+
+    enableVolumeCompensation.checked = false;
+    enableVolumeCompensation.dispatchEvent(new Event("change"));
+
+    await vi.waitFor(() =>
+      expect(storage.set).toHaveBeenCalledWith({
+        [STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]: false,
+      }),
+    );
   });
 });

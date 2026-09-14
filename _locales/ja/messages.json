@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "ウィンドウモードを開けませんでした。もう一度お試しください。"
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "音量を自動補正"
   }
 }

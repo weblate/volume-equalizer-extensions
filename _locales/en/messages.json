@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Could not open Window mode. Please try again."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Automatic volume compensation"
   }
 }

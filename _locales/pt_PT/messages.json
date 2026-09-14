@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Não foi possível abrir o modo de janela. Tente novamente."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Compensação automática do volume"
   }
 }

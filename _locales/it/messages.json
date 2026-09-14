@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Impossibile aprire la modalità finestra. Riprova."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Compensazione automatica del volume"
   }
 }

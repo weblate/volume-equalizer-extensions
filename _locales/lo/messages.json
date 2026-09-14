@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "ບໍ່ສາມາດເປີດໂໝດໜ້າຕ່າງໄດ້. ກະລຸນາລອງໃໝ່."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "ການຊົດເຊີຍລະດັບສຽງອັດຕະໂນມັດ"
   }
 }

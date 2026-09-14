@@ -164,6 +164,7 @@ getTabId((tabId) => {
       [STORAGE_KEYS.tabPan(tabId)]: 0,
       [STORAGE_KEYS.tabFilters(tabId)]: defaultFilters,
       [STORAGE_KEYS.ENABLE_SPECTRUM]: false,
+      [STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]: true,
       [STORAGE_KEYS.tabEnabled(tabId)]: false,
       [STORAGE_KEYS.tabMute(tabId)]: false,
     },
@@ -178,6 +179,9 @@ getTabId((tabId) => {
         port.dataset.preamp = String(prefs[STORAGE_KEYS.tabVolume(tabId)]);
         port.dataset.mute = String(prefs[STORAGE_KEYS.tabMute(tabId)]);
         port.dataset.enableSpectrum = String(prefs[STORAGE_KEYS.ENABLE_SPECTRUM]);
+        port.dataset.enableVolumeCompensation = String(
+          prefs[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION],
+        );
         await applyTabEnabledState(prefs[STORAGE_KEYS.tabEnabled(tabId)] === true);
         if (!isCurrentInstance()) return;
         console.log("[contentIsolated] State ready", {
@@ -208,6 +212,13 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (changes[STORAGE_KEYS.ENABLE_SPECTRUM]) {
     port.dataset.enableSpectrum = String(changes[STORAGE_KEYS.ENABLE_SPECTRUM].newValue);
     port.dispatchEvent(new Event("spectrum-state-changed"));
+  }
+
+  if (changes[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]) {
+    port.dataset.enableVolumeCompensation = String(
+      changes[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION].newValue !== false,
+    );
+    port.dispatchEvent(new Event("volume-compensation-changed"));
   }
 
   withTabId((tabId) => {

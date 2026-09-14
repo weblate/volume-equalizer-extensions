@@ -265,5 +265,8 @@
   },
   "window_mode_start_error": {
     "message": "Der Fenstermodus konnte nicht geöffnet werden. Bitte versuche es erneut."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Automatische Lautstärkekompensation"
   }
 }

@@ -33,6 +33,7 @@ export const createSettingsView = (deps: {
   importPresetsButton: HTMLButtonElement;
   importInput: HTMLInputElement;
   enableSpectrum: HTMLInputElement;
+  enableVolumeCompensation: HTMLInputElement;
   hideDefaultPresets: HTMLInputElement;
   languageSelect: HTMLSelectElement;
   shortcutMute: HTMLInputElement;
@@ -53,6 +54,7 @@ export const createSettingsView = (deps: {
     pointCount: number;
     shortcuts: ShortcutMap;
     enableSpectrum: boolean;
+    enableVolumeCompensation: boolean;
     hideDefaultPresets: boolean;
   }>;
   loadPointCount(): Promise<number>;
@@ -62,6 +64,7 @@ export const createSettingsView = (deps: {
   savePointCount(count: number): Promise<void>;
   saveSkipPointCountConfirmation(skip: boolean): Promise<void>;
   saveSpectrumEnabled(enabled: boolean): Promise<void>;
+  saveVolumeCompensationEnabled(enabled: boolean): Promise<void>;
   saveHideDefaultPresets(hidden: boolean): Promise<void>;
   importPresets(
     text: string,
@@ -231,6 +234,13 @@ export const createSettingsView = (deps: {
       console.error("Failed to save spectrum setting", { error });
     });
   });
+  deps.enableVolumeCompensation.addEventListener("change", () => {
+    const enabled = deps.enableVolumeCompensation.checked;
+    void deps.saveVolumeCompensationEnabled(enabled).catch((error: unknown) => {
+      deps.enableVolumeCompensation.checked = !enabled;
+      console.error("Failed to save volume compensation setting", { error });
+    });
+  });
   deps.hideDefaultPresets.addEventListener("change", () => {
     const hidden = deps.hideDefaultPresets.checked;
     void deps
@@ -255,6 +265,7 @@ export const createSettingsView = (deps: {
       updatePointCountSelect(stored.pointCount);
       deps.hideDefaultPresets.checked = stored.hideDefaultPresets;
       deps.enableSpectrum.checked = stored.enableSpectrum;
+      deps.enableVolumeCompensation.checked = stored.enableVolumeCompensation;
       shortcuts.setShortcuts(stored.shortcuts);
       return stored;
     },
