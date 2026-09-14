@@ -1,7 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 
-import { frequencyToX } from "./equalizerMath";
-import { createEqualizerState } from "./equalizerState";
+import { frequencyToX } from "../../domains/equalizer/equalizerMath";
+import { readPersistedFilters } from "../../domains/equalizer/persistedFilters";
+import { createEqualizerState } from "./equalizerEditorState";
 
 const dimensions = {
   canvasWidth: 500,
@@ -9,6 +10,35 @@ const dimensions = {
 };
 
 describe("createEqualizerState", () => {
+  test("projects persisted audio values for the current canvas size", () => {
+    const loaded = readPersistedFilters([
+      { type: "peaking", freq: 1000, gain: 6, q: 0.5, x: 10, y: 20 },
+    ]);
+    expect(loaded).not.toBeNull();
+
+    const smallState = createEqualizerState();
+    smallState.setPoints(loaded ?? [], dimensions);
+    const wideDimensions = { canvasWidth: 1000, canvasHeight: 400 };
+    const wideState = createEqualizerState();
+    wideState.setPoints(loaded ?? [], wideDimensions);
+
+    expect(wideState.getPoints()[0]).not.toEqual(smallState.getPoints()[0]);
+    expect(smallState.getFilters(dimensions).find((filter) => filter.type === "peaking")).toEqual({
+      type: "peaking",
+      freq: expect.closeTo(1000, 10),
+      gain: expect.closeTo(6, 10),
+      q: 0.5,
+    });
+    expect(
+      wideState.getFilters(wideDimensions).find((filter) => filter.type === "peaking"),
+    ).toEqual({
+      type: "peaking",
+      freq: expect.closeTo(1000, 10),
+      gain: expect.closeTo(6, 10),
+      q: 0.5,
+    });
+  });
+
   test("initializes legacy peaking and crossover points", () => {
     const state = createEqualizerState();
 
@@ -41,8 +71,8 @@ describe("createEqualizerState", () => {
       [
         { type: "highpass", freq: 40, gain: 0, q: 0.05 },
         { type: "peaking", freq: 1000, gain: 12.5, q: 2 },
-        { type: "peaking", x: 123, y: 45, q: 20 },
-        { type: "lowpass", x: 456, q: "bad" },
+        { type: "peaking", freq: 2000, gain: -12.5, q: 10 },
+        { type: "lowpass", freq: 18000, gain: 0, q: 0.5 },
       ],
       dimensions,
       { onPointCountChange },
@@ -56,9 +86,13 @@ describe("createEqualizerState", () => {
     });
     expect(state.getPoints()).toEqual([
       { x: frequencyToX(1000, 490), y: 60, q: 2 },
-      { x: 123, y: 45, q: 10 },
+      { x: frequencyToX(2000, 490), y: 140, q: 10 },
     ]);
-    expect(state.getLowpassPoint()).toEqual({ x: 456, y: 100, q: 0.5 });
+    expect(state.getLowpassPoint()).toEqual({
+      x: frequencyToX(18000, 490),
+      y: 100,
+      q: 0.5,
+    });
   });
 
   test("serializes points back to filters in legacy order", () => {
@@ -81,16 +115,12 @@ describe("createEqualizerState", () => {
       freq: expect.closeTo(20, 10),
       gain: 0,
       q: 0.5,
-      x: frequencyToX(20, 490),
-      y: 100,
     });
     expect(filters[1]).toEqual({
       type: "peaking",
       freq: expect.closeTo(1000, 10),
       gain: 0,
       q: 1,
-      x: frequencyToX(1000, 490),
-      y: 100,
     });
     expect(filters[2]).toEqual({
       type: "lowpass",
@@ -98,8 +128,6 @@ describe("createEqualizerState", () => {
       freq: expect.closeTo(20000, 10),
       gain: 0,
       q: 0.5,
-      x: frequencyToX(20000, 490),
-      y: 100,
     });
   });
 

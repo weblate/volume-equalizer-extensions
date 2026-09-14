@@ -3,7 +3,7 @@ export const formatGainValue = (value: number): string => `${value.toFixed(1)} d
 const CLIPPING_HOLD_MS = 1500;
 
 export const createControlsView = (deps: {
-  changeEqButton: HTMLImageElement;
+  changeEqButton: HTMLButtonElement;
   resetButton: HTMLButtonElement;
   masterVolume: HTMLInputElement;
   masterVolumeValue: HTMLOutputElement;
@@ -62,10 +62,12 @@ export const createControlsView = (deps: {
 
     setEnableButtonClass: (enabled: boolean) => {
       deps.changeEqButton.classList.toggle("change-eq-active", enabled);
+      deps.changeEqButton.setAttribute("aria-pressed", String(enabled));
     },
 
     setMuteButtonClass: (muted: boolean) => {
       deps.volumeMuteButton.className = muted ? "volume-mute-active" : "volume-mute";
+      deps.volumeMuteButton.setAttribute("aria-pressed", String(muted));
       deps.onMuteStateApplied();
     },
   };

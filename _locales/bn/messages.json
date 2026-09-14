@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "এছাড়াও, সেটিংসে স্পেকট্রাম ভিজ্যুয়ালাইজেশন চালু করতে পারেন।"
+  },
+  "preset_import_syntax_error": {
+    "message": "ফাইলটিতে অবৈধ JSON রয়েছে।"
+  },
+  "preset_import_structure_error": {
+    "message": "প্রিসেট ফাইলটির গঠন অবৈধ।"
+  },
+  "preset_import_name_error": {
+    "message": "প্রিসেট ফাইলটিতে একটি অবৈধ নাম রয়েছে।"
+  },
+  "preset_import_filter_error": {
+    "message": "প্রিসেট ফাইলটিতে একটি অবৈধ ফিল্টার রয়েছে।"
+  },
+  "preset_import_read_error": {
+    "message": "প্রিসেট ফাইলটি পড়া যায়নি।"
+  },
+  "preset_import_save_error": {
+    "message": "ইমপোর্ট করা প্রিসেটগুলো সংরক্ষণ করা যায়নি।"
+  },
+  "close": {
+    "message": "বন্ধ করুন"
+  },
+  "help_label": {
+    "message": "সহায়তা"
+  },
+  "tab_label": {
+    "message": "ট্যাব"
+  },
+  "stop_capture_label": {
+    "message": "ক্যাপচার বন্ধ করুন"
+  },
+  "equalizer_canvas_label": {
+    "message": "ইকুয়ালাইজার নিয়ন্ত্রণ"
+  },
+  "equalizer_keyboard_help": {
+    "message": "একটি ব্যান্ড নির্বাচন করতে Home, End, Page Up বা Page Down চাপুন। ফ্রিকোয়েন্সি ও গেইনের জন্য তীর চিহ্ন, Q-এর জন্য Shift+Up/Down এবং রিসেট করতে Enter চাপুন।"
+  },
+  "window_mode_start_error": {
+    "message": "উইন্ডো মোড খোলা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "স্বয়ংক্রিয় ভলিউম ক্ষতিপূরণ"
   }
 }

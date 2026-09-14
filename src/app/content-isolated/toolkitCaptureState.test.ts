@@ -1,10 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
-import {
-  resolveShortcutToggle,
-  resolveTabEnabled,
-} from "./toolkitCaptureState";
+import { resolveShortcutToggle, resolveTabEnabled } from "./toolkitCaptureState";
 
 describe("resolveTabEnabled", () => {
   test("keeps the page equalizer disabled while its tab is captured", () => {

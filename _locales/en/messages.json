@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "You can also enable spectrum visualization in Settings."
+  },
+  "preset_import_syntax_error": {
+    "message": "The file contains invalid JSON."
+  },
+  "preset_import_structure_error": {
+    "message": "The preset file has an invalid structure."
+  },
+  "preset_import_name_error": {
+    "message": "The preset file contains an invalid name."
+  },
+  "preset_import_filter_error": {
+    "message": "The preset file contains an invalid filter."
+  },
+  "preset_import_read_error": {
+    "message": "The preset file could not be read."
+  },
+  "preset_import_save_error": {
+    "message": "The imported presets could not be saved."
+  },
+  "close": {
+    "message": "Close"
+  },
+  "help_label": {
+    "message": "Help"
+  },
+  "tab_label": {
+    "message": "Tab"
+  },
+  "stop_capture_label": {
+    "message": "Stop capture"
+  },
+  "equalizer_canvas_label": {
+    "message": "Equalizer controls"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Select a band with Home, End, Page Up or Page Down. Use arrows for frequency and gain, Shift+Up/Down for Q, and Enter to reset."
+  },
+  "window_mode_start_error": {
+    "message": "Could not open Window mode. Please try again."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Automatic volume compensation"
   }
 }

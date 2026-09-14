@@ -10,13 +10,21 @@
 
 ## Build, Test, and Development Commands
 
-- `npm ci` (or `npm install`): installs dev dependencies; there is no bundler or transpile step.
+- `npm ci` (or `npm install`): installs development and build dependencies.
 
-- `npm run build`: runs build using vite with custom script (`tools/buildExtension.mjs`)
+- `npm run build`: builds the TypeScript entry points with Vite through `tools/buildExtension.mjs`.
 
-- `lint:locales`: validates length of strings and lines count for some buttons
+- `npm run format:check`: checks authored files with Prettier; `npm run format` applies formatting.
 
-- `npm test`: runs unit tests using vitest
+- `npm run lint`: checks TypeScript and build tools with ESLint.
+
+- `npm run typecheck`: checks TypeScript without emitting files.
+
+- `npm test`: runs unit tests with Vitest.
+
+- `npm run lint:locales`: validates localization keys, string lengths, and popup layout constraints.
+
+- Manual extension checks follow `docs/testing/extension-smoke-checklist.md` after `npm run build`.
 
 - Packaging: zip `dist/` for store uploads after build; avoid including `node_modules/`.
 

@@ -14,62 +14,71 @@ import {
 import {
   RUNTIME_MESSAGES,
   TOOLKIT_SHORTCUT_ACTIONS,
+  normalizeSpectrumPayload,
   type ToolkitShortcutAction,
   type RuntimeMessage,
 } from "../../infrastructure/chrome/runtimeMessages";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 import { claimContentInstance } from "./contentInstance";
-import {
-  resolveShortcutToggle,
-  resolveTabEnabled,
-} from "./toolkitCaptureState";
+import { resolveShortcutToggle, resolveTabEnabled } from "./toolkitCaptureState";
 
 type SendRuntimeMessageWithCallback = (
   message: RuntimeMessage,
   callback: (response: unknown) => void,
 ) => void;
 
-const sendRuntimeMessageWithCallback =
-  chrome.runtime.sendMessage as unknown as SendRuntimeMessageWithCallback;
+const sendRuntimeMessageWithCallback = chrome.runtime
+  .sendMessage as unknown as SendRuntimeMessageWithCallback;
+
+const failingOperations = new Set<string>();
+
+const reportAsyncFailure = (operation: string, promise: Promise<unknown>): void => {
+  void promise.then(
+    () => failingOperations.delete(operation),
+    (error: unknown) => {
+      if (failingOperations.has(operation)) return;
+      failingOperations.add(operation);
+      console.error(`Failed to ${operation}`, { operation, error });
+    },
+  );
+};
 
 const existingPort = document.getElementById("eq-tools-port");
 const port =
-  existingPort instanceof HTMLSpanElement
-    ? existingPort
-    : document.createElement("span");
+  existingPort instanceof HTMLSpanElement ? existingPort : document.createElement("span");
 port.id = "eq-tools-port";
 port.hidden = true;
 if (!port.isConnected) document.documentElement.append(port);
 const isCurrentInstance = claimContentInstance(port);
 port.dataset.enabled = "false";
+port.dataset.spectrumDemand = "false";
 port.dispatchEvent(new Event("enabled-changed"));
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (
-    !isCurrentInstance() ||
-    message?.method !== RUNTIME_MESSAGES.CONTENT_SCRIPT_PING
-  ) {
+  if (!isCurrentInstance()) return;
+
+  if (message?.method === RUNTIME_MESSAGES.CONTENT_SCRIPT_PING) {
+    (sendResponse as unknown as (response: boolean) => void)(port.dataset.mainReady === "true");
     return;
   }
 
-  (sendResponse as unknown as (response: boolean) => void)(
-    port.dataset.mainReady === "true",
-  );
+  if (message?.method !== RUNTIME_MESSAGES.SET_SPECTRUM_DEMAND) return;
+  const enabled = (message.payload as { enabled?: unknown } | undefined)?.enabled;
+  if (typeof enabled !== "boolean") return;
+  port.dataset.spectrumDemand = String(enabled);
+  port.dispatchEvent(new Event("spectrum-state-changed"));
 });
 
 let currentTabId: number | null = null;
 let shortcuts = resolveShortcuts(null);
 
 const getTabId = (callback: (tabId: number) => void): void => {
-  sendRuntimeMessageWithCallback(
-    { method: RUNTIME_MESSAGES.GET_TAB_ID },
-    (tabId) => {
-      if (!isCurrentInstance() || typeof tabId !== "number") return;
+  sendRuntimeMessageWithCallback({ method: RUNTIME_MESSAGES.GET_TAB_ID }, (tabId) => {
+    if (!isCurrentInstance() || typeof tabId !== "number") return;
 
-      currentTabId = tabId;
-      callback(tabId);
-    },
-  );
+    currentTabId = tabId;
+    callback(tabId);
+  });
 };
 
 const withTabId = (callback: (tabId: number) => void): void => {
@@ -83,61 +92,62 @@ const withTabId = (callback: (tabId: number) => void): void => {
 
 const isToolkitCaptured = (): Promise<boolean> => {
   return new Promise((resolve) => {
-    sendRuntimeMessageWithCallback(
-      { method: RUNTIME_MESSAGES.IS_TOOLKIT_CAPTURED },
-      (captured) => resolve(captured === true),
+    sendRuntimeMessageWithCallback({ method: RUNTIME_MESSAGES.IS_TOOLKIT_CAPTURED }, (captured) =>
+      resolve(captured === true),
     );
   });
 };
 
-const applyTabEnabledState = async (
-  requestedEnabled: boolean,
-): Promise<void> => {
+const applyTabEnabledState = async (requestedEnabled: boolean): Promise<void> => {
   const captured = await isToolkitCaptured();
   if (!isCurrentInstance()) return;
 
-  port.dataset.enabled = String(
-    resolveTabEnabled(requestedEnabled, captured),
-  );
+  port.dataset.enabled = String(resolveTabEnabled(requestedEnabled, captured));
   port.dispatchEvent(new Event("enabled-changed"));
 };
 
 const setCaptureError = (message: string): void => {
   withTabId((tabId) => {
-    chrome.storage.local.set({
-      [STORAGE_KEYS.tabCaptureError(tabId)]: message,
-    });
+    reportAsyncFailure(
+      "store capture error",
+      chrome.storage.local.set({
+        [STORAGE_KEYS.tabCaptureError(tabId)]: message,
+      }),
+    );
   });
 };
 
 const clearCaptureError = (): void => {
   withTabId((tabId) => {
-    chrome.storage.local.remove(STORAGE_KEYS.tabCaptureError(tabId));
+    reportAsyncFailure(
+      "clear capture error",
+      chrome.storage.local.remove(STORAGE_KEYS.tabCaptureError(tabId)),
+    );
   });
 };
 
 const getCaptureErrorMessage = (event: Event): string => {
   const detail = (event as CustomEvent<{ message?: unknown }>).detail;
-  return typeof detail?.message === "string"
-    ? detail.message
-    : "Audio capture failed";
+  return typeof detail?.message === "string" ? detail.message : "Audio capture failed";
 };
 
 port.addEventListener("connected", () => {
   if (!isCurrentInstance()) return;
 
   clearCaptureError();
-  chrome.runtime.sendMessage({
-    method: RUNTIME_MESSAGES.CONNECTED,
-  });
+  reportAsyncFailure(
+    "report connected state",
+    chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.CONNECTED }),
+  );
 });
 
 port.addEventListener("disconnected", () => {
   if (!isCurrentInstance()) return;
 
-  chrome.runtime.sendMessage({
-    method: RUNTIME_MESSAGES.DISCONNECTED,
-  });
+  reportAsyncFailure(
+    "report disconnected state",
+    chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.DISCONNECTED }),
+  );
 });
 
 port.addEventListener("capture-error", (event) => {
@@ -154,6 +164,7 @@ getTabId((tabId) => {
       [STORAGE_KEYS.tabPan(tabId)]: 0,
       [STORAGE_KEYS.tabFilters(tabId)]: defaultFilters,
       [STORAGE_KEYS.ENABLE_SPECTRUM]: false,
+      [STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]: true,
       [STORAGE_KEYS.tabEnabled(tabId)]: false,
       [STORAGE_KEYS.tabMute(tabId)]: false,
     },
@@ -167,12 +178,11 @@ getTabId((tabId) => {
         port.dataset.pan = String(prefs[STORAGE_KEYS.tabPan(tabId)]);
         port.dataset.preamp = String(prefs[STORAGE_KEYS.tabVolume(tabId)]);
         port.dataset.mute = String(prefs[STORAGE_KEYS.tabMute(tabId)]);
-        port.dataset.enableSpectrum = String(
-          prefs[STORAGE_KEYS.ENABLE_SPECTRUM],
+        port.dataset.enableSpectrum = String(prefs[STORAGE_KEYS.ENABLE_SPECTRUM]);
+        port.dataset.enableVolumeCompensation = String(
+          prefs[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION],
         );
-        await applyTabEnabledState(
-          prefs[STORAGE_KEYS.tabEnabled(tabId)] === true,
-        );
+        await applyTabEnabledState(prefs[STORAGE_KEYS.tabEnabled(tabId)] === true);
         if (!isCurrentInstance()) return;
         console.log("[contentIsolated] State ready", {
           tabId,
@@ -200,10 +210,15 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   }
 
   if (changes[STORAGE_KEYS.ENABLE_SPECTRUM]) {
-    port.dataset.enableSpectrum = String(
-      changes[STORAGE_KEYS.ENABLE_SPECTRUM].newValue,
-    );
+    port.dataset.enableSpectrum = String(changes[STORAGE_KEYS.ENABLE_SPECTRUM].newValue);
     port.dispatchEvent(new Event("spectrum-state-changed"));
+  }
+
+  if (changes[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION]) {
+    port.dataset.enableVolumeCompensation = String(
+      changes[STORAGE_KEYS.ENABLE_VOLUME_COMPENSATION].newValue !== false,
+    );
+    port.dispatchEvent(new Event("volume-compensation-changed"));
   }
 
   withTabId((tabId) => {
@@ -224,9 +239,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
     const tabEnabledKey = STORAGE_KEYS.tabEnabled(tabId);
     if (changes[tabEnabledKey]) {
-      void applyTabEnabledState(
-        changes[tabEnabledKey].newValue === true,
-      );
+      void applyTabEnabledState(changes[tabEnabledKey].newValue === true);
     }
 
     const tabMuteKey = STORAGE_KEYS.tabMute(tabId);
@@ -244,9 +257,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 chrome.storage.local.get([STORAGE_KEYS.SHORTCUTS], (prefs) => {
   if (!isCurrentInstance()) return;
 
-  shortcuts = resolveShortcuts(
-    prefs[STORAGE_KEYS.SHORTCUTS] as Partial<ShortcutMap> | null,
-  );
+  shortcuts = resolveShortcuts(prefs[STORAGE_KEYS.SHORTCUTS] as Partial<ShortcutMap> | null);
 });
 
 const toggleTabStorageValue = (
@@ -255,27 +266,30 @@ const toggleTabStorageValue = (
   toolkitAction: ToolkitShortcutAction,
   options: { enableTab?: boolean } = {},
 ): void => {
-  Promise.all([chrome.storage.local.get([key]), isToolkitCaptured()]).then(
-    ([prefs, captured]) => {
-      if (!isCurrentInstance()) return;
+  reportAsyncFailure(
+    "toggle shortcut state",
+    Promise.all([chrome.storage.local.get([key]), isToolkitCaptured()]).then(
+      async ([prefs, captured]) => {
+        if (!isCurrentInstance()) return;
 
-      const values = resolveShortcutToggle({
-        key,
-        currentValue: prefs[key],
-        enabledKey: STORAGE_KEYS.tabEnabled(tabId),
-        enableTab: options.enableTab === true,
-        isToolkitCaptured: captured,
-        toolkitAction,
-      });
-      if ("toolkitAction" in values) {
-        chrome.runtime.sendMessage({
-          method: RUNTIME_MESSAGES.TOOLKIT_SHORTCUT,
-          payload: { action: values.toolkitAction },
+        const values = resolveShortcutToggle({
+          key,
+          currentValue: prefs[key],
+          enabledKey: STORAGE_KEYS.tabEnabled(tabId),
+          enableTab: options.enableTab === true,
+          isToolkitCaptured: captured,
+          toolkitAction,
         });
-        return;
-      }
-      chrome.storage.local.set(values.storageValues);
-    },
+        if ("toolkitAction" in values) {
+          await chrome.runtime.sendMessage({
+            method: RUNTIME_MESSAGES.TOOLKIT_SHORTCUT,
+            payload: { action: values.toolkitAction },
+          });
+          return;
+        }
+        await chrome.storage.local.set(values.storageValues);
+      },
+    ),
   );
 };
 
@@ -290,12 +304,9 @@ document.addEventListener(
       event.preventDefault();
       event.stopPropagation();
       withTabId((tabId) => {
-        toggleTabStorageValue(
-          tabId,
-          STORAGE_KEYS.tabMute(tabId),
-          TOOLKIT_SHORTCUT_ACTIONS.MUTE,
-          { enableTab: true },
-        );
+        toggleTabStorageValue(tabId, STORAGE_KEYS.tabMute(tabId), TOOLKIT_SHORTCUT_ACTIONS.MUTE, {
+          enableTab: true,
+        });
       });
       return;
     }
@@ -317,29 +328,42 @@ document.addEventListener(
 
 port.addEventListener("spectrum-frame", (event) => {
   if (!isCurrentInstance()) return;
+  const payload = normalizeSpectrumPayload((event as CustomEvent<unknown>).detail);
+  if (!payload) return;
 
-  chrome.runtime.sendMessage({
-    method: RUNTIME_MESSAGES.SPECTRUM_FRAME,
-    payload: (event as CustomEvent<unknown>).detail,
-  });
+  reportAsyncFailure(
+    "relay spectrum frame",
+    chrome.runtime.sendMessage({
+      method: RUNTIME_MESSAGES.SPECTRUM_FRAME,
+      payload,
+    }),
+  );
 });
+
+reportAsyncFailure(
+  "restore spectrum demand",
+  chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.SPECTRUM_READY }),
+);
 
 const start = (): void => {
   if (window.top !== window) return;
 
-  sendRuntimeMessageWithCallback(
-    { method: RUNTIME_MESSAGES.GET_TAB_ID },
-    () => {
-      if (!isCurrentInstance()) return;
+  sendRuntimeMessageWithCallback({ method: RUNTIME_MESSAGES.GET_TAB_ID }, () => {
+    if (!isCurrentInstance()) return;
 
-      chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.PAGE_STARTED });
-    },
-  );
+    reportAsyncFailure(
+      "report page start",
+      chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.PAGE_STARTED }),
+    );
+  });
 
   setTimeout(() => {
     if (!isCurrentInstance()) return;
 
-    chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.CLEAR_STORAGE });
+    reportAsyncFailure(
+      "request storage cleanup",
+      chrome.runtime.sendMessage({ method: RUNTIME_MESSAGES.CLEAR_STORAGE }),
+    );
   }, 1000);
 };
 

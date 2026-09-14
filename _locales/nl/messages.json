@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Je kunt in de instellingen ook spectrumvisualisatie inschakelen."
+  },
+  "preset_import_syntax_error": {
+    "message": "Het bestand bevat ongeldige JSON."
+  },
+  "preset_import_structure_error": {
+    "message": "Het presetbestand heeft een ongeldige structuur."
+  },
+  "preset_import_name_error": {
+    "message": "Het presetbestand bevat een ongeldige naam."
+  },
+  "preset_import_filter_error": {
+    "message": "Het presetbestand bevat een ongeldig filter."
+  },
+  "preset_import_read_error": {
+    "message": "Het presetbestand kon niet worden gelezen."
+  },
+  "preset_import_save_error": {
+    "message": "De geïmporteerde presets konden niet worden opgeslagen."
+  },
+  "close": {
+    "message": "Sluiten"
+  },
+  "help_label": {
+    "message": "Help"
+  },
+  "tab_label": {
+    "message": "Tabblad"
+  },
+  "stop_capture_label": {
+    "message": "Opname stoppen"
+  },
+  "equalizer_canvas_label": {
+    "message": "Equalizerbediening"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Selecteer een band met Home, End, Page Up of Page Down. Gebruik pijlen voor frequentie en versterking, Shift+Omhoog/Omlaag voor Q en Enter om te resetten."
+  },
+  "window_mode_start_error": {
+    "message": "De venstermodus kan niet worden geopend. Probeer het opnieuw."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Automatische volumecompensatie"
   }
 }

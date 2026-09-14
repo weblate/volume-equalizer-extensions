@@ -1,7 +1,7 @@
-import { createEqualizerState } from "../../domains/equalizer/equalizerState";
-import { createLocalizationService } from "../../domains/localization/localizationService";
-import { readThemeColors } from "../../domains/theme/themeColors";
-import { getPopupElements } from "../../infrastructure/dom/popupElements";
+import { createEqualizerState } from "../../ui/equalizerCanvas/equalizerEditorState";
+import { readThemeColors } from "../../ui/theme/themeColors";
+import { getPopupElements } from "../../ui/popup/popupElements";
+import { createLocalizationService } from "./localizationController";
 import { createPopupApp } from "./createPopupApp";
 
 declare global {
@@ -25,6 +25,8 @@ window.addEventListener("load", () => {
     readThemeColors,
   });
 
-  window.addEventListener("resize", app.resize);
-  void app.start();
+  void app.start().catch((error: unknown) => {
+    console.error("Failed to start popup", { error });
+    app.dispose();
+  });
 });

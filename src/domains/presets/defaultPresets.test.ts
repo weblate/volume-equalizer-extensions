@@ -19,9 +19,7 @@ describe("default presets", () => {
     const names = getAvailablePresetNames(["Custom", DEFAULT_PRESETS[0].name]);
 
     expect(names[0]).toBe("Custom");
-    expect(names.slice(1)).toEqual(
-      DEFAULT_PRESETS.map((preset) => preset.name),
-    );
+    expect(names.slice(1)).toEqual(DEFAULT_PRESETS.map((preset) => preset.name));
     expect(names.filter((name) => name === DEFAULT_PRESETS[0].name)).toHaveLength(1);
   });
 
@@ -37,6 +35,15 @@ describe("default presets", () => {
     const preset = DEFAULT_PRESETS[0];
 
     expect(resolvePresetFilters(preset.name, {})).toEqual(preset.filters);
+  });
+
+  test("normalizes user presets before returning them to the editor", () => {
+    expect(
+      resolvePresetFilters("Legacy", {
+        Legacy: [{ type: "peaking", freq: "1000", gain: "6", q: "0.5", x: 10, y: 20 }],
+      }),
+    ).toEqual([{ type: "peaking", freq: 1000, gain: 6, q: 0.5 }]);
+    expect(resolvePresetFilters("Broken", { Broken: [{ freq: 0, gain: 4 }] })).toBeUndefined();
   });
 
   test("marks default presets as immutable", () => {

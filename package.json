@@ -4,6 +4,9 @@
   },
   "scripts": {
     "lint:locales": "node tools/validateLocalizationLengths.js",
+    "lint": "eslint src tools *.mjs",
+    "format": "prettier --write src tools _locales resources/styles popup.html manifest.json package.json tsconfig.json vitest.config.ts eslint.config.mjs .prettierrc.json .github/workflows",
+    "format:check": "prettier --check src tools _locales resources/styles popup.html manifest.json package.json tsconfig.json vitest.config.ts eslint.config.mjs .prettierrc.json .github/workflows",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "node tools/buildExtension.mjs",
@@ -11,10 +14,15 @@
     "zip": "node -e \"const {version}=require('./manifest.json'); require('child_process').execFileSync('npx',['bestzip',`../build/Release/eq-toolkit_v${version}_unpacked.zip`,'*'],{cwd:'dist',stdio:'inherit',shell:true})\""
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@types/node": "^26.1.0",
     "bestzip": "^2.2.1",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
     "playwright": "^1.62.0",
+    "prettier": "3.9.6",
     "typescript": "^6.0.3",
+    "typescript-eslint": "8.70.0",
     "vite": "^8.1.3",
     "vitest": "^4.1.9"
   }

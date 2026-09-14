@@ -1,3 +1,4 @@
+import { attachModalFocus } from "./modalFocus";
 import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
 
 export interface InstallUpdateNotice {
@@ -36,10 +37,14 @@ export const createInstallUpdateNoticeView = (deps: {
   modal: HTMLElement;
   closeButton: HTMLElement;
   topCloseButton: HTMLElement;
+  returnFocusTo: HTMLElement;
 }) => {
+  const modalFocus = attachModalFocus(deps.modal, deps.returnFocusTo);
+  deps.modal.addEventListener("modal-closed", () => {
+    void chrome.storage.local.remove(STORAGE_KEYS.INSTALL_UPDATE_NOTICE);
+  });
   const closeInstallUpdateNotice = async (): Promise<void> => {
-    deps.modal.style.display = "none";
-    await chrome.storage.local.remove(STORAGE_KEYS.INSTALL_UPDATE_NOTICE);
+    modalFocus.close();
   };
 
   [deps.closeButton, deps.topCloseButton].forEach((button) => {
@@ -52,7 +57,7 @@ export const createInstallUpdateNoticeView = (deps: {
     showInstallUpdateNotice: (notice: InstallUpdateNotice | null) => {
       if (notice?.reason !== "update") return;
 
-      deps.modal.style.display = "block";
+      modalFocus.open();
     },
   };
 };

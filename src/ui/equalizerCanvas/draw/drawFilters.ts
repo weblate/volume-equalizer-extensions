@@ -1,13 +1,6 @@
-import {
-  ensureQFactor,
-  xToFrequency,
-  yToDb,
-} from "../../../domains/equalizer/equalizerMath";
-import {
-  POINT_RADIUS,
-  type EqualizerCanvasPoint,
-} from "../../../domains/equalizer/equalizerState";
-import type { ThemeColors } from "../../../domains/theme/themeColors";
+import { ensureQFactor, xToFrequency, yToDb } from "../../../domains/equalizer/equalizerMath";
+import { POINT_RADIUS, type EqualizerCanvasPoint } from "../equalizerEditorState";
+import type { ThemeColors } from "../../theme/themeColors";
 import type { EqualizerCanvasRenderOptions } from "../types";
 import { drawBiquadFilter } from "./drawBiquadFilter";
 
@@ -30,6 +23,16 @@ const drawTypedPoint = (
   ctx.stroke();
 };
 
+const getTargetPoint = (
+  state: EqualizerCanvasRenderOptions["state"],
+  target: EqualizerCanvasRenderOptions["selectedTarget"],
+): EqualizerCanvasPoint | null => {
+  if (!target) return null;
+  if (target.type === "highpass") return state.getHighpassPoint();
+  if (target.type === "lowpass") return state.getLowpassPoint();
+  return state.getPoints()[target.index] ?? null;
+};
+
 export const drawPoints = ({
   ctx,
   state,
@@ -49,18 +52,8 @@ export const drawPoints = ({
     ctx.stroke();
   });
 
-  drawTypedPoint(
-    ctx,
-    state.getHighpassPoint(),
-    colors.highpassFilterColor,
-    colors.panelBg,
-  );
-  drawTypedPoint(
-    ctx,
-    state.getLowpassPoint(),
-    colors.lowpassFilterColor,
-    colors.panelBg,
-  );
+  drawTypedPoint(ctx, state.getHighpassPoint(), colors.highpassFilterColor, colors.panelBg);
+  drawTypedPoint(ctx, state.getLowpassPoint(), colors.lowpassFilterColor, colors.panelBg);
 };
 
 export const drawFilter = ({
@@ -69,12 +62,21 @@ export const drawFilter = ({
   audioContext,
   state,
   getColors,
+  selectedTarget,
 }: EqualizerCanvasRenderOptions): void => {
   const colors = getColors();
 
   drawPoints({ ctx, state, colors });
+  const selectedPoint = getTargetPoint(state, selectedTarget);
+  if (selectedPoint) {
+    ctx.beginPath();
+    ctx.arc(selectedPoint.x, selectedPoint.y, POINT_RADIUS + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = colors.axis;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
 
-  const canvasWidth = canvas.width - 10;
+  const canvasWidth = canvas.clientWidth - 10;
   const highpassPoint = state.getHighpassPoint();
 
   if (highpassPoint) {
@@ -91,7 +93,7 @@ export const drawFilter = ({
   }
 
   state.getPoints().forEach((point) => {
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    const gradient = ctx.createLinearGradient(0, 0, canvas.clientWidth, 0);
     gradient.addColorStop(0, colors.accentStart);
     gradient.addColorStop(0.5, colors.accentMid);
     gradient.addColorStop(1, colors.accentEnd);
@@ -103,7 +105,7 @@ export const drawFilter = ({
       type: "peaking",
       freq: xToFrequency(point.x, canvasWidth),
       q: ensureQFactor(point.q),
-      gain: yToDb(point.y, canvas.height),
+      gain: yToDb(point.y, canvas.clientHeight),
       strokeStyle: gradient,
     });
   });

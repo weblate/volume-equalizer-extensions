@@ -8,7 +8,7 @@ const createChromeMock = () => {
   const localSet = vi.fn();
   const sessionGet = vi.fn();
   const sessionSet = vi.fn();
-  const setBadgeText = vi.fn();
+  const setBadgeText = vi.fn().mockResolvedValue(undefined);
 
   vi.stubGlobal("chrome", {
     action: {
@@ -55,14 +55,12 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn().mockResolvedValue(capturedTabs),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
-    const result = handler(
-      { method: RUNTIME_MESSAGES.GET_CAPTURED_TABS },
-      {},
-      response
-    );
+    const result = handler({ method: RUNTIME_MESSAGES.GET_CAPTURED_TABS }, {}, response);
     await flushPromises();
 
     expect(result).toBe(true);
@@ -76,43 +74,88 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn().mockRejectedValue(new Error("gone")),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
-    const result = handler(
-      { method: RUNTIME_MESSAGES.GET_CAPTURED_TABS },
-      {},
-      response
-    );
+    const result = handler({ method: RUNTIME_MESSAGES.GET_CAPTURED_TABS }, {}, response);
     await flushPromises();
 
     expect(result).toBe(true);
     expect(response).toHaveBeenCalledWith({ tabs: [], activeTabId: null });
   });
 
-  test("stores sender tab id and responds synchronously", () => {
-    const chromeMock = createChromeMock();
-    chromeMock.sessionGet.mockImplementation((_keys, callback) => {
-      callback({ [STORAGE_KEYS.REGISTERED_TAB_IDS]: [3] });
-    });
+  test("responds after window mode is enabled", async () => {
+    createChromeMock();
     const response = vi.fn();
     const handler = createRuntimeMessageHandler({
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn().mockResolvedValue(undefined),
+    });
+
+    const result = handler(
+      { method: RUNTIME_MESSAGES.ENABLE_WINDOW_MODE, tabId: 12 },
+      {},
+      response,
+    );
+    await flushPromises();
+
+    expect(result).toBe(true);
+    expect(response).toHaveBeenCalledWith({ ok: true });
+  });
+
+  test("responds with the window mode failure", async () => {
+    createChromeMock();
+    const response = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn().mockRejectedValue(new Error("capture failed")),
+    });
+
+    const result = handler(
+      { method: RUNTIME_MESSAGES.ENABLE_WINDOW_MODE, tabId: 12 },
+      {},
+      response,
+    );
+    await flushPromises();
+
+    expect(result).toBe(true);
+    expect(response).toHaveBeenCalledWith({
+      ok: false,
+      error: "capture failed",
+    });
+  });
+
+  test("responds with the sender tab id without registering it", () => {
+    const chromeMock = createChromeMock();
+    const response = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
     const result = handler(
       { method: RUNTIME_MESSAGES.GET_TAB_ID },
       { tab: { id: 7 } as chrome.tabs.Tab },
-      response
+      response,
     );
 
     expect(result).toBeUndefined();
-    expect(chromeMock.sessionSet).toHaveBeenCalledWith({
-      [STORAGE_KEYS.REGISTERED_TAB_IDS]: [3, 7],
-    });
+    expect(chromeMock.sessionGet).not.toHaveBeenCalled();
+    expect(chromeMock.sessionSet).not.toHaveBeenCalled();
     expect(response).toHaveBeenCalledWith(7);
   });
 
@@ -126,6 +169,8 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
@@ -148,21 +193,21 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab,
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
     const result = handler(
       { method: RUNTIME_MESSAGES.PAGE_STARTED },
       { tab: { id: 9, url: "https://example.com" } as chrome.tabs.Tab },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(result).toBeUndefined();
-    expect(applyAutostartForTab).toHaveBeenCalledWith(
-      9,
-      "https://example.com",
-      { resetWhenNoMatch: true }
-    );
+    expect(applyAutostartForTab).toHaveBeenCalledWith(9, "https://example.com", {
+      resetWhenNoMatch: true,
+    });
   });
 
   test("updates connected tab badge without an async response", () => {
@@ -171,13 +216,15 @@ describe("createRuntimeMessageHandler", () => {
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
     const result = handler(
       { method: RUNTIME_MESSAGES.CONNECTED },
       { tab: { id: 11 } as chrome.tabs.Tab },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(result).toBeUndefined();
@@ -187,21 +234,105 @@ describe("createRuntimeMessageHandler", () => {
     });
   });
 
+  test("reports a badge update failure with its operation and tab", async () => {
+    const chromeMock = createChromeMock();
+    const failure = new Error("badge failed");
+    chromeMock.setBadgeText.mockRejectedValue(failure);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn(),
+    });
+
+    handler(
+      { method: RUNTIME_MESSAGES.CONNECTED },
+      { tab: { id: 11 } as chrome.tabs.Tab },
+      vi.fn(),
+    );
+    await flushPromises();
+
+    expect(consoleError).toHaveBeenCalledWith("Failed to update tab badge", {
+      operation: "setBadgeText",
+      tabId: 11,
+      error: failure,
+    });
+  });
+
   test("ignores unknown tab messages without an async response", () => {
     createChromeMock();
     const handler = createRuntimeMessageHandler({
       applyAutostartForTab: vi.fn(),
       clearUnusedStorage: vi.fn(),
       getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand: vi.fn(),
       toggleWindowMode: vi.fn(),
     });
 
     const result = handler(
       { method: "unknown" as typeof RUNTIME_MESSAGES.GET_TAB_ID },
       { tab: { id: 13 } as chrome.tabs.Tab },
-      vi.fn()
+      vi.fn(),
     );
 
     expect(result).toBeUndefined();
+  });
+
+  test("relays spectrum frames using the original sender without storage", () => {
+    const chromeMock = createChromeMock();
+    const acceptSpectrumFrame = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame,
+      restoreSpectrumDemand: vi.fn(),
+      toggleWindowMode: vi.fn(),
+    });
+    const payload = {
+      type: "spectrum" as const,
+      buffer: [-42, -38],
+      clipping: false,
+    };
+    const sender = {
+      tab: { id: 12 } as chrome.tabs.Tab,
+      frameId: 3,
+    };
+
+    handler({ method: RUNTIME_MESSAGES.SPECTRUM_FRAME, payload }, sender, vi.fn());
+
+    expect(acceptSpectrumFrame).toHaveBeenCalledWith(payload, sender);
+    expect(chromeMock.localSet).not.toHaveBeenCalled();
+  });
+
+  test("restores spectrum demand only for ready content with routing ids", () => {
+    createChromeMock();
+    const restoreSpectrumDemand = vi.fn();
+    const handler = createRuntimeMessageHandler({
+      applyAutostartForTab: vi.fn(),
+      clearUnusedStorage: vi.fn(),
+      getCapturedTabs: vi.fn(),
+      acceptSpectrumFrame: vi.fn(),
+      restoreSpectrumDemand,
+      toggleWindowMode: vi.fn(),
+    });
+    const routedSender = {
+      tab: { id: 12 } as chrome.tabs.Tab,
+      frameId: 3,
+    };
+
+    handler({ method: RUNTIME_MESSAGES.SPECTRUM_READY }, routedSender, vi.fn());
+    handler(
+      { method: RUNTIME_MESSAGES.SPECTRUM_READY },
+      { tab: { id: 12 } as chrome.tabs.Tab },
+      vi.fn(),
+    );
+
+    expect(restoreSpectrumDemand).toHaveBeenCalledOnce();
+    expect(restoreSpectrumDemand).toHaveBeenCalledWith(routedSender);
   });
 });

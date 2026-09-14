@@ -1,13 +1,9 @@
-import {
-  ensureQFactor,
-  xToFrequency,
-  yToDb,
-} from "../../domains/equalizer/equalizerMath";
+import { ensureQFactor, xToFrequency, yToDb } from "../../domains/equalizer/equalizerMath";
 import type {
   EqualizerCanvasDimensions,
   EqualizerCanvasPoint,
   EqualizerState,
-} from "../../domains/equalizer/equalizerState";
+} from "./equalizerEditorState";
 
 export interface EqualizerTooltipOptions {
   canvas: HTMLCanvasElement;
@@ -78,10 +74,7 @@ export const createEqualizerTooltips = ({
     const maxLeft = canvas.clientWidth - tooltipWidth - margin;
     const maxTop = canvas.clientHeight - tooltipHeight - margin;
     const left = Math.max(margin, Math.min(maxLeft, point.x + offset));
-    const top = Math.max(
-      margin,
-      Math.min(maxTop, point.y - tooltipHeight - offset),
-    );
+    const top = Math.max(margin, Math.min(maxTop, point.y - tooltipHeight - offset));
 
     infoTooltip.style.transform = `translate(${left}px, ${top}px)`;
   };

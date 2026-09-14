@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
-import type { ThemeColors } from "../../../domains/theme/themeColors";
+import type { ThemeColors } from "../../theme/themeColors";
 import { drawAxis } from "./drawFrequencyAxis";
 import { createSpectrumRenderer } from "./drawSpectrum";
 
@@ -93,20 +93,14 @@ describe("equalizer canvas color providers", () => {
     });
 
     renderer.drawSpectrum([-90, -80, -70]);
-    expect(ctx.gradient.addColorStop).toHaveBeenCalledWith(
-      0,
-      "accent-start-initial",
-    );
+    expect(ctx.gradient.addColorStop).toHaveBeenCalledWith(0, "accent-start-initial");
     expect(ctx.strokeStyle).toBe("accent-mid-initial");
 
     colors = createColors("updated");
     ctx.gradient.addColorStop.mockClear();
     renderer.drawSpectrum([-90, -80, -70]);
 
-    expect(ctx.gradient.addColorStop).toHaveBeenCalledWith(
-      0,
-      "accent-start-updated",
-    );
+    expect(ctx.gradient.addColorStop).toHaveBeenCalledWith(0, "accent-start-updated");
     expect(ctx.strokeStyle).toBe("accent-mid-updated");
   });
 

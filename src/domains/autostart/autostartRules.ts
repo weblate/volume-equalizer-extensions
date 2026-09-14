@@ -12,7 +12,7 @@ export const normalizeWhitelistUrl = (url: string): string => {
     const normalizedUrl = new URL(url);
     normalizedUrl.hash = "";
     return normalizedUrl.href;
-  } catch (e) {
+  } catch {
     return url;
   }
 };
@@ -20,14 +20,14 @@ export const normalizeWhitelistUrl = (url: string): string => {
 export const getWhitelistDomain = (url: string): string => {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
-  } catch (e) {
+  } catch {
     return url.split("/")[0].replace(/^www\./, "");
   }
 };
 
 export const normalizeAutostartSettingsUrlValue = (
   type: AutostartEntryType,
-  value: string
+  value: string,
 ): string => {
   if (!value) return "";
   const rawValue = value.trim();
@@ -42,7 +42,7 @@ export const normalizeAutostartSettingsUrlValue = (
 export const createWhitelistEntry = (
   type: AutostartEntryType,
   value: string,
-  presetName: string
+  presetName: string,
 ): AutostartWhitelistEntry | null => {
   if (!value || !presetName) return null;
 
@@ -59,7 +59,7 @@ export const createWhitelistEntry = (
 
 export const findWhitelistMatch = (
   entries: AutostartWhitelistEntry[] | null | undefined,
-  url: string
+  url: string,
 ): AutostartWhitelistEntry | undefined | null => {
   const normalizedUrl = normalizeWhitelistUrl(url);
   const domain = getWhitelistDomain(url);
@@ -74,10 +74,7 @@ export const findWhitelistMatch = (
       urlRule = entry;
     }
 
-    if (
-      entry.type === "domain" &&
-      (domain === entry.value || domain.endsWith("." + entry.value))
-    ) {
+    if (entry.type === "domain" && (domain === entry.value || domain.endsWith("." + entry.value))) {
       domainRule = entry;
     }
   });
@@ -89,7 +86,7 @@ export const findWhitelistMatch = (
 
 export const isPresetUsedInWhitelist = (
   entries: AutostartWhitelistEntry[] | null | undefined,
-  presetName: string
+  presetName: string,
 ): boolean => {
   return (entries ?? []).some((entry) => entry.presetName === presetName);
 };

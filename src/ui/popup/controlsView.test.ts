@@ -32,7 +32,7 @@ describe("createControlsView", () => {
     const onToggleEqualizer = vi.fn(async () => undefined);
 
     createControlsView({
-      changeEqButton: changeEqButton as unknown as HTMLImageElement,
+      changeEqButton: changeEqButton as unknown as HTMLButtonElement,
       resetButton: new FakeElement() as unknown as HTMLButtonElement,
       masterVolume: new FakeInput() as unknown as HTMLInputElement,
       masterVolumeValue: new FakeElement() as unknown as HTMLOutputElement,
@@ -59,7 +59,7 @@ describe("createControlsView", () => {
     const onVolumeInput = vi.fn(async () => undefined);
 
     createControlsView({
-      changeEqButton: new FakeElement() as unknown as HTMLImageElement,
+      changeEqButton: new FakeElement() as unknown as HTMLButtonElement,
       resetButton: new FakeElement() as unknown as HTMLButtonElement,
       masterVolume: masterVolume as unknown as HTMLInputElement,
       masterVolumeValue: masterVolumeValue as unknown as HTMLOutputElement,
@@ -86,7 +86,7 @@ describe("createControlsView", () => {
     vi.useFakeTimers();
     const clippingIndicator = new FakeElement();
     const view = createControlsView({
-      changeEqButton: new FakeElement() as unknown as HTMLImageElement,
+      changeEqButton: new FakeElement() as unknown as HTMLButtonElement,
       resetButton: new FakeElement() as unknown as HTMLButtonElement,
       masterVolume: new FakeInput() as unknown as HTMLInputElement,
       masterVolumeValue: new FakeElement() as unknown as HTMLOutputElement,

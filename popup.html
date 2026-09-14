@@ -1,388 +1,615 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Maitrog's EQ Toolkit</title>
+    <link rel="stylesheet" href="resources/styles/popup.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Maitrog's EQ Toolkit</title>
-  <link rel="stylesheet" href="resources/styles/popup.css">
-  </link>
-</head>
-
-<body>
-  <div class="header">
-    <div class="header-left">
-      <text>EQ Toolkit</text>
-      <img id="settings-btn" class="settings-btn" src="resources/images/settings.svg">
-      <img id="add-to-autostart-whitelist-btn" class="add-to-autostart-whitelist-btn" src="resources/images/add_to_whitelist.svg">
-      <img id="window-mod" class="window-mod" src="resources/images/window-mod.svg">
+  <body>
+    <div class="header">
+      <div class="header-left">
+        <text>EQ Toolkit</text>
+        <button type="button" id="settings-btn" class="settings-btn">
+          <img src="resources/images/settings.svg" alt="" />
+        </button>
+        <button
+          type="button"
+          id="add-to-autostart-whitelist-btn"
+          class="add-to-autostart-whitelist-btn"
+        >
+          <img src="resources/images/add_to_whitelist.svg" alt="" />
+        </button>
+        <button type="button" id="window-mod" class="window-mod">
+          <img src="resources/images/window-mod.svg" alt="" />
+        </button>
+      </div>
+      <div class="header-right">
+        <button type="button" id="volume-mute" class="volume-mute" aria-pressed="false">
+          <img src="resources/images/volume-mute.svg" alt="" />
+        </button>
+        <button type="button" id="change-eq" class="change-eq" aria-pressed="false">
+          <img src="resources/images/on-off-button.svg" alt="" />
+        </button>
+      </div>
     </div>
-    <div class="header-right">
-      <img id="volume-mute" class="volume-mute" src="resources/images/volume-mute.svg">
-      <img id="change-eq" class="change-eq" src="resources/images/on-off-button.svg">
+    <div id="capture-error" class="capture-error"></div>
+    <div id="captured-tabs" class="captured-tabs"></div>
+    <div id="equalizer-curve-container" class="equalizer-curve-container">
+      <button type="button" id="info-btn" class="info-btn">
+        <img src="resources/images/info.svg" alt="" />
+      </button>
+      <canvas
+        class="eq-canvas"
+        id="eq-canvas"
+        tabindex="0"
+        role="application"
+        data-i18n-label="equalizer_canvas_label"
+        aria-describedby="equalizer-keyboard-help equalizer-keyboard-status"
+      ></canvas>
+      <span
+        id="equalizer-keyboard-help"
+        class="visually-hidden"
+        data-i18n="equalizer_keyboard_help"
+      ></span>
+      <span id="equalizer-keyboard-status" class="visually-hidden" aria-live="polite"></span>
+      <canvas class="spectrum-canvas" id="spectrum-canvas"></canvas>
+      <div class="info-tooltip" id="info-tooltip"></div>
     </div>
-  </div>
-  <div id="capture-error" class="capture-error"></div>
-  <div id="captured-tabs" class="captured-tabs"></div>
-  <div id="equalizer-curve-container" class="equalizer-curve-container">
-    <img id="info-btn" class="info-btn" src="resources/images/info.svg">
-    <canvas class="eq-canvas" id="eq-canvas"></canvas>
-    <canvas class="spectrum-canvas" id="spectrum-canvas"></canvas>
-    <div class="info-tooltip" id="info-tooltip"></div>
-  </div>
-  <div class="controls-panel">
-    <section class="control-card" id="volume-control-card">
-      <h2 id="global-controls-title" data-i18n="global_controls_title">Global Controls</h2>
-      <div class="global-actions">
-        <div class="volume-control">
-          <div class="gain-value-row">
-            <label for="master-volume" id="master-volume-label" data-i18n="gain_slider_label">Gain:</label>
-            <div class="gain-status">
-              <span id="clipping-indicator" class="clipping-indicator" data-i18n="clipping_indicator_label" aria-live="polite">CLIP</span>
-              <output id="master-volume-value" for="master-volume">0.0 dB</output>
+    <div class="controls-panel">
+      <section class="control-card" id="volume-control-card">
+        <h2 id="global-controls-title" data-i18n="global_controls_title">Global Controls</h2>
+        <div class="global-actions">
+          <div class="volume-control">
+            <div class="gain-value-row">
+              <label for="master-volume" id="master-volume-label" data-i18n="gain_slider_label"
+                >Gain:</label
+              >
+              <div class="gain-status">
+                <span
+                  id="clipping-indicator"
+                  class="clipping-indicator"
+                  data-i18n="clipping_indicator_label"
+                  aria-live="polite"
+                  >CLIP</span
+                >
+                <output id="master-volume-value" for="master-volume">0.0 dB</output>
+              </div>
+            </div>
+            <input
+              type="range"
+              class="master-volume"
+              id="master-volume"
+              name="master-volume"
+              min="-24"
+              max="24"
+              value="0"
+            />
+          </div>
+          <button type="button" id="reset" class="reset-btn" data-i18n="reset_button_label">
+            Reset
+          </button>
+        </div>
+      </section>
+      <section id="preset-controls-card" class="control-card">
+        <h2 id="preset-controls-title" data-i18n="preset_controls_title">Preset Controls</h2>
+        <div class="preset-actions">
+          <button
+            type="button"
+            id="save-preset"
+            class="save-preset"
+            data-i18n="save_preset_button_label"
+          >
+            Save preset
+          </button>
+          <div class="dropdown" id="presets">
+            <button
+              type="button"
+              class="dropdown-toggle"
+              id="presets-toggle"
+              aria-expanded="false"
+              aria-controls="presets-menu"
+              data-i18n="empty_preset_name"
+            >
+              none
+            </button>
+            <div class="dropdown-menu" id="presets-menu">
+              <button
+                type="button"
+                class="dropdown-item"
+                data-value="none"
+                id="none-item"
+                data-i18n="empty_preset_name"
+              >
+                none
+              </button>
             </div>
           </div>
-          <input type="range" class="master-volume" id="master-volume" name="master-volume" min="-24" max="24" value="0">
         </div>
-        <button type="button" id="reset" class="reset-btn" data-i18n="reset_button_label">Reset</button>
-      </div>
-    </section>
-    <section id="preset-controls-card" class="control-card">
-      <h2 id="preset-controls-title" data-i18n="preset_controls_title">Preset Controls</h2>
-      <div class="preset-actions">
-        <button type="button" id="save-preset" class="save-preset" data-i18n="save_preset_button_label">Save preset</button>
-        <div class="dropdown" id="presets">
-          <div class="dropdown-toggle" id="presets-toggle" data-i18n="empty_preset_name">none</div>
-          <div class="dropdown-menu" id="presets-menu">
-            <div class="dropdown-item" data-value="none" id="none-item" data-i18n="empty_preset_name">none</div>
+      </section>
+    </div>
+
+    <div id="settings-modal" class="modal" aria-labelledby="settings-header">
+      <div class="modal-content">
+        <button type="button" id="close-settings" class="close" data-i18n-label="close">
+          &times;
+        </button>
+        <h2 id="settings-header" data-i18n="settings_title">Settings</h2>
+        <label class="settings-row">
+          <text id="enable-spectrum-label" data-i18n="enable_spectrum_setting_option">
+            Enable spectrum visualisation (high CPU load)
+          </text>
+          <input type="checkbox" id="enable-spectrum" />
+        </label>
+        <label class="settings-row">
+          <text data-i18n="enable_volume_compensation_setting_option">
+            Automatic volume compensation
+          </text>
+          <input type="checkbox" id="enable-volume-compensation" />
+        </label>
+        <div class="settings-row">
+          <span id="points-count-label" data-i18n="points_count_setting_option">EQ points</span>
+          <select id="points-count" class="settings-select">
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <span id="theme-label" data-i18n="theme_setting_option">Theme</span>
+          <select id="theme-select" class="settings-select">
+            <option value="dark" id="theme-dark-option" data-i18n="guide_theme_dark">Dark</option>
+            <option value="light" id="theme-light-option" data-i18n="guide_theme_light">
+              Lignt
+            </option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <span id="language-label" data-i18n="language_setting_option">Language</span>
+          <select id="language-select" class="settings-select"></select>
+        </div>
+
+        <!--SHORTCUTS SECTION-->
+        <div class="settings-section">
+          <h3 id="shortcuts-settings-title" data-i18n="shortcuts_settings_title">Shortcuts</h3>
+          <div class="settings-row">
+            <span id="shortcut-mute-label" data-i18n="shortcut_mute_label">Mute/unmute</span>
+            <input type="text" id="shortcut-mute" class="settings-input shortcut-input" readonly />
+          </div>
+          <div class="settings-row">
+            <span id="shortcut-toggle-eq-label" data-i18n="shortcut_toggle_eq_label"
+              >Enable/disable</span
+            >
+            <input
+              type="text"
+              id="shortcut-toggle-eq"
+              class="settings-input shortcut-input"
+              readonly
+            />
+          </div>
+          <div class="settings-row">
+            <span id="shortcut-q-factor-label" data-i18n="shortcut_q_factor_label"
+              >Adjust Q factor</span
+            >
+            <input
+              type="text"
+              id="shortcut-q-factor"
+              class="settings-input shortcut-input"
+              value="Shift+Drag"
+              disabled
+            />
+          </div>
+          <div class="settings-row">
+            <span id="shortcut-reset-point-label" data-i18n="shortcut_reset_point_label"
+              >Reset point</span
+            >
+            <input
+              type="text"
+              id="shortcut-reset-point"
+              class="settings-input shortcut-input"
+              value="Double-click"
+              disabled
+            />
+          </div>
+          <div id="shortcuts-settings-error" class="settings-error"></div>
+        </div>
+
+        <!--WHITELIST SECTION-->
+        <div class="settings-section">
+          <h3 id="autostart-settings-title" data-i18n="autostart_settings_title">Whitelist</h3>
+          <div id="autostart-settings-list" class="autostart-settings-list"></div>
+          <div class="autostart-settings-add-row">
+            <select
+              id="autostart-settings-type"
+              class="settings-select autostart-settings-type-select"
+            >
+              <option
+                value="domain"
+                id="autostart-settings-type-domain"
+                data-i18n="autostart_rule_type_domain_label"
+              >
+                Domain
+              </option>
+              <option
+                value="url"
+                id="autostart-settings-type-url"
+                data-i18n="autostart_rule_type_url_label"
+              >
+                URL
+              </option>
+            </select>
+            <input
+              type="text"
+              id="autostart-settings-add-value"
+              class="settings-input autostart-settings-add-value-input"
+              placeholder="example.com or https://example.com/page"
+            />
+          </div>
+          <div class="autostart-settings-add-row">
+            <select
+              id="autostart-settings-add-preset"
+              class="settings-select autostart-preset-select"
+            ></select>
+            <button type="button" id="autostart-settings-add-btn" data-i18n="add">Add</button>
+          </div>
+          <div id="autostart-settings-error" class="settings-error"></div>
+        </div>
+        <div class="settings-section">
+          <h3 id="presets-settings-title" data-i18n="presets_settings_title">Presets</h3>
+          <label class="settings-row">
+            <text id="hide-default-presets-label" data-i18n="hide_default_presets_label"
+              >Hide default presets</text
+            >
+            <input type="checkbox" id="hide-default-presets" />
+          </label>
+          <div class="settings-actions">
+            <input type="file" id="import-input" hidden />
+            <button type="button" id="import-presets" data-i18n="import_presets_button_label">
+              Import presets
+            </button>
+            <button type="button" id="export-presets" data-i18n="export_presets_button_label">
+              Export presets
+            </button>
+          </div>
+        </div>
+
+        <!--COMMUNITY SECTION-->
+        <div class="settings-section">
+          <h3 id="community-settings-title" data-i18n="community_settings_title">Community</h3>
+          <div id="donation-label" class="notice-message">
+            Support me:
+            <a href="https://www.donationalerts.com/r/maitrog" target="_blank">Donation</a>
+          </div>
+          <div id="translators-label" class="notice-message">
+            Translators:
+            <a href="https://github.com/AntonioOliveira2" target="_blank">AntonioOliveira2</a>,
+            <a href="https://tamilneram.github.io/" target="_blank" style="margin-left: 4px"
+              >தமிழ்நேரம்</a
+            >,
+            <a href="https://github.com/bounkirdni-2025" target="_blank" style="margin-left: 4px"
+              >bounkirdni-2025</a
+            >,
+            <a href="https://github.com/arifpedia" target="_blank" style="margin-left: 4px"
+              >arifpedia</a
+            >
+          </div>
+          <div id="help-with-translation-label" class="notice-message">
+            Help with translation:
+            <a
+              href="https://hosted.weblate.org/projects/eq-toolkit-chrome-extension/"
+              target="_blank"
+              style="margin-left: 4px"
+              >Weblate</a
+            >
+          </div>
+          <div id="source-code-label" class="notice-message">
+            Source code:
+            <a
+              href="https://github.com/Maitrog/volume-equalizer-extensions"
+              target="_blank"
+              style="margin-left: 4px"
+              >Github</a
+            >
+          </div>
+          <div class="notice-message">
+            <a
+              href="https://docs.google.com/forms/d/e/1FAIpQLScAU6Fqb23jvnHb_Tn5nqqU-eaD8bziwm3NYHBKJZgvvzrOvQ/viewform?usp=header"
+              target="_blank"
+              >Feedback</a
+            >
           </div>
         </div>
       </div>
-    </section>
-  </div>
+    </div>
 
-  <div id="settings-modal" class="modal">
-    <div class="modal-content">
-      <span id="close-settings" class="close">&times;</span>
-      <h2 id="settings-header" data-i18n="settings_title">Settings</h2>
-      <label class="settings-row">
-        <text id="enable-spectrum-label" data-i18n="enable_spectrum_setting_option">
-          Enable spectrum visualisation (high CPU load)
-        </text>
-        <input type="checkbox" id="enable-spectrum">
-      </label>
-      <div class="settings-row">
-        <span id="points-count-label" data-i18n="points_count_setting_option">EQ points</span>
-        <select id="points-count" class="settings-select">
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-        </select>
-      </div>
-      <div class="settings-row">
-        <span id="theme-label" data-i18n="theme_setting_option">Theme</span>
-        <select id="theme-select" class="settings-select">
-          <option value="dark" id="theme-dark-option" data-i18n="guide_theme_dark">Dark</option>
-          <option value="light" id="theme-light-option" data-i18n="guide_theme_light">Lignt</option>
-        </select>
-      </div>
-      <div class="settings-row">
-        <span id="language-label" data-i18n="language_setting_option">Language</span>
-        <select id="language-select" class="settings-select"></select>
-      </div>
-      
-      <!--SHORTCUTS SECTION-->
-      <div class="settings-section">
-        <h3 id="shortcuts-settings-title" data-i18n="shortcuts_settings_title">Shortcuts</h3>
-        <div class="settings-row">
-          <span id="shortcut-mute-label" data-i18n="shortcut_mute_label">Mute/unmute</span>
-          <input type="text" id="shortcut-mute" class="settings-input shortcut-input" readonly>
+    <div id="autostart-modal" class="modal" aria-labelledby="autostart-modal-title">
+      <div class="modal-content confirm-modal">
+        <button type="button" id="autostart-modal-close" class="close" data-i18n-label="close">
+          &times;
+        </button>
+        <h3 id="autostart-modal-title" data-i18n="autostart_modal_title">
+          Add to autostart whitelist
+        </h3>
+        <div class="autostart-modal-choice-list">
+          <label class="checkbox-row">
+            <input type="radio" name="autostart-modal-add-type" value="domain" checked />
+            <span>
+              <span id="autostart-modal-domain-label" data-i18n="autostart_rule_type_domain_label"
+                >Domain</span
+              >
+              <small id="autostart-modal-domain-value" class="autostart-modal-choice-value"></small>
+            </span>
+          </label>
+          <label class="checkbox-row">
+            <input type="radio" name="autostart-modal-add-type" value="url" />
+            <span>
+              <span id="autostart-modal-url-label" data-i18n="autostart_rule_type_url_label"
+                >Current URL</span
+              >
+              <small id="autostart-modal-url-value" class="autostart-modal-choice-value"></small>
+            </span>
+          </label>
         </div>
         <div class="settings-row">
-          <span id="shortcut-toggle-eq-label" data-i18n="shortcut_toggle_eq_label">Enable/disable</span>
-          <input type="text" id="shortcut-toggle-eq" class="settings-input shortcut-input" readonly>
+          <span id="autostart-modal-preset-label" data-i18n="autostart_modal_preset_label"
+            >Preset</span
+          >
+          <select
+            id="autostart-modal-preset"
+            class="settings-select autostart-preset-select"
+          ></select>
         </div>
-        <div class="settings-row">
-          <span id="shortcut-q-factor-label" data-i18n="shortcut_q_factor_label">Adjust Q factor</span>
-          <input type="text" id="shortcut-q-factor" class="settings-input shortcut-input" value="Shift+Drag" disabled>
+        <div id="autostart-modal-error" class="settings-error"></div>
+        <div class="confirm-actions">
+          <button type="button" id="autostart-modal-cancel" data-i18n="cancel">Cancel</button>
+          <button type="button" id="autostart-modal-confirm" data-i18n="add">Add</button>
         </div>
-        <div class="settings-row">
-          <span id="shortcut-reset-point-label" data-i18n="shortcut_reset_point_label">Reset point</span>
-          <input type="text" id="shortcut-reset-point" class="settings-input shortcut-input" value="Double-click" disabled>
-        </div>
-        <div id="shortcuts-settings-error" class="settings-error"></div>
       </div>
+    </div>
 
-      <!--WHITELIST SECTION-->
-      <div class="settings-section">
-        <h3 id="autostart-settings-title" data-i18n="autostart_settings_title">Whitelist</h3>
-        <div id="autostart-settings-list" class="autostart-settings-list"></div>
-        <div class="autostart-settings-add-row">
-          <select id="autostart-settings-type" class="settings-select autostart-settings-type-select">
-            <option value="domain" id="autostart-settings-type-domain" data-i18n="autostart_rule_type_domain_label">Domain</option>
-            <option value="url" id="autostart-settings-type-url" data-i18n="autostart_rule_type_url_label">URL</option>
-          </select>
-          <input type="text" id="autostart-settings-add-value" class="settings-input autostart-settings-add-value-input" placeholder="example.com or https://example.com/page">
+    <div id="preset-save-modal" class="modal" aria-labelledby="preset-save-title">
+      <form id="preset-save-form" class="modal-content confirm-modal">
+        <button type="button" id="preset-save-close" class="close" data-i18n-label="close">
+          &times;
+        </button>
+        <h3 id="preset-save-title" data-i18n="save_preset_modal_title">Save preset</h3>
+        <label for="preset-name" id="preset-name-label" data-i18n="preset_name_label"
+          >Preset name</label
+        >
+        <input
+          type="text"
+          id="preset-name"
+          class="settings-input preset-name-input"
+          autocomplete="off"
+        />
+        <div id="preset-save-error" class="settings-error" role="alert"></div>
+        <div class="confirm-actions">
+          <button type="button" id="preset-save-cancel" data-i18n="cancel">Cancel</button>
+          <button type="submit" id="preset-save-confirm" data-i18n="save">Save</button>
         </div>
-        <div class="autostart-settings-add-row">
-          <select id="autostart-settings-add-preset" class="settings-select autostart-preset-select"></select>
-          <button type="button" id="autostart-settings-add-btn" data-i18n="add">Add</button>
-        </div>
-        <div id="autostart-settings-error" class="settings-error"></div>
-      </div>
-      <div class="settings-section">
-        <h3 id="presets-settings-title" data-i18n="presets_settings_title">Presets</h3>
-        <label class="settings-row">
-          <text id="hide-default-presets-label" data-i18n="hide_default_presets_label">Hide default presets</text>
-          <input type="checkbox" id="hide-default-presets">
+      </form>
+    </div>
+
+    <div id="points-reset-modal" class="modal" aria-labelledby="points-reset-title">
+      <div class="modal-content confirm-modal">
+        <h3 id="points-reset-title" data-i18n="points_reset_title">Change points count?</h3>
+        <p id="points-reset-message" data-i18n="points_reset_message">
+          Changing the number of points will reset the current EQ settings.
+        </p>
+        <label class="checkbox-row">
+          <input type="checkbox" id="skip-reset-confirm" />
+          <span id="skip-reset-label" data-i18n="points_reset_skip">Don't show again</span>
         </label>
-        <div class="settings-actions">
-          <input type="file" id="import-input" hidden>
-          <button type="input" id="import-presets" data-i18n="import_presets_button_label">Import presets</button>
-          <button type="button" id="export-presets" data-i18n="export_presets_button_label">Export presets</button>
+        <div class="confirm-actions">
+          <button type="button" id="points-reset-cancel" data-i18n="cancel">Cancel</button>
+          <button type="button" id="points-reset-confirm" data-i18n="ok">Ok</button>
         </div>
       </div>
+    </div>
 
-      <!--COMMUNITY SECTION-->
-      <div class="settings-section">
-        <h3 id="community-settings-title" data-i18n="community_settings_title">Community</h3>
-        <div id="donation-label" class="notice-message">
-          Support me:
-          <a href="https://www.donationalerts.com/r/maitrog" target="_blank">Donation</a>
-        </div>
-        <div id="translators-label" class="notice-message">
-          Translators:
-          <a href="https://github.com/AntonioOliveira2" target="_blank">AntonioOliveira2</a>,
-          <a href="https://tamilneram.github.io/" target="_blank" style="margin-left: 4px">தமிழ்நேரம்</a>,
-          <a href="https://github.com/bounkirdni-2025" target="_blank" style="margin-left: 4px">bounkirdni-2025</a>,
-          <a href="https://github.com/arifpedia" target="_blank" style="margin-left: 4px">arifpedia</a>
-        </div>
-        <div id="help-with-translation-label" class="notice-message">
-          Help with translation: 
-          <a href="https://hosted.weblate.org/projects/eq-toolkit-chrome-extension/" target="_blank" style="margin-left: 4px">Weblate</a>
-        </div>
-        <div id="source-code-label" class="notice-message">
-          Source code: 
-          <a href="https://github.com/Maitrog/volume-equalizer-extensions" target="_blank" style="margin-left: 4px">Github</a>
-        </div>
+    <div id="update-notice-modal" class="modal" aria-labelledby="update-notice-title">
+      <div class="modal-content notice-modal">
+        <button
+          type="button"
+          id="install-update-notice-top-close"
+          class="close notice-close"
+          data-i18n-label="close"
+        >
+          &times;
+        </button>
+        <h3 id="update-notice-title">Patch Notes 2.3.0</h3>
         <div class="notice-message">
-          <a href="https://docs.google.com/forms/d/e/1FAIpQLScAU6Fqb23jvnHb_Tn5nqqU-eaD8bziwm3NYHBKJZgvvzrOvQ/viewform?usp=header" target="_blank">Feedback</a>
+          <ul>
+            <li>Added the ability to disable automatic volume compensation in settings</li>
+            <li>Improved cleanup when captured tabs are closed</li>
+            <li>
+              Fixed cases where outdated tab data could replace the currently selected tab's
+              settings
+            </li>
+            <li>Improved preset import validation and error messages</li>
+            <li>Improved reliability of rapid shortcut changes</li>
+            <li>Added clear feedback when Window Mode cannot be started</li>
+            <li>Improved language switching when multiple selections happen quickly</li>
+            <li>Prevented failed settings changes from incorrectly updating the interface</li>
+            <li>Improved keyboard navigation throughout the popup</li>
+            <li>Added keyboard controls for selecting and editing equalizer bands</li>
+            <li>Added accessible labels and status announcements to the equalizer canvas</li>
+            <li>Added Escape support and focus restoration for dialogs</li>
+            <li>Added visible focus indicators</li>
+            <li>Improved usability at 100% and 200% browser zoom</li>
+            <li>Different things were made to improve performance</li>
+            <li>Updated localization</li>
+          </ul>
+        </div>
+        <h3 id="update-notice-title">Patch Notes 2.2.0</h3>
+        <div class="notice-message">
+          <ul>
+            <li>Added clipping indicator</li>
+            <li>Added automatic volume compensation if you complex aplification more than 18 dB</li>
+            <li>Highpass and lowpass filters are disabled by default until you change them</li>
+            <li>
+              Fixed an issue with capturing audio when more than one audio node was on a tab, e.g.
+              on YouTube
+            </li>
+            <li>Added mention that double click on point resets its state</li>
+            <li>Fixed rendering of onboarding</li>
+            <li>Updated localization</li>
+          </ul>
+        </div>
+        <h3>Patch Notes 2.1.0</h3>
+        <div class="notice-message">
+          <ul>
+            <li>Fixed an issue with using shortcuts in window mod</li>
+            <li>Added the ability to turn off handling audio in window mod</li>
+            <li>Fixed default size of window for window mod</li>
+            <li>Added mention about changing Q factor to settings and onboarding guide</li>
+            <li>Improved Portuguese localization</li>
+            <li>Improved Indonesian localization</li>
+          </ul>
+        </div>
+        <h3>Patch Notes 2.0.2</h3>
+        <div class="notice-message">
+          <ul>
+            <li>Fixed issue when points count would reset after restarting browser</li>
+            <li>Other fixes</li>
+          </ul>
+        </div>
+        <h3>Patch Notes 2.0.1</h3>
+        <div class="notice-message">
+          <ul>
+            <li>Fixed operation on tabs opened before the extension was updated or installed</li>
+          </ul>
+        </div>
+        <h3>Patch Notes 2.0.0</h3>
+        <div class="notice-message">
+          <ul>
+            <li>
+              Redesigned popup interface
+              <ul>
+                <li>Controls are now grouped into clear sections.</li>
+                <li>
+                  Added a compact equalizer enable/disable button with a visible active state.
+                </li>
+                <li>The current gain value is displayed in dB.</li>
+                <li>Updated controls, checkboxes, settings, and modal styles.</li>
+              </ul>
+            </li>
+
+            <li>
+              Built-in audio presets
+              <ul>
+                <li>Added 13 presets, including Bass Boost, Acoustic, Classical, Rock, and Pop.</li>
+                <li>Added an option to hide built-in presets.</li>
+              </ul>
+            </li>
+
+            <li>
+              Improved custom presets
+              <ul>
+                <li>Custom presets are now created in a dedicated modal.</li>
+                <li>Added validation for empty, duplicate, and reserved preset names.</li>
+              </ul>
+            </li>
+
+            <li>
+              Improved window mode
+              <ul>
+                <li>Added spectrum visualization for the active tab.</li>
+                <li>Added switching between captured tabs.</li>
+                <li>Added the ability to stop audio capture for an individual tab.</li>
+              </ul>
+            </li>
+
+            <li>
+              Real-time spectrum visualization
+              <ul>
+                <li>The spectrum now responds to filter and settings changes in real time.</li>
+              </ul>
+            </li>
+
+            <li>
+              New onboarding guide
+              <ul>
+                <li>Introduces themes, shortcuts, equalizer controls, volume, and presets.</li>
+                <li>Highlights relevant interface elements.</li>
+                <li>Supports Back, Next, Skip, and Finish actions.</li>
+                <li>Resumes automatically if onboarding was not completed.</li>
+              </ul>
+            </li>
+
+            <li>
+              Added Lao localization. Thanks
+              <a href="https://github.com/bounkirdni-2025" target="_blank">bounkirdni-2025</a>
+            </li>
+            <li>Updated localization files.</li>
+            <li>Added translator credits to the Community section.</li>
+            <li>Added an uninstall feedback form.</li>
+            <li>Removed the Christmas theme and its unused assets.</li>
+          </ul>
+          <br />
+          If you like the extension please rate the EQ Toolkit in
+          <a
+            href="https://chromewebstore.google.com/detail/dlilpinpaihdcfdjnofegabgoijmmoja?utm_source=eq-toolkit"
+            target="_blank"
+            >Chrome Web Store</a
+          >
+          and leave a review in there.
+        </div>
+        <div class="notice-actions">
+          <button type="button" id="install-update-notice-close">Close</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <div id="autostart-modal" class="modal">
-    <div class="modal-content confirm-modal">
-      <span id="autostart-modal-close" class="close">&times;</span>
-      <h3 id="autostart-modal-title" data-i18n="autostart_modal_title">Add to autostart whitelist</h3>
-      <div class="autostart-modal-choice-list">
-        <label class="checkbox-row">
-          <input type="radio" name="autostart-modal-add-type" value="domain" checked>
-          <span>
-            <span id="autostart-modal-domain-label" data-i18n="autostart_rule_type_domain_label">Domain</span>
-            <small id="autostart-modal-domain-value" class="autostart-modal-choice-value"></small>
-          </span>
-        </label>
-        <label class="checkbox-row">
-          <input type="radio" name="autostart-modal-add-type" value="url">
-          <span>
-            <span id="autostart-modal-url-label" data-i18n="autostart_rule_type_url_label">Current URL</span>
-            <small id="autostart-modal-url-value" class="autostart-modal-choice-value"></small>
-          </span>
-        </label>
-      </div>
-      <div class="settings-row">
-        <span id="autostart-modal-preset-label" data-i18n="autostart_modal_preset_label">Preset</span>
-        <select id="autostart-modal-preset" class="settings-select autostart-preset-select"></select>
-      </div>
-      <div id="autostart-modal-error" class="settings-error"></div>
-      <div class="confirm-actions">
-        <button type="button" id="autostart-modal-cancel" data-i18n="cancel">Cancel</button>
-        <button type="button" id="autostart-modal-confirm" data-i18n="add">Add</button>
-      </div>
+    <div id="donation-reminder-modal" class="modal" aria-labelledby="donation-reminder-title">
+      <section class="modal-content notice-modal">
+        <h2 id="donation-reminder-title" data-i18n="donation_reminder_title">
+          Support the developer
+        </h2>
+        <p
+          id="donation-reminder-message"
+          class="notice-message"
+          data-i18n="donation_reminder_message"
+        >
+          If this extension is useful to you, you can support its development.
+        </p>
+        <p class="notice-message">
+          <a
+            id="donation-reminder-link"
+            href="https://www.donationalerts.com/r/maitrog"
+            data-i18n="donation_reminder_link"
+            target="_blank"
+            rel="noreferrer"
+            >Support development</a
+          >
+        </p>
+        <div class="notice-actions">
+          <button type="button" id="donation-reminder-close" data-i18n="ok">OK</button>
+        </div>
+      </section>
     </div>
-  </div>
 
-  <div id="preset-save-modal" class="modal">
-    <form id="preset-save-form" class="modal-content confirm-modal">
-      <span id="preset-save-close" class="close">&times;</span>
-      <h3 id="preset-save-title" data-i18n="save_preset_modal_title">Save preset</h3>
-      <label for="preset-name" id="preset-name-label" data-i18n="preset_name_label">Preset name</label>
-      <input type="text" id="preset-name" class="settings-input preset-name-input" autocomplete="off">
-      <div id="preset-save-error" class="settings-error" role="alert"></div>
-      <div class="confirm-actions">
-        <button type="button" id="preset-save-cancel" data-i18n="cancel">Cancel</button>
-        <button type="submit" id="preset-save-confirm" data-i18n="save">Save</button>
-      </div>
-    </form>
-  </div>
-
-  <div id="points-reset-modal" class="modal">
-    <div class="modal-content confirm-modal">
-      <h3 id="points-reset-title" data-i18n="points_reset_title">Change points count?</h3>
-      <p id="points-reset-message" data-i18n="points_reset_message">
-        Changing the number of points will reset the current EQ settings.
-      </p>
-      <label class="checkbox-row">
-        <input type="checkbox" id="skip-reset-confirm">
-        <span id="skip-reset-label" data-i18n="points_reset_skip">Don't show again</span>
-      </label>
-      <div class="confirm-actions">
-        <button type="button" id="points-reset-cancel" data-i18n="cancel">Cancel</button>
-        <button type="button" id="points-reset-confirm" data-i18n="ok">Ok</button>
-      </div>
+    <div id="onboarding-guide" class="onboarding-guide" hidden>
+      <div class="guide-blocker"></div>
+      <div class="guide-blur-panel" data-guide-panel="top"></div>
+      <div class="guide-blur-panel" data-guide-panel="left"></div>
+      <div class="guide-blur-panel" data-guide-panel="right"></div>
+      <div class="guide-blur-panel" data-guide-panel="bottom"></div>
+      <div class="guide-spotlight"></div>
+      <section class="guide-card" role="dialog" aria-modal="true" aria-labelledby="guide-title">
+        <h2 id="guide-title" tabindex="-1"></h2>
+        <div class="guide-content"></div>
+        <div class="guide-actions">
+          <button type="button" data-guide-action="skip"></button>
+          <button type="button" data-guide-action="back"></button>
+          <button type="button" data-guide-action="next"></button>
+        </div>
+      </section>
     </div>
-  </div>
 
-  <div id="update-notice-modal" class="modal">
-    <div class="modal-content notice-modal">
-      <button type="button" id="install-update-notice-top-close" class="close notice-close"
-        aria-label="Close">&times;</button>
-      <h3>Patch Notes 2.2.0</h3>
-      <div class="notice-message">
-        <ul>
-          <li>Added clipping indicator</li>
-          <li>Added automatic volume compensation if you complex aplification more than 18 dB</li>
-          <li>Highpass and lowpass filters are disabled by default until you change them</li>
-          <li>Fixed an issue with capturing audio when more than one audio node was on a tab, e.g. on YouTube</li>
-          <li>Added mention that double click on point resets its state</li>
-          <li>Fixed rendering of onboarding</li>
-          <li>Updated localization</li>
-        </ul>
-      </div> 
-        <h3>Patch Notes 2.1.0</h3>
-      <div class="notice-message">
-        <ul>
-          <li>Fixed an issue with using shortcuts in window mod</li>
-          <li>Added the ability to turn off handling audio in window mod</li>
-          <li>Fixed default size of window for window mod</li>
-          <li>Added mention about changing Q factor to settings and onboarding guide</li>
-          <li>Improved Portuguese localization</li>
-          <li>Improved Indonesian localization</li>
-        </ul>
-      </div>  
-      <h3>Patch Notes 2.0.2</h3>
-      <div class="notice-message">
-        <ul>
-          <li>Fixed issue when points count would reset after restarting browser</li>
-          <li>Other fixes</li>
-        </ul>
-      </div>
-      <h3>Patch Notes 2.0.1</h3>
-      <div class="notice-message">
-        <ul>
-          <li>Fixed operation on tabs opened before the extension was updated or installed</li>
-        </ul>
-      </div>
-      <h3>Patch Notes 2.0.0</h3>
-      <div class="notice-message">
-        <ul>
-          <li>
-            Redesigned popup interface
-            <ul>
-              <li>Controls are now grouped into clear sections.</li>
-              <li>Added a compact equalizer enable/disable button with a visible active state.</li>
-              <li>The current gain value is displayed in dB.</li>
-              <li>Updated controls, checkboxes, settings, and modal styles.</li>
-            </ul>
-          </li>
-
-          <li>
-            Built-in audio presets
-            <ul>
-              <li>Added 13 presets, including Bass Boost, Acoustic, Classical, Rock, and Pop.</li>
-              <li>Added an option to hide built-in presets.</li>
-            </ul>
-          </li>
-
-          <li>
-            Improved custom presets
-            <ul>
-              <li>Custom presets are now created in a dedicated modal.</li>
-              <li>Added validation for empty, duplicate, and reserved preset names.</li>
-            </ul>
-          </li>
-
-          <li>
-            Improved window mode
-            <ul>
-              <li>Added spectrum visualization for the active tab.</li>
-              <li>Added switching between captured tabs.</li>
-              <li>Added the ability to stop audio capture for an individual tab.</li>
-            </ul>
-          </li>
-
-          <li>
-            Real-time spectrum visualization
-            <ul>
-              <li>The spectrum now responds to filter and settings changes in real time.</li>
-            </ul>
-          </li>
-
-          <li>
-            New onboarding guide
-            <ul>
-              <li>Introduces themes, shortcuts, equalizer controls, volume, and presets.</li>
-              <li>Highlights relevant interface elements.</li>
-              <li>Supports Back, Next, Skip, and Finish actions.</li>
-              <li>Resumes automatically if onboarding was not completed.</li>
-            </ul>
-          </li>
-
-          <li>Added Lao localization. Thanks <a href="https://github.com/bounkirdni-2025" target="_blank">bounkirdni-2025</a></li>
-          <li>Updated localization files.</li>
-          <li>Added translator credits to the Community section.</li>
-          <li>Added an uninstall feedback form.</li>
-          <li>Removed the Christmas theme and its unused assets.</li>
-        </ul>
-        <br />
-        If you like the extension please rate the EQ Toolkit in <a href="https://chromewebstore.google.com/detail/dlilpinpaihdcfdjnofegabgoijmmoja?utm_source=eq-toolkit" target="_blank">Chrome Web Store</a> and leave a review in there.
-      </div>
-      <div class="notice-actions">
-        <button type="button" id="install-update-notice-close">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="donation-reminder-modal" class="modal">
-    <section class="modal-content notice-modal" role="dialog" aria-modal="true"
-      aria-labelledby="donation-reminder-title">
-      <h2 id="donation-reminder-title" data-i18n="donation_reminder_title">Support the developer</h2>
-      <p id="donation-reminder-message" class="notice-message" data-i18n="donation_reminder_message">
-        If this extension is useful to you, you can support its development.
-      </p>
-      <p class="notice-message">
-        <a id="donation-reminder-link" href="https://www.donationalerts.com/r/maitrog" data-i18n="donation_reminder_link"
-          target="_blank" rel="noreferrer">Support development</a>
-      </p>
-      <div class="notice-actions">
-        <button type="button" id="donation-reminder-close" data-i18n="ok">OK</button>
-      </div>
-    </section>
-  </div>
-
-  <div id="onboarding-guide" class="onboarding-guide" hidden>
-    <div class="guide-blocker"></div>
-    <div class="guide-blur-panel" data-guide-panel="top"></div>
-    <div class="guide-blur-panel" data-guide-panel="left"></div>
-    <div class="guide-blur-panel" data-guide-panel="right"></div>
-    <div class="guide-blur-panel" data-guide-panel="bottom"></div>
-    <div class="guide-spotlight"></div>
-    <section class="guide-card" role="dialog" aria-modal="true" aria-labelledby="guide-title">
-      <h2 id="guide-title" tabindex="-1"></h2>
-      <div class="guide-content"></div>
-      <div class="guide-actions">
-        <button type="button" data-guide-action="skip"></button>
-        <button type="button" data-guide-action="back"></button>
-        <button type="button" data-guide-action="next"></button>
-      </div>
-    </section>
-  </div>
-
-  <script src="scripts/popup.js"></script>
-</body>
-
+    <script src="scripts/popup.js"></script>
+  </body>
 </html>

@@ -28,40 +28,28 @@ const createFakeBiquadFilter = (magnitude = 1): BiquadFilterNode =>
 
 describe("biquadChain", () => {
   test("does not compensate a combined response below 18 decibels", () => {
-    expect(
-      getBiquadHeadroomGain(
-        [createFakeBiquadFilter(1.7782794100389228)],
-        48000,
-      ),
-    ).toBe(1);
+    expect(getBiquadHeadroomGain([createFakeBiquadFilter(1.7782794100389228)], 48000)).toBe(1);
   });
 
   test("does not compensate a combined response at 18 decibels", () => {
-    expect(
-      getBiquadHeadroomGain(
-        [createFakeBiquadFilter(4.466835921509632)],
-        48000,
-      ),
-    ).toBe(1);
+    expect(getBiquadHeadroomGain([createFakeBiquadFilter(4.466835921509632)], 48000)).toBe(1);
   });
 
   test("compensates only the combined response above 18 decibels", () => {
-    expect(
-      getBiquadHeadroomGain(
-        [createFakeBiquadFilter(10)],
-        48000,
-      ),
-    ).toBeCloseTo(0.7943282347242815, 6);
+    expect(getBiquadHeadroomGain([createFakeBiquadFilter(10)], 48000)).toBeCloseTo(
+      0.7943282347242815,
+      6,
+    );
   });
 
   test("ignores floating-point noise around a neutral response", () => {
-    expect(
-      getBiquadHeadroomGain([createFakeBiquadFilter(1.0000001)], 48000),
-    ).toBe(1);
+    expect(getBiquadHeadroomGain([createFakeBiquadFilter(1.0000001)], 48000)).toBe(1);
   });
 
   test("counts contiguous numeric filter slots", () => {
-    expect(getBiquadFilterCount({ 0: createFakeBiquadFilter(), 2: createFakeBiquadFilter() })).toBe(1);
+    expect(getBiquadFilterCount({ 0: createFakeBiquadFilter(), 2: createFakeBiquadFilter() })).toBe(
+      1,
+    );
   });
 
   test("applies legacy biquad defaults and numeric coercion", () => {
@@ -101,6 +89,8 @@ describe("biquadChain", () => {
     const secondFilter = createFakeBiquadFilter();
 
     expect(getLastBiquadFilter({}, fallbackNode)).toBe(fallbackNode);
-    expect(getLastBiquadFilter({ 0: firstFilter, 1: secondFilter }, fallbackNode)).toBe(secondFilter);
+    expect(getLastBiquadFilter({ 0: firstFilter, 1: secondFilter }, fallbackNode)).toBe(
+      secondFilter,
+    );
   });
 });

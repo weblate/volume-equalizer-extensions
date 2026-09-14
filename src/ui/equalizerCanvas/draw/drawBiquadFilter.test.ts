@@ -8,11 +8,9 @@ test("draws a configured biquad response", () => {
     frequency: { value: 0 },
     Q: { value: 0 },
     gain: { value: 0 },
-    getFrequencyResponse: vi.fn(
-      (_frequencies: Float32Array, magnitudes: Float32Array) => {
-        magnitudes.fill(1);
-      },
-    ),
+    getFrequencyResponse: vi.fn((_frequencies: Float32Array, magnitudes: Float32Array) => {
+      magnitudes.fill(1);
+    }),
   };
   const audioContext = {
     sampleRate: 48000,

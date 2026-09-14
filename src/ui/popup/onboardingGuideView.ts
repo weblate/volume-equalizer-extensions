@@ -1,122 +1,11 @@
-export type GuideTarget =
-  | "volumeMute"
-  | "changeEq"
-  | "settings"
-  | "autostart"
-  | "windowMode"
-  | "equalizer"
-  | "volume"
-  | "presets";
-
-export interface GuideScreen {
-  stage: number;
-  kind: "language" | "appearance" | "shortcuts" | "spotlight";
-  titleKey: string;
-  messageKey?: string;
-  additionalMessageKeys?: readonly string[];
-  target?: GuideTarget;
-  substep?: readonly [number, number];
-}
-
-export const GUIDE_SHORTCUTS = [
-  ["shortcut_mute_label", "Alt+M"],
-  ["shortcut_toggle_eq_label", "Alt+K"],
-  ["shortcut_q_factor_label", "Shift+Drag"],
-  ["shortcut_reset_point_label", "Double-click"],
-] as const;
-
-export const GUIDE_SCREENS: readonly GuideScreen[] = [
-  { stage: 1, kind: "language", titleKey: "language_setting_option" },
-  { stage: 2, kind: "appearance", titleKey: "settings_title" },
-  {
-    stage: 3,
-    kind: "shortcuts",
-    titleKey: "shortcuts_settings_title",
-    messageKey: "guide_shortcuts_hint",
-  },
-  {
-    stage: 4,
-    kind: "spotlight",
-    target: "volumeMute",
-    titleKey: "volume_mute_button_tooltip",
-    substep: [1, 2],
-  },
-  {
-    stage: 4,
-    kind: "spotlight",
-    target: "changeEq",
-    titleKey: "enable_eq_button_label",
-    substep: [2, 2],
-  },
-  {
-    stage: 5,
-    kind: "spotlight",
-    target: "settings",
-    titleKey: "settings_button_tooltip",
-    substep: [1, 3],
-  },
-  {
-    stage: 5,
-    kind: "spotlight",
-    target: "autostart",
-    titleKey: "add_to_autostart_tooltip",
-    substep: [2, 3],
-  },
-  {
-    stage: 5,
-    kind: "spotlight",
-    target: "windowMode",
-    titleKey: "window_mode_button_tooltip",
-    substep: [3, 3],
-  },
-  {
-    stage: 6,
-    kind: "spotlight",
-    target: "equalizer",
-    titleKey: "extName",
-    messageKey: "guide_canvas_hint",
-    additionalMessageKeys: [
-      "q_factor_shift_hint",
-      "point_double_click_hint",
-      "guide_spectrum_visualization_hint",
-    ],
-  },
-  {
-    stage: 7,
-    kind: "spotlight",
-    target: "volume",
-    titleKey: "global_controls_title",
-    messageKey: "guide_volume_hint",
-  },
-  {
-    stage: 8,
-    kind: "spotlight",
-    target: "presets",
-    titleKey: "preset_controls_title",
-    messageKey: "guide_presets_hint",
-  },
-];
-
-export interface GuideNavigation {
-  canGoBack: boolean;
-  canSkip: boolean;
-  isLast: boolean;
-}
-
-export const getGuideNavigation = (index: number): GuideNavigation => ({
-  canGoBack: index > 0,
-  canSkip: GUIDE_SCREENS[index].stage >= 4,
-  isLast: index === GUIDE_SCREENS.length - 1,
-});
-
-export type GuideExitAction = "close" | "next" | "skip";
-
-export const shouldCompleteGuide = (
-  action: GuideExitAction,
-  index: number,
-): boolean =>
-  action === "skip" ||
-  (action === "next" && getGuideNavigation(index).isLast);
+import {
+  GUIDE_SCREENS,
+  GUIDE_SHORTCUTS,
+  getGuideNavigation,
+  shouldCompleteGuide,
+  type GuideScreen,
+  type GuideTarget,
+} from "./onboardingGuideScreens";
 
 interface RectEdges {
   left: number;
@@ -165,9 +54,7 @@ export const getNextFocusIndex = (
 ): number => {
   if (length <= 0) return -1;
   if (currentIndex < 0) return backwards ? length - 1 : 0;
-  return backwards
-    ? (currentIndex - 1 + length) % length
-    : (currentIndex + 1) % length;
+  return backwards ? (currentIndex - 1 + length) % length : (currentIndex + 1) % length;
 };
 
 export const createOnboardingGuideView = (deps: {
@@ -203,6 +90,8 @@ export const createOnboardingGuideView = (deps: {
   };
   let currentIndex = 0;
   let started = false;
+  const previousInert = new Map<HTMLElement, boolean>();
+  let previousFocus: HTMLElement | null = null;
 
   const setRect = (element: HTMLElement, rect: PositionedRect): void => {
     element.style.left = `${rect.left}px`;
@@ -269,14 +158,9 @@ export const createOnboardingGuideView = (deps: {
         row.append(label, shortcut);
         return row;
       };
-      content.append(...GUIDE_SHORTCUTS.map(([label, keys]) => (
-        createShortcut(label, keys)
-      )));
+      content.append(...GUIDE_SHORTCUTS.map(([label, keys]) => createShortcut(label, keys)));
     }
-    [
-      screen.messageKey,
-      ...(screen.additionalMessageKeys ?? []),
-    ].forEach((messageKey) => {
+    [screen.messageKey, ...(screen.additionalMessageKeys ?? [])].forEach((messageKey) => {
       if (!messageKey) return;
 
       const message = document.createElement("span");
@@ -294,11 +178,7 @@ export const createOnboardingGuideView = (deps: {
       right: Math.min(window.innerWidth, rect.right + padding),
       bottom: Math.min(window.innerHeight, rect.bottom + padding),
     };
-    const panelRects = getSpotlightPanels(
-      focus,
-      window.innerWidth,
-      window.innerHeight,
-    );
+    const panelRects = getSpotlightPanels(focus, window.innerWidth, window.innerHeight);
     Object.entries(panels).forEach(([name, panel]) => {
       setRect(panel, panelRects[name as keyof typeof panelRects]);
     });
@@ -313,10 +193,7 @@ export const createOnboardingGuideView = (deps: {
     const cardRect = card.getBoundingClientRect();
     const center = Math.max(
       margin + cardRect.width / 2,
-      Math.min(
-        window.innerWidth - margin - cardRect.width / 2,
-        (focus.left + focus.right) / 2,
-      ),
+      Math.min(window.innerWidth - margin - cardRect.width / 2, (focus.left + focus.right) / 2),
     );
     const below = focus.bottom + margin;
     const above = focus.top - cardRect.height - margin;
@@ -347,9 +224,7 @@ export const createOnboardingGuideView = (deps: {
     skipButton.hidden = !navigation.canSkip;
     backButton.textContent = deps.getMessage("guide_back");
     skipButton.textContent = deps.getMessage("guide_skip");
-    nextButton.textContent = deps.getMessage(
-      navigation.isLast ? "guide_finish" : "guide_next",
-    );
+    nextButton.textContent = deps.getMessage(navigation.isLast ? "guide_finish" : "guide_next");
     renderContent(screen);
 
     card.style.left = "";
@@ -362,8 +237,10 @@ export const createOnboardingGuideView = (deps: {
   const close = (): void => {
     deps.root.hidden = true;
     deps.inertElements.forEach((element) => {
-      element.inert = false;
+      element.inert = previousInert.get(element) ?? false;
     });
+    previousInert.clear();
+    previousFocus?.focus();
     window.removeEventListener("resize", positionCurrentSpotlight);
     started = false;
   };
@@ -390,6 +267,11 @@ export const createOnboardingGuideView = (deps: {
   });
   deps.root.addEventListener("keydown", (event) => {
     event.stopPropagation();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      void complete();
+      return;
+    }
     if (event.key !== "Tab") return;
     const controls = Array.from(
       deps.root.querySelectorAll<HTMLButtonElement | HTMLSelectElement>(
@@ -397,7 +279,7 @@ export const createOnboardingGuideView = (deps: {
       ),
     );
     if (controls.length === 0) return;
-    const current = controls.indexOf(document.activeElement as typeof controls[number]);
+    const current = controls.indexOf(document.activeElement as (typeof controls)[number]);
     const next = getNextFocusIndex(current, controls.length, event.shiftKey);
     event.preventDefault();
     controls[next].focus();
@@ -408,7 +290,9 @@ export const createOnboardingGuideView = (deps: {
       if (started) return;
       started = true;
       currentIndex = 0;
+      previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       deps.inertElements.forEach((element) => {
+        previousInert.set(element, element.inert);
         element.inert = true;
       });
       deps.root.hidden = false;

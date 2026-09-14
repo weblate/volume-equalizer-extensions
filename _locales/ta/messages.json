@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "அமைப்புகளில் ஸ்பெக்ட்ரம் காட்சிப்படுத்தலையும் இயக்கலாம்."
+  },
+  "preset_import_syntax_error": {
+    "message": "கோப்பில் தவறான JSON உள்ளது."
+  },
+  "preset_import_structure_error": {
+    "message": "முன்னமைவு கோப்பின் கட்டமைப்பு தவறானது."
+  },
+  "preset_import_name_error": {
+    "message": "முன்னமைவு கோப்பில் தவறான பெயர் உள்ளது."
+  },
+  "preset_import_filter_error": {
+    "message": "முன்னமைவு கோப்பில் தவறான வடிகட்டி உள்ளது."
+  },
+  "preset_import_read_error": {
+    "message": "முன்னமைவு கோப்பைப் படிக்க முடியவில்லை."
+  },
+  "preset_import_save_error": {
+    "message": "இறக்குமதி செய்யப்பட்ட முன்னமைவுகளைச் சேமிக்க முடியவில்லை."
+  },
+  "close": {
+    "message": "மூடு"
+  },
+  "help_label": {
+    "message": "உதவி"
+  },
+  "tab_label": {
+    "message": "தாவல்"
+  },
+  "stop_capture_label": {
+    "message": "பிடிப்பை நிறுத்து"
+  },
+  "equalizer_canvas_label": {
+    "message": "சமநிலைப்படுத்தி கட்டுப்பாடுகள்"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Home, End, Page Up அல்லது Page Down மூலம் பட்டையைத் தேர்ந்தெடுக்கவும். அதிர்வெண் மற்றும் gain-க்கு அம்புகள், Q-க்கு Shift+மேல்/கீழ், மீட்டமைக்க Enter பயன்படுத்தவும்."
+  },
+  "window_mode_start_error": {
+    "message": "சாளரப் பயன்முறையைத் திறக்க முடியவில்லை. மீண்டும் முயலவும்."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "தானியங்கி ஒலியளவு ஈடுசெய்தல்"
   }
 }

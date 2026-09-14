@@ -21,9 +21,7 @@ export const resolveShortcutToggle = ({
   enableTab: boolean;
   isToolkitCaptured: boolean;
   toolkitAction: ToolkitShortcutAction;
-}):
-  | { toolkitAction: ToolkitShortcutAction }
-  | { storageValues: Record<string, boolean> } => {
+}): { toolkitAction: ToolkitShortcutAction } | { storageValues: Record<string, boolean> } => {
   if (isToolkitCaptured) return { toolkitAction };
 
   const values = { [key]: !currentValue };

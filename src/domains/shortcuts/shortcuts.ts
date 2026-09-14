@@ -10,8 +10,7 @@ export interface Shortcut {
 }
 
 export type ShortcutActionName =
-  | typeof SHORTCUT_ACTION_MUTE_NAME
-  | typeof SHORTCUT_ACTION_TOGGLE_EQ_NAME;
+  typeof SHORTCUT_ACTION_MUTE_NAME | typeof SHORTCUT_ACTION_TOGGLE_EQ_NAME;
 export type ShortcutMap = Record<ShortcutActionName, Shortcut | null>;
 export type ShortcutValidationError = "invalid" | "duplicate";
 
@@ -76,9 +75,7 @@ export const isEditableShortcutTarget = (target: EventTarget | null): boolean =>
   if (!element) return false;
 
   return Boolean(
-    element.closest(
-      "input, textarea, select, [contenteditable=''], [contenteditable='true']"
-    )
+    element.closest("input, textarea, select, [contenteditable=''], [contenteditable='true']"),
   );
 };
 
@@ -96,7 +93,7 @@ export const formatShortcut = (shortcut: Shortcut | null): string => {
 
 export const areShortcutsEqual = (
   first: Shortcut | null | undefined,
-  second: Shortcut | null | undefined
+  second: Shortcut | null | undefined,
 ): boolean => {
   return (
     first?.ctrl === second?.ctrl &&
@@ -128,11 +125,10 @@ export const normalizeShortcut = (value: unknown): Shortcut | null => {
 };
 
 export const normalizeShortcutFromKeyboardEvent = (
-  event: KeyboardEvent | null | undefined
+  event: KeyboardEvent | null | undefined,
 ): Shortcut | null => {
   if (!event || event.isComposing) return null;
-  const key =
-    normalizeShortcutCode(event.code) ?? normalizeShortcutKey(event.key);
+  const key = normalizeShortcutCode(event.code) ?? normalizeShortcutKey(event.key);
 
   return normalizeShortcut({
     ctrl: event.ctrlKey,
@@ -144,28 +140,20 @@ export const normalizeShortcutFromKeyboardEvent = (
 };
 
 export const resolveShortcuts = (
-  storedShortcuts: Partial<ShortcutMap> | null | undefined
+  storedShortcuts: Partial<ShortcutMap> | null | undefined,
 ): ShortcutMap => {
   const shortcuts = storedShortcuts ?? DEFAULT_SHORTCUTS;
   return {
-    [SHORTCUT_ACTION_MUTE_NAME]: normalizeShortcut(
-      shortcuts[SHORTCUT_ACTION_MUTE_NAME]
-    ),
-    [SHORTCUT_ACTION_TOGGLE_EQ_NAME]: normalizeShortcut(
-      shortcuts[SHORTCUT_ACTION_TOGGLE_EQ_NAME]
-    ),
+    [SHORTCUT_ACTION_MUTE_NAME]: normalizeShortcut(shortcuts[SHORTCUT_ACTION_MUTE_NAME]),
+    [SHORTCUT_ACTION_TOGGLE_EQ_NAME]: normalizeShortcut(shortcuts[SHORTCUT_ACTION_TOGGLE_EQ_NAME]),
   };
 };
 
 export const validateShortcutConfig = (
-  shortcuts: Partial<ShortcutMap> | null | undefined
+  shortcuts: Partial<ShortcutMap> | null | undefined,
 ): ShortcutValidationError | null => {
-  const muteShortcut = normalizeShortcut(
-    shortcuts?.[SHORTCUT_ACTION_MUTE_NAME]
-  );
-  const toggleEqShortcut = normalizeShortcut(
-    shortcuts?.[SHORTCUT_ACTION_TOGGLE_EQ_NAME]
-  );
+  const muteShortcut = normalizeShortcut(shortcuts?.[SHORTCUT_ACTION_MUTE_NAME]);
+  const toggleEqShortcut = normalizeShortcut(shortcuts?.[SHORTCUT_ACTION_TOGGLE_EQ_NAME]);
 
   if (!muteShortcut || !toggleEqShortcut) return "invalid";
   if (areShortcutsEqual(muteShortcut, toggleEqShortcut)) return "duplicate";
@@ -173,10 +161,7 @@ export const validateShortcutConfig = (
   return null;
 };
 
-export const matchesShortcut = (
-  event: KeyboardEvent,
-  shortcut: Shortcut | null
-): boolean => {
+export const matchesShortcut = (event: KeyboardEvent, shortcut: Shortcut | null): boolean => {
   const normalized = normalizeShortcutFromKeyboardEvent(event);
   if (!normalized) return false;
 

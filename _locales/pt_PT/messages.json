@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Também pode ativar a visualização de espetro nas Definições."
+  },
+  "preset_import_syntax_error": {
+    "message": "O ficheiro contém JSON inválido."
+  },
+  "preset_import_structure_error": {
+    "message": "O ficheiro de predefinições tem uma estrutura inválida."
+  },
+  "preset_import_name_error": {
+    "message": "O ficheiro de predefinições contém um nome inválido."
+  },
+  "preset_import_filter_error": {
+    "message": "O ficheiro de predefinições contém um filtro inválido."
+  },
+  "preset_import_read_error": {
+    "message": "Não foi possível ler o ficheiro de predefinições."
+  },
+  "preset_import_save_error": {
+    "message": "Não foi possível guardar as predefinições importadas."
+  },
+  "close": {
+    "message": "Fechar"
+  },
+  "help_label": {
+    "message": "Ajuda"
+  },
+  "tab_label": {
+    "message": "Separador"
+  },
+  "stop_capture_label": {
+    "message": "Parar captura"
+  },
+  "equalizer_canvas_label": {
+    "message": "Controlos do equalizador"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Selecione uma banda com Home, End, Page Up ou Page Down. Use as setas para frequência e ganho, Shift+Cima/Baixo para Q e Enter para repor."
+  },
+  "window_mode_start_error": {
+    "message": "Não foi possível abrir o modo de janela. Tente novamente."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Compensação automática do volume"
   }
 }

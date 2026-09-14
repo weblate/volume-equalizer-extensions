@@ -12,26 +12,15 @@ const TARGETS = [
 
 const getPopupMarkup = () => {
   const html = fs.readFileSync(path.join(ROOT_DIR, "popup.html"), "utf8");
-  const css = fs.readFileSync(
-    path.join(ROOT_DIR, "resources", "styles", "popup.css"),
-    "utf8"
-  );
+  const css = fs.readFileSync(path.join(ROOT_DIR, "resources", "styles", "popup.css"), "utf8");
 
   return html
-    .replace(
-      '<link rel="stylesheet" href="resources/styles/popup.css">',
-      `<style>${css}</style>`
-    )
+    .replace('<link rel="stylesheet" href="resources/styles/popup.css">', `<style>${css}</style>`)
     .replace('  <script src="scripts/popup.js"></script>', "");
 };
 
 const readMessages = (locale) =>
-  JSON.parse(
-    fs.readFileSync(
-      path.join(LOCALES_DIR, locale, "messages.json"),
-      "utf8"
-    )
-  );
+  JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, locale, "messages.json"), "utf8"));
 
 const validateLocale = async (page, locale) => {
   const messages = readMessages(locale);
@@ -42,64 +31,62 @@ const validateLocale = async (page, locale) => {
     const message = messages[target.key]?.message;
 
     if (typeof message !== "string") {
-      errors.push(
-        `${locale}: ${target.key} must exist and contain a string message.`
-      );
+      errors.push(`${locale}: ${target.key} must exist and contain a string message.`);
       continue;
     }
 
     values.push({ ...target, message });
   }
 
-  const measurements = await page.evaluate(async ({ locale, values }) => {
-    document.documentElement.lang = locale;
-    const results = [];
+  const measurements = await page.evaluate(
+    async ({ locale, values }) => {
+      document.documentElement.lang = locale;
+      const results = [];
 
-    for (const value of values) {
-      const element = document.querySelector(value.selector);
+      for (const value of values) {
+        const element = document.querySelector(value.selector);
 
-      if (!element) {
-        results.push({ ...value, missing: true });
-        continue;
+        if (!element) {
+          results.push({ ...value, missing: true });
+          continue;
+        }
+
+        element.textContent = value.message;
+        results.push({ ...value, element });
       }
 
-      element.textContent = value.message;
-      results.push({ ...value, element });
-    }
+      await document.fonts.ready;
 
-    await document.fonts.ready;
-
-    return results.map(({ element, ...result }) =>
-      element
-        ? {
-            ...result,
-            scrollWidth: element.scrollWidth,
-            clientWidth: element.clientWidth,
-            scrollHeight: element.scrollHeight,
-            clientHeight: element.clientHeight,
-          }
-        : result
-    );
-  }, { locale, values });
+      return results.map(({ element, ...result }) =>
+        element
+          ? {
+              ...result,
+              scrollWidth: element.scrollWidth,
+              clientWidth: element.clientWidth,
+              scrollHeight: element.scrollHeight,
+              clientHeight: element.clientHeight,
+            }
+          : result,
+      );
+    },
+    { locale, values },
+  );
 
   for (const result of measurements) {
     if (result.missing) {
-      errors.push(
-        `${locale}: ${result.key} target ${result.selector} does not exist.`
-      );
+      errors.push(`${locale}: ${result.key} target ${result.selector} does not exist.`);
       continue;
     }
 
-    if (
-      result.scrollWidth > result.clientWidth ||
-      result.scrollHeight > result.clientHeight
-    ) {
-      errors.push([
-        `${locale}: ${result.key} (${result.selector}) overflows:`,
-        `  message: ${JSON.stringify(result.message)}`,
-        `  width: ${result.scrollWidth}px scroll / ${result.clientWidth}px client`,
-        `  height: ${result.scrollHeight}px scroll / ${result.clientHeight}px client`,
-      ].join("\n"));
+    if (result.scrollWidth > result.clientWidth || result.scrollHeight > result.clientHeight) {
+      errors.push(
+        [
+          `${locale}: ${result.key} (${result.selector}) overflows:`,
+          `  message: ${JSON.stringify(result.message)}`,
+          `  width: ${result.scrollWidth}px scroll / ${result.clientWidth}px client`,
+          `  height: ${result.scrollHeight}px scroll / ${result.clientHeight}px client`,
+        ].join("\n"),
+      );
     }
   }
 
@@ -120,7 +107,7 @@ const main = async () => {
     const errors = [];
 
     for (const locale of locales) {
-      errors.push(...await validateLocale(page, locale));
+      errors.push(...(await validateLocale(page, locale)));
     }
 
     if (errors.length > 0) {
@@ -130,9 +117,7 @@ const main = async () => {
       return;
     }
 
-    console.log(
-      `Localization layout validation passed for ${locales.length} locales.`
-    );
+    console.log(`Localization layout validation passed for ${locales.length} locales.`);
   } finally {
     await browser.close();
   }

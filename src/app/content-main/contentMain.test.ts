@@ -11,6 +11,8 @@ class FakePort extends EventTarget {
   dataset: Record<string, string> = {
     enabled: "true",
     enableSpectrum: "false",
+    enableVolumeCompensation: "true",
+    spectrumDemand: "true",
     freqs: filters,
     mute: "false",
     preamp: "1",
@@ -101,6 +103,8 @@ class FakeHTMLMediaElement {
   setAttribute(): void {}
 }
 
+const nativeFakePlay = FakeHTMLMediaElement.prototype.play;
+
 class FakeMediaElementAudioSourceNode extends FakeAudioNode {
   readonly mediaElement: FakeHTMLMediaElement;
 
@@ -115,6 +119,7 @@ class FakeAudioContext {
   destination = new FakeAudioDestinationNode(this, "destination");
   spectrumDb: number;
   peakAmplitude: number;
+  closed = false;
 
   constructor(spectrumDb: number, peakAmplitude = 0) {
     this.spectrumDb = spectrumDb;
@@ -137,9 +142,7 @@ class FakeAudioContext {
     return new FakeAnalyserNode(this, "analyser");
   }
 
-  createMediaElementSource(
-    target: FakeHTMLMediaElement,
-  ): FakeMediaElementAudioSourceNode {
+  createMediaElementSource(target: FakeHTMLMediaElement): FakeMediaElementAudioSourceNode {
     if (target.alreadyConnected) {
       throw new DOMException(
         "HTMLMediaElement already connected previously to a different MediaElementSourceNode.",
@@ -150,14 +153,33 @@ class FakeAudioContext {
     target.captured = true;
     return new FakeMediaElementAudioSourceNode(this, target);
   }
+
+  close(): Promise<void> {
+    this.closed = true;
+    return Promise.resolve();
+  }
 }
 
 let playingListener: EventListener | null = null;
+let pauseListener: EventListener | null = null;
+let pagehideListener: EventListener | null = null;
 
 const dispatchPlaying = (media: FakeHTMLMediaElement): void => {
   if (!playingListener) throw new Error("Playing listener was not registered");
 
   playingListener({ target: media } as unknown as Event);
+};
+
+const dispatchPause = (media: FakeHTMLMediaElement): void => {
+  if (!pauseListener) throw new Error("Pause listener was not registered");
+
+  pauseListener({ target: media } as unknown as Event);
+};
+
+const dispatchPagehide = (persisted: boolean): void => {
+  if (!pagehideListener) throw new Error("Pagehide listener was not registered");
+
+  pagehideListener({ persisted } as PageTransitionEvent);
 };
 
 const loadContentMain = async (
@@ -166,7 +188,10 @@ const loadContentMain = async (
 ): Promise<void> => {
   vi.resetModules();
   playingListener = null;
+  pauseListener = null;
+  pagehideListener = null;
   FakeAudioNode.prototype.connect = nativeFakeConnect;
+  FakeHTMLMediaElement.prototype.play = nativeFakePlay;
 
   vi.stubGlobal("document", {
     getElementById: (id: string) => (id === "eq-tools-port" ? port : null),
@@ -175,8 +200,15 @@ const loadContentMain = async (
   vi.stubGlobal("window", {
     addEventListener: vi.fn((type: string, listener: EventListener) => {
       if (type === "playing") playingListener = listener;
+      if (type === "pause") pauseListener = listener;
+      if (type === "pagehide") pagehideListener = listener;
     }),
-    Audio: class {},
+    removeEventListener: vi.fn((type: string, listener: EventListener) => {
+      if (type === "playing" && playingListener === listener) playingListener = null;
+      if (type === "pause" && pauseListener === listener) pauseListener = null;
+      if (type === "pagehide" && pagehideListener === listener) pagehideListener = null;
+    }),
+    Audio: FakeHTMLMediaElement,
   });
   vi.stubGlobal("self", globalThis.window);
   vi.stubGlobal("AudioNode", FakeAudioNode);
@@ -185,14 +217,20 @@ const loadContentMain = async (
   vi.stubGlobal("HTMLMediaElement", FakeHTMLMediaElement);
   vi.stubGlobal("MediaElementAudioSourceNode", FakeMediaElementAudioSourceNode);
   vi.stubGlobal("AudioContext", FakeAudioContext);
-  vi.stubGlobal("setTimeout", vi.fn((callback: () => void) => {
-    callback();
-    return 1;
-  }));
-  vi.stubGlobal("setInterval", vi.fn((callback: () => void) => {
-    callback();
-    return 1;
-  }));
+  vi.stubGlobal(
+    "setTimeout",
+    vi.fn((callback: () => void) => {
+      callback();
+      return 1;
+    }),
+  );
+  vi.stubGlobal(
+    "setInterval",
+    vi.fn((callback: () => void) => {
+      callback();
+      return 1;
+    }),
+  );
   vi.stubGlobal("clearInterval", vi.fn());
 
   await import("./contentMain");
@@ -220,6 +258,31 @@ describe("contentMain spectrum state", () => {
 
     return undefined;
   };
+
+  test("samples only on demand and refreshes metadata for repeated demand", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    port.dataset.spectrumDemand = "false";
+    const frames: Array<{ type?: string }> = [];
+    port.addEventListener("spectrum-frame", (event) => {
+      frames.push((event as CustomEvent).detail);
+    });
+    await loadContentMain(port);
+
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "active-source");
+    source.connect(context.destination);
+    expect(frames.filter((message) => message.type === "meta")).toHaveLength(0);
+    expect(getLastSpectrumFrame(frames)?.buffer).toBeNull();
+
+    port.dataset.spectrumDemand = "true";
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(frames.filter((message) => message.type === "meta")).toHaveLength(1);
+    expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
+
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(frames.filter((message) => message.type === "meta")).toHaveLength(2);
+  });
 
   test("uses the latest connected graph when spectrum is enabled", async () => {
     const port = new FakePort();
@@ -267,9 +330,7 @@ describe("contentMain spectrum state", () => {
       const serviceMedia = new FakeHTMLMediaElement();
       serviceMedia.isConnected = false;
       serviceMedia.paused = true;
-      serviceContext.createMediaElementSource(serviceMedia).connect(
-        serviceContext.destination,
-      );
+      serviceContext.createMediaElementSource(serviceMedia).connect(serviceContext.destination);
     });
 
     expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
@@ -293,16 +354,12 @@ describe("contentMain spectrum state", () => {
 
     const connectedContext = new FakeAudioContext(-42);
     const connectedMedia = new FakeHTMLMediaElement();
-    connectedContext.createMediaElementSource(connectedMedia).connect(
-      connectedContext.destination,
-    );
+    connectedContext.createMediaElementSource(connectedMedia).connect(connectedContext.destination);
 
     const detachedContext = new FakeAudioContext(-70);
     const detachedMedia = new FakeHTMLMediaElement();
     detachedMedia.isConnected = false;
-    detachedContext.createMediaElementSource(detachedMedia).connect(
-      detachedContext.destination,
-    );
+    detachedContext.createMediaElementSource(detachedMedia).connect(detachedContext.destination);
 
     expect(getLastSpectrumFrame(frames)?.buffer?.[0]).toBe(-42);
   });
@@ -319,16 +376,12 @@ describe("contentMain spectrum state", () => {
     const pausedContext = new FakeAudioContext(-90);
     const pausedMedia = new FakeHTMLMediaElement();
     pausedMedia.paused = true;
-    pausedContext.createMediaElementSource(pausedMedia).connect(
-      pausedContext.destination,
-    );
+    pausedContext.createMediaElementSource(pausedMedia).connect(pausedContext.destination);
 
     const endedContext = new FakeAudioContext(-91);
     const endedMedia = new FakeHTMLMediaElement();
     endedMedia.ended = true;
-    endedContext.createMediaElementSource(endedMedia).connect(
-      endedContext.destination,
-    );
+    endedContext.createMediaElementSource(endedMedia).connect(endedContext.destination);
 
     expect(getLastSpectrumFrame(frames)?.buffer).toBeNull();
   });
@@ -458,17 +511,13 @@ describe("contentMain spectrum state", () => {
     port.dataset.enabled = "true";
     port.dispatchEvent(new Event("enabled-changed"));
 
-    expect(
-      source.connections.some((connection) => connection instanceof FakeGainNode),
-    ).toBe(true);
+    expect(source.connections.some((connection) => connection instanceof FakeGainNode)).toBe(true);
     expect(source.connections).toContain(pageAnalyser);
   });
 
   test("does not reduce preamp below the headroom threshold", async () => {
     const port = new FakePort();
-    port.dataset.freqs = JSON.stringify([
-      { freq: 1000, gain: 6, q: 0.5, type: "peaking" },
-    ]);
+    port.dataset.freqs = JSON.stringify([{ freq: 1000, gain: 6, q: 0.5, type: "peaking" }]);
     await loadContentMain(port);
     const context = new FakeAudioContext(-42);
     const source = new FakeAudioNode(context, "source");
@@ -479,11 +528,146 @@ describe("contentMain spectrum state", () => {
     expect(preamp.gain.value).toBe(1);
   });
 
+  test("reapplies graph gain when volume compensation is toggled", async () => {
+    const port = new FakePort();
+    port.dataset.enableVolumeCompensation = "false";
+    port.dataset.freqs = JSON.stringify(
+      Array.from({ length: 4 }, (_, index) => ({
+        freq: 1000 + index,
+        gain: 6,
+        q: 0.5,
+        type: "peaking",
+      })),
+    );
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "source");
+
+    source.connect(context.destination);
+    const preamp = source.connections[0] as FakeGainNode;
+    expect(preamp.gain.value).toBe(1);
+
+    port.dataset.enableVolumeCompensation = "true";
+    port.dispatchEvent(new Event("volume-compensation-changed"));
+
+    expect(preamp.gain.value).toBeCloseTo(0.49645513, 6);
+  });
+
   test("marks the reusable main bridge as ready", async () => {
     const port = new FakePort();
 
     await loadContentMain(port);
 
     expect(port.dataset.mainReady).toBe("true");
+  });
+  test("disconnects and reuses its analyser when spectrum is toggled", async () => {
+    const port = new FakePort();
+    port.dataset.enableSpectrum = "true";
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const createAnalyser = vi.spyOn(context, "createAnalyser");
+    const source = new FakeAudioNode(context, "source");
+    source.connect(context.destination);
+    let output = source;
+    while (!output.connections.includes(context.destination)) {
+      output = output.connections[0] as FakeAudioNode;
+    }
+    const analyser = createAnalyser.mock.results[0].value;
+    expect(output.connections).toContain(analyser);
+    port.dataset.enableSpectrum = "false";
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(output.connections).not.toContain(analyser);
+    expect(output.connections).toContain(context.destination);
+    port.dataset.enableSpectrum = "true";
+    port.dispatchEvent(new Event("spectrum-state-changed"));
+    expect(createAnalyser).toHaveBeenCalledTimes(1);
+    expect(output.connections).toContain(analyser);
+  });
+
+  test("uses one owned context for different media elements", async () => {
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
+    await loadContentMain(new FakePort(), [new FakeHTMLMediaElement(), new FakeHTMLMediaElement()]);
+    await Promise.resolve();
+    expect(createSource).toHaveBeenCalledTimes(2);
+    expect(createSource.mock.contexts[0]).toBe(createSource.mock.contexts[1]);
+  });
+
+  test("reuses a media source after pause and resume", async () => {
+    const media = new FakeHTMLMediaElement();
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
+    await loadContentMain(new FakePort(), [media]);
+    await Promise.resolve();
+
+    media.paused = true;
+    dispatchPause(media);
+    media.paused = false;
+    dispatchPlaying(media);
+    await Promise.resolve();
+
+    expect(createSource).toHaveBeenCalledOnce();
+  });
+
+  test("captures a detached audio created through the Audio constructor", async () => {
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
+    await loadContentMain(new FakePort());
+
+    const media = new window.Audio() as unknown as FakeHTMLMediaElement;
+    media.isConnected = false;
+    await Promise.resolve();
+
+    expect(createSource).toHaveBeenCalledOnce();
+  });
+
+  test("reuses the source when a removed video returns", async () => {
+    const media = new FakeHTMLMediaElement();
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
+    await loadContentMain(new FakePort(), [media]);
+    await Promise.resolve();
+
+    media.paused = true;
+    media.isConnected = false;
+    dispatchPause(media);
+    media.paused = false;
+    media.isConnected = true;
+    dispatchPlaying(media);
+    await Promise.resolve();
+
+    expect(createSource).toHaveBeenCalledOnce();
+  });
+
+  test("closes only its owned context on final page teardown", async () => {
+    const media = new FakeHTMLMediaElement();
+    const createSource = vi.spyOn(FakeAudioContext.prototype, "createMediaElementSource");
+    await loadContentMain(new FakePort(), [media]);
+    await Promise.resolve();
+    const ownedContext = createSource.mock.contexts[0] as FakeAudioContext;
+
+    const pageContext = new FakeAudioContext(-42);
+    const pageSource = new FakeAudioNode(pageContext, "page-source");
+    pageSource.connect(pageContext.destination);
+    dispatchPagehide(false);
+
+    expect(ownedContext.closed).toBe(true);
+    expect(pageContext.closed).toBe(false);
+  });
+
+  test("preserves page-owned connections across equalizer toggles", async () => {
+    const port = new FakePort();
+    await loadContentMain(port);
+    const context = new FakeAudioContext(-42);
+    const source = new FakeAudioNode(context, "source");
+    const pageAnalyser = new FakeAnalyserNode(context, "page-analyser");
+    const pageGain = new FakeGainNode(context, "page-gain");
+    source.connect(pageAnalyser);
+    source.connect(pageGain);
+    source.connect(context.destination);
+    port.dataset.enabled = "false";
+    port.dispatchEvent(new Event("enabled-changed"));
+    expect(source.connections).toContain(pageAnalyser);
+    expect(source.connections).toContain(pageGain);
+    port.dataset.enabled = "true";
+    port.dispatchEvent(new Event("enabled-changed"));
+    expect(source.connections).toContain(pageAnalyser);
+    expect(source.connections).toContain(pageGain);
   });
 });

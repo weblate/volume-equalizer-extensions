@@ -1,13 +1,7 @@
-import { isPresetUsedInWhitelist } from "../../domains/autostart/autostartRules";
-import type { EqualizerPersistedFilter } from "../../domains/equalizer/equalizerState";
-import {
-  getAvailablePresetNames,
-  isDefaultPresetName,
-  resolvePresetFilters,
-  type PresetStorage,
-} from "../../domains/presets/defaultPresets";
-import { validatePresetName } from "../../domains/presets/presetNameValidation";
-import { STORAGE_KEYS } from "../../infrastructure/chrome/storageKeys";
+import { attachModalFocus } from "./modalFocus";
+import { attachPresetDropdown } from "./presetDropdown";
+import type { EqualizerFilter } from "../../domains/equalizer/types";
+import { getAvailablePresetNames, isDefaultPresetName } from "../../domains/presets/defaultPresets";
 
 export const createPresetsView = (deps: {
   dropdown: HTMLElement;
@@ -15,32 +9,47 @@ export const createPresetsView = (deps: {
   menu: HTMLElement;
   saveButton: HTMLButtonElement;
   saveModal: HTMLDivElement;
-  saveModalClose: HTMLSpanElement;
+  saveModalClose: HTMLButtonElement;
   saveForm: HTMLFormElement;
   nameInput: HTMLInputElement;
   saveError: HTMLDivElement;
   saveCancel: HTMLButtonElement;
-  isToolkitWindow: boolean;
   getMessage(messageName: string): string;
-  getCurrentTabId(): Promise<number | null>;
-  getCurrentFilters(): EqualizerPersistedFilter[];
-  setCurrentFilters(filters: EqualizerPersistedFilter[]): void;
-  saveLoadedFilters(filters: EqualizerPersistedFilter[]): Promise<void>;
+  getCurrentFilters(): EqualizerFilter[];
+  savePreset(
+    name: string,
+  ): Promise<
+    | { ok: true; name: string; presetNames: string[] }
+    | { ok: false; reason: "missingTab" | "empty" | "reserved" | "duplicate" }
+  >;
+  deletePreset(
+    name: string,
+  ): Promise<{ ok: true; presetNames: string[] } | { ok: false; reason: "default" | "used" }>;
+  selectPreset(name: string): Promise<EqualizerFilter[] | null>;
+  setCurrentFilters(filters: EqualizerFilter[]): void;
+  saveLoadedFilters(filters: EqualizerFilter[]): Promise<void>;
   redraw(): void;
   refreshToolkitCaptureFilters(): void;
 }) => {
-  const addPresetToDropdown = (
-    name: string,
-    options: { deletable?: boolean } = {},
-  ): void => {
+  const saveModalFocus = attachModalFocus(deps.saveModal, deps.saveButton);
+  const dropdown = attachPresetDropdown(deps.dropdown, deps.toggle, deps.menu);
+
+  const addPresetToDropdown = (name: string, options: { deletable?: boolean } = {}): void => {
     const option = document.createElement("div");
-    option.textContent = name;
+    const choice = document.createElement("button");
+    choice.type = "button";
+    choice.textContent = name;
+    choice.className = "dropdown-item";
+    choice.setAttribute("data-value", name);
+    option.appendChild(choice);
     option.setAttribute("data-value", name);
-    option.className = "dropdown-item";
+    option.className = "dropdown-row";
 
     if (options.deletable ?? true) {
-      const closeButton = document.createElement("span");
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
       closeButton.className = "close-btn";
+      closeButton.setAttribute("aria-label", `${deps.getMessage("delete")}: ${name}`);
       closeButton.textContent = "\u00d7";
       closeButton.setAttribute("data-value", name);
       option.appendChild(closeButton);
@@ -53,7 +62,7 @@ export const createPresetsView = (deps: {
     userPresetNames: string[],
     options: { includeDefaultPresets?: boolean } = {},
   ): void => {
-    Array.from(deps.menu.querySelectorAll(".dropdown-item")).forEach((item) => {
+    Array.from(deps.menu.querySelectorAll(".dropdown-row")).forEach((item) => {
       if (item.getAttribute("data-value") !== "none") item.remove();
     });
 
@@ -63,14 +72,13 @@ export const createPresetsView = (deps: {
   };
 
   const closeSaveModal = (): void => {
-    deps.saveModal.style.display = "none";
-    deps.saveButton.focus();
+    saveModalFocus.close();
   };
 
   deps.saveButton.addEventListener("click", () => {
     deps.nameInput.value = "";
     deps.saveError.textContent = "";
-    deps.saveModal.style.display = "block";
+    saveModalFocus.open();
     deps.nameInput.focus();
   });
 
@@ -79,11 +87,6 @@ export const createPresetsView = (deps: {
   deps.saveModal.addEventListener("click", (event) => {
     if (event.target === deps.saveModal) closeSaveModal();
   });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && deps.saveModal.style.display === "block") {
-      closeSaveModal();
-    }
-  });
   deps.nameInput.addEventListener("input", () => {
     deps.saveError.textContent = "";
   });
@@ -91,45 +94,18 @@ export const createPresetsView = (deps: {
   deps.saveForm.addEventListener("submit", (event) => {
     event.preventDefault();
     void (async () => {
-      const tabId = await deps.getCurrentTabId();
-      if (tabId == null) return;
-
-      const prefs = await chrome.storage.local.get([
-        STORAGE_KEYS.tabFilters(tabId),
-        STORAGE_KEYS.PRESETS,
-        STORAGE_KEYS.PRESET_NAMES,
-      ]);
-      const presets = (prefs[STORAGE_KEYS.PRESETS] ?? {}) as PresetStorage;
-      const presetNames = [...((prefs[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[])];
-      const validation = validatePresetName(deps.nameInput.value, presetNames);
-      if (validation.kind === "error") {
-        deps.saveError.textContent = deps.getMessage(`preset_name_${validation.reason}_error`);
+      const result = await deps.savePreset(deps.nameInput.value);
+      if (!result.ok) {
+        if (result.reason === "missingTab") return;
+        deps.saveError.textContent = deps.getMessage(`preset_name_${result.reason}_error`);
         deps.saveError.style.display = "block";
         return;
       }
-
-      const { name } = validation;
-      presets[name] =
-        (prefs[STORAGE_KEYS.tabFilters(tabId)] as EqualizerPersistedFilter[]) ??
-        deps.getCurrentFilters();
-      presetNames.push(name);
-
-      await chrome.storage.local.set({
-        [STORAGE_KEYS.PRESETS]: presets,
-        [STORAGE_KEYS.PRESET_NAMES]: presetNames,
-      });
-      addPresetToDropdown(name);
+      addPresetToDropdown(result.name);
       closeSaveModal();
-    })();
-  });
-
-  deps.toggle.addEventListener("click", () => {
-    deps.menu.style.display = deps.menu.style.display === "block" ? "none" : "block";
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!(event.target instanceof Node)) return;
-    if (!deps.dropdown.contains(event.target)) deps.menu.style.display = "none";
+    })().catch((error: unknown) => {
+      console.error("Failed to save preset", { error });
+    });
   });
 
   deps.menu.addEventListener("click", (event) => {
@@ -141,53 +117,42 @@ export const createPresetsView = (deps: {
 
       if (choice === "none") {
         deps.toggle.textContent = deps.getMessage("empty_preset_name");
-        deps.menu.style.display = "none";
+        dropdown.close(true);
         return;
       }
 
       if (event.target.classList.contains("close-btn")) {
-        if (isDefaultPresetName(choice)) return;
-
-        const prefs = await chrome.storage.local.get([
-          STORAGE_KEYS.PRESETS,
-          STORAGE_KEYS.PRESET_NAMES,
-          STORAGE_KEYS.AUTOSTART_RULES,
-        ]);
-
-        if (isPresetUsedInWhitelist(prefs[STORAGE_KEYS.AUTOSTART_RULES], choice)) {
+        const result = await deps.deletePreset(choice);
+        if (!result.ok && result.reason === "used") {
           alert(deps.getMessage("preset_delete_error"));
           return;
         }
+        if (!result.ok) return;
 
-        event.target.parentElement?.remove();
-        const presets = (prefs[STORAGE_KEYS.PRESETS] ?? {}) as PresetStorage;
-        const presetNames = ((prefs[STORAGE_KEYS.PRESET_NAMES] ?? []) as string[]).filter(
-          (name) => name !== choice,
-        );
-        delete presets[choice];
-
-        await chrome.storage.local.set({
-          [STORAGE_KEYS.PRESETS]: presets,
-          [STORAGE_KEYS.PRESET_NAMES]: presetNames,
-        });
+        const row = event.target.parentElement;
+        const nextAction =
+          row?.nextElementSibling?.querySelector<HTMLElement>("button") ??
+          row?.previousElementSibling?.querySelector<HTMLElement>("button") ??
+          deps.toggle;
+        row?.remove();
+        nextAction.focus();
         return;
       }
 
       if (!event.target.classList.contains("dropdown-item")) return;
 
-      deps.toggle.textContent =
-        choice === "none" ? deps.getMessage("empty_preset_name") : choice;
-      const prefs = await chrome.storage.local.get([STORAGE_KEYS.PRESETS]);
-      const presets = prefs[STORAGE_KEYS.PRESETS] as PresetStorage | undefined;
-      const filters = resolvePresetFilters(choice, presets);
+      const filters = await deps.selectPreset(choice);
       if (!filters) return;
 
+      deps.toggle.textContent = choice;
       deps.setCurrentFilters(filters);
       await deps.saveLoadedFilters(deps.getCurrentFilters());
       deps.redraw();
       deps.refreshToolkitCaptureFilters();
-      deps.menu.style.display = "none";
-    })();
+      dropdown.close(true);
+    })().catch((error: unknown) => {
+      console.error("Failed to update preset selection", { error });
+    });
   });
 
   return {

@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Ayrıca Ayarlar'da spektrum görselleştirmesini etkinleştirebilirsiniz."
+  },
+  "preset_import_syntax_error": {
+    "message": "Dosya geçersiz JSON içeriyor."
+  },
+  "preset_import_structure_error": {
+    "message": "Ön ayar dosyasının yapısı geçersiz."
+  },
+  "preset_import_name_error": {
+    "message": "Ön ayar dosyası geçersiz bir ad içeriyor."
+  },
+  "preset_import_filter_error": {
+    "message": "Ön ayar dosyası geçersiz bir filtre içeriyor."
+  },
+  "preset_import_read_error": {
+    "message": "Ön ayar dosyası okunamadı."
+  },
+  "preset_import_save_error": {
+    "message": "İçe aktarılan ön ayarlar kaydedilemedi."
+  },
+  "close": {
+    "message": "Kapat"
+  },
+  "help_label": {
+    "message": "Yardım"
+  },
+  "tab_label": {
+    "message": "Sekme"
+  },
+  "stop_capture_label": {
+    "message": "Yakalamayı durdur"
+  },
+  "equalizer_canvas_label": {
+    "message": "Ekolayzer kontrolleri"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Home, End, Page Up veya Page Down ile bir bant seçin. Frekans ve kazanç için okları, Q için Shift+Yukarı/Aşağı, sıfırlamak için Enter'ı kullanın."
+  },
+  "window_mode_start_error": {
+    "message": "Pencere modu açılamadı. Lütfen tekrar deneyin."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Otomatik ses düzeyi dengeleme"
   }
 }

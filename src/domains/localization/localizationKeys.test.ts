@@ -17,6 +17,7 @@ const requiredKeys = [
   "shortcut_reset_point_label",
   "guide_volume_hint",
   "guide_presets_hint",
+  "enable_volume_compensation_setting_option",
   "donation_reminder_title",
   "donation_reminder_message",
   "donation_reminder_link",

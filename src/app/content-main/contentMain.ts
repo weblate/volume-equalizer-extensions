@@ -5,47 +5,38 @@ import {
   getBiquadFilterCount,
   getLastBiquadFilter,
 } from "../../domains/audio/biquadChain";
-import { hasClippingSample } from "../../domains/audio/clipping";
+import { createMediaGraphRegistry } from "../../infrastructure/audio/mediaGraphRegistry";
+import { createSpectrumSampler } from "../../infrastructure/audio/spectrumSampler";
+import { attachMediaInterception } from "./mediaInterception";
 
 import type { EqualizerFilter } from "../../domains/equalizer/types";
 
 interface EqualizerNodeChain extends Record<number, BiquadFilterNode | undefined> {
   preamp: GainNode;
   balance: StereoPannerNode;
+  bypassed: boolean;
 }
 
-interface CapturedMediaSource {
-  context: AudioContext;
-  source: MediaElementAudioSourceNode;
-}
-
-type AnalyserWithLegacySampleRate = AnalyserNode & { sampleRate?: number };
 type CapturableMediaElement = HTMLMediaElement & {
   captureStream?: () => MediaStream;
 };
 
 const port = document.getElementById("eq-tools-port") as HTMLSpanElement;
 
-const equalizerGraphs = new Map<AudioNode, EqualizerNodeChain>();
-let currentAudioCtx: AudioContext | null = null;
-let currentSourceNode: AudioNode | null = null;
+const equalizerGraphs = createMediaGraphRegistry<AudioNode, EqualizerNodeChain>();
+let mediaAudioContext: AudioContext | null = null;
 let currentGraphSource: AudioNode | null = null;
-let analyser: AnalyserWithLegacySampleRate | null = null;
-let spectrumTimer: ReturnType<typeof setInterval> | null = null;
-const mediaSources = new WeakMap<HTMLMediaElement, CapturedMediaSource>();
+const mediaSources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
 const pendingMedia = new WeakSet<HTMLMediaElement>();
-const cachedMedia = new Set<HTMLMediaElement>();
-const bypassedSources = new Set<AudioNode>();
+const cachedMedia = createMediaGraphRegistry<HTMLMediaElement, true>();
+const bypassedSources = createMediaGraphRegistry<AudioNode, true>();
 
 const nativeConnect = AudioNode.prototype.connect;
 
-const getAudioContext = (source: AudioNode): AudioContext =>
-  source.context as AudioContext;
+const getAudioContext = (source: AudioNode): AudioContext => source.context as AudioContext;
 
-const connectToDestination = (
-  source: AudioNode,
-  destination: AudioDestinationNode,
-): AudioNode => Reflect.apply(nativeConnect, source, [destination]) as AudioNode;
+const connectToDestination = (source: AudioNode, destination: AudioDestinationNode): AudioNode =>
+  Reflect.apply(nativeConnect, source, [destination]) as AudioNode;
 
 const readFilterSettings = (): EqualizerFilter[] =>
   JSON.parse(port.dataset.freqs as string) as EqualizerFilter[];
@@ -54,20 +45,16 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error && error.message ? error.message : fallback;
 
 const applyGraphGain = (filters: EqualizerNodeChain): void => {
-  const preampValue = isNaN(Number(port.dataset.preamp))
-    ? 1
-    : Number(port.dataset.preamp);
+  const preampValue = isNaN(Number(port.dataset.preamp)) ? 1 : Number(port.dataset.preamp);
   const biquadFilters = Array.from(
     { length: getBiquadFilterCount(filters) },
     (_, index) => filters[index] as BiquadFilterNode,
   );
-  const headroomGain = getBiquadHeadroomGain(
-    biquadFilters,
-    filters.preamp.context.sampleRate,
-  );
-  filters.preamp.gain.value = port.dataset.mute === "true"
-    ? 0
-    : preampValue * headroomGain;
+  const headroomGain =
+    port.dataset.enableVolumeCompensation === "false"
+      ? 1
+      : getBiquadHeadroomGain(biquadFilters, filters.preamp.context.sampleRate);
+  filters.preamp.gain.value = port.dataset.mute === "true" ? 0 : preampValue * headroomGain;
 };
 
 const rebuildBiquadChain = (
@@ -75,6 +62,7 @@ const rebuildBiquadChain = (
   filters: EqualizerNodeChain,
   filterSettings: EqualizerFilter[],
 ): void => {
+  if (source === currentGraphSource) stopSpectrum();
   filters.balance.disconnect();
 
   const oldCount = getBiquadFilterCount(filters);
@@ -96,54 +84,19 @@ const rebuildBiquadChain = (
   applyGraphGain(filters);
 };
 
-const startSpectrum = (): void => {
-  const audioCtx = currentAudioCtx;
-  const sourceNode = currentSourceNode;
-  const currentAnalyser = ensureAnalyser(audioCtx, sourceNode);
-
-  if (!audioCtx || !sourceNode || !currentAnalyser) {
-    return;
-  }
-
-  let payload: Record<string, unknown> = {
-    type: "meta",
-    sampleRate: audioCtx.sampleRate,
-    fftSize: currentAnalyser.fftSize,
-    minDb: currentAnalyser.minDecibels,
-    maxDb: currentAnalyser.maxDecibels,
-    frequencyBinCount: currentAnalyser.frequencyBinCount,
-  };
+const publishSpectrum = (detail: unknown): void => {
   port.dispatchEvent(
     new CustomEvent("spectrum-frame", {
-      detail: { ...payload },
+      detail,
       bubbles: true,
       composed: true,
     }),
   );
-
-  if (spectrumTimer) clearInterval(spectrumTimer);
-  const timeDomainBuffer = new Float32Array(currentAnalyser.fftSize);
-  spectrumTimer = setInterval(() => {
-    if (!currentAnalyser) return;
-
-    const buffer = new Float32Array(currentAnalyser.frequencyBinCount);
-    currentAnalyser.getFloatFrequencyData(buffer);
-    currentAnalyser.getFloatTimeDomainData(timeDomainBuffer);
-
-    payload = {
-      type: "spectrum",
-      buffer,
-      clipping: hasClippingSample(timeDomainBuffer),
-    };
-    port.dispatchEvent(
-      new CustomEvent("spectrum-frame", {
-        detail: { ...payload },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  }, 50);
 };
+const spectrumSampler = createSpectrumSampler(publishSpectrum, (buffer, clipping) =>
+  publishSpectrum({ type: "spectrum", buffer, clipping }),
+);
+const stopSpectrum = (): void => spectrumSampler.stop();
 
 const getSpectrumPriority = (source: AudioNode): number => {
   if (!(source instanceof MediaElementAudioSourceNode)) return 0;
@@ -157,7 +110,8 @@ const selectSpectrumGraph = (
 ): void => {
   if (
     port.dataset.enableSpectrum !== "true" ||
-    port.dataset.enabled !== "true"
+    port.dataset.enabled !== "true" ||
+    port.dataset.spectrumDemand !== "true"
   ) {
     stopSpectrum();
     return;
@@ -171,10 +125,8 @@ const selectSpectrumGraph = (
 
     if (
       priority > selectedPriority ||
-      (
-        priority === selectedPriority &&
-        (source === preferredSource || selectedSource !== preferredSource)
-      )
+      (priority === selectedPriority &&
+        (source === preferredSource || selectedSource !== preferredSource))
     ) {
       selectedSource = source;
       selectedPriority = priority;
@@ -183,19 +135,7 @@ const selectSpectrumGraph = (
 
   if (!selectedSource) {
     currentGraphSource = null;
-    currentAudioCtx = null;
-    currentSourceNode = null;
-    analyser = null;
     stopSpectrum();
-    return;
-  }
-
-  if (
-    !forceRestart &&
-    selectedSource === currentGraphSource &&
-    analyser &&
-    spectrumTimer
-  ) {
     return;
   }
 
@@ -203,21 +143,22 @@ const selectSpectrumGraph = (
   if (!filters) return;
 
   currentGraphSource = selectedSource;
-  currentAudioCtx = getAudioContext(selectedSource);
-  currentSourceNode = getLastBiquadFilter(filters, filters.balance);
-  analyser = null;
-  startSpectrum();
+  if (forceRestart) stopSpectrum();
+  spectrumSampler.start(
+    getAudioContext(selectedSource),
+    getLastBiquadFilter(filters, filters.balance),
+  );
 };
 
 const attach = (source: AudioNode): AudioNode => {
   const context = getAudioContext(source);
 
   if (source instanceof MediaElementAudioSourceNode) {
-    mediaSources.set(source.mediaElement, { context, source });
+    mediaSources.set(source.mediaElement, source);
   }
 
   if (port.dataset.enabled === "false") {
-    bypassedSources.add(source);
+    bypassedSources.set(source, true);
     return connectToDestination(source, context.destination);
   }
 
@@ -231,6 +172,7 @@ const attach = (source: AudioNode): AudioNode => {
   const filters: EqualizerNodeChain = {
     preamp: context.createGain(),
     balance: context.createStereoPanner(),
+    bypassed: false,
   };
   source.connect(filters.preamp);
   filters.balance.pan.value = 0;
@@ -248,22 +190,20 @@ const attach = (source: AudioNode): AudioNode => {
   return context.destination;
 };
 
-const createMediaSource = (
-  target: HTMLMediaElement,
-): Promise<MediaElementAudioSourceNode> =>
+const createMediaSource = (target: HTMLMediaElement): Promise<MediaElementAudioSourceNode> =>
   new Promise((resolve, reject) => {
     const existing = mediaSources.get(target);
     if (existing) {
-      resolve(existing.source);
+      resolve(existing);
       return;
     }
 
-    const context = new AudioContext();
+    const context = (mediaAudioContext ??= new AudioContext());
 
     const next = (): void => {
       try {
         const source = context.createMediaElementSource(target);
-        mediaSources.set(target, { context, source });
+        mediaSources.set(target, source);
         resolve(source);
       } catch (error) {
         reject(error);
@@ -289,18 +229,24 @@ const detach = (): void => {
   stopSpectrum();
   equalizerGraphs.forEach((filters, source) => {
     const context = getAudioContext(source);
-    source.disconnect();
+    if (filters.bypassed) return;
+    source.disconnect(filters.preamp);
     getLastBiquadFilter(filters, filters.balance).disconnect();
     connectToDestination(source, context.destination);
+    filters.bypassed = true;
     port.dispatchEvent(new Event("disconnected"));
   });
 };
 
 const reattach = (): void => {
+  stopSpectrum();
   const filterSettings = readFilterSettings();
   equalizerGraphs.forEach((filters, source) => {
-    source.disconnect();
-    source.connect(filters.preamp);
+    if (filters.bypassed) {
+      source.disconnect(getAudioContext(source).destination);
+      source.connect(filters.preamp);
+      filters.bypassed = false;
+    }
     if (getBiquadFilterCount(filters) !== filterSettings.length) {
       rebuildBiquadChain(source, filters, filterSettings);
     } else {
@@ -319,7 +265,7 @@ const reattach = (): void => {
     port.dispatchEvent(new Event("connected"));
   }
 
-  bypassedSources.forEach((source) => {
+  bypassedSources.forEach((_bypassed, source) => {
     source.disconnect(getAudioContext(source).destination);
     attach(source);
   });
@@ -330,27 +276,10 @@ const reattach = (): void => {
 };
 
 const updateSpectrumState = (): void => {
-  selectSpectrumGraph();
+  selectSpectrumGraph(currentGraphSource, true);
 };
 
 port.addEventListener("spectrum-state-changed", updateSpectrumState);
-
-AudioNode.prototype.connect = new Proxy(nativeConnect, {
-  apply(target, self, args) {
-    const [node] = args;
-
-    if (node && node instanceof AudioDestinationNode) {
-      try {
-        return attach(self as AudioNode);
-      } catch (error) {
-        console.warn("cannot equalize;", getErrorMessage(error, ""));
-        port.dispatchEvent(new Event("cannot-attach"));
-      }
-    }
-
-    return Reflect.apply(target, self, args);
-  },
-});
 
 const convert = async (target: EventTarget | null): Promise<void> => {
   if (!(target instanceof HTMLMediaElement)) return;
@@ -362,7 +291,7 @@ const convert = async (target: EventTarget | null): Promise<void> => {
   });
 
   if (port.dataset.enabled !== "true") {
-    cachedMedia.add(target);
+    cachedMedia.set(target, true);
     console.log("[contentMain] Media cached until enabled");
     return;
   }
@@ -400,41 +329,31 @@ const convert = async (target: EventTarget | null): Promise<void> => {
   }
 };
 
-window.addEventListener("playing", (event) => void convert(event.target), true);
-window.addEventListener("pause", () => selectSpectrumGraph(), true);
-window.addEventListener("ended", () => selectSpectrumGraph(), true);
+const startConversion = (target: EventTarget | null): void => {
+  void convert(target).catch((error) => {
+    console.error("[contentMain] Unexpected media conversion failure", error);
+  });
+};
+
 const existingMedia = document.querySelectorAll("audio, video");
 console.log("[contentMain] Loaded", {
   media: existingMedia.length,
   enabled: port.dataset.enabled,
   filtersReady: port.dataset.freqs !== undefined,
 });
-existingMedia.forEach((target) => void convert(target));
-
-window.Audio = new Proxy(window.Audio, {
-  construct(target, args, newTarget) {
-    const result = Reflect.construct(target, args, newTarget) as HTMLAudioElement;
-    try {
-      void convert(result);
-    } catch (error) {
-      console.error(error);
-    }
-    return result;
+const disposeMediaInterception = attachMediaInterception({
+  onMedia: (target, activity) => {
+    if (activity === "playing") startConversion(target);
+    else selectSpectrumGraph();
   },
-});
-
-HTMLMediaElement.prototype.play = new Proxy(HTMLMediaElement.prototype.play, {
-  apply(target, self, args) {
-    const mediaElement = self as HTMLMediaElement;
-    if (mediaElement.isConnected === false) {
-      try {
-        void convert(mediaElement);
-      } catch (error) {
-        console.error(error);
-      }
+  onDestinationConnect: (source) => {
+    try {
+      return attach(source);
+    } catch (error) {
+      console.warn("cannot equalize;", getErrorMessage(error, ""));
+      port.dispatchEvent(new Event("cannot-attach"));
+      return Reflect.apply(nativeConnect, source, [source.context.destination]) as AudioNode;
     }
-
-    return Reflect.apply(target, self, args) as Promise<void>;
   },
 });
 
@@ -466,6 +385,12 @@ port.addEventListener("preamp-changed", () => {
   });
 });
 
+port.addEventListener("volume-compensation-changed", () => {
+  equalizerGraphs.forEach((filters) => {
+    applyGraphGain(filters);
+  });
+});
+
 port.addEventListener("mute-enabled", () => {
   equalizerGraphs.forEach((filters) => {
     filters.preamp.gain.value = Number(0);
@@ -485,48 +410,29 @@ port.addEventListener("enabled-changed", () => {
     reattach();
 
     if (cachedMedia.size) {
-      for (const target of cachedMedia) {
-        void convert(target);
-      }
+      cachedMedia.forEach((_cached, target) => {
+        startConversion(target);
+      });
       cachedMedia.clear();
     }
   }
 });
 
-function ensureAnalyser(
-  audioCtx: AudioContext | null,
-  sourceNode: AudioNode | null,
-): AnalyserWithLegacySampleRate | null {
-  if (!audioCtx || !sourceNode) return null;
-  if (analyser) return analyser;
-
-  analyser = audioCtx.createAnalyser();
-  analyser.sampleRate = 48000;
-  analyser.fftSize = 2048;
-  analyser.smoothingTimeConstant = 0.5;
-
-  try {
-    sourceNode.connect(analyser);
-  } catch (error) {}
-  return analyser;
-}
-
-function stopSpectrum(): void {
-  if (spectrumTimer) {
-    clearInterval(spectrumTimer);
-    spectrumTimer = null;
+window.addEventListener("pagehide", (event) => {
+  stopSpectrum();
+  if ((event as PageTransitionEvent).persisted) return;
+  disposeMediaInterception();
+  spectrumSampler.dispose();
+  currentGraphSource = null;
+  equalizerGraphs.clear();
+  cachedMedia.clear();
+  bypassedSources.clear();
+  if (mediaAudioContext) {
+    void mediaAudioContext.close().catch((error) => {
+      console.error("[contentMain] Failed to close owned audio context", error);
+    });
   }
-
-  port.dispatchEvent(
-    new CustomEvent("spectrum-frame", {
-      detail: {
-        type: "spectrum",
-        buffer: null,
-      },
-      bubbles: true,
-      composed: true,
-    }),
-  );
-}
+});
+window.addEventListener("pageshow", () => selectSpectrumGraph());
 
 port.dataset.mainReady = "true";

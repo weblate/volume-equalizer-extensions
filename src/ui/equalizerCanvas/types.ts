@@ -1,5 +1,5 @@
-import type { EqualizerState } from "../../domains/equalizer/equalizerState";
-import type { ThemeColors } from "../../domains/theme/themeColors";
+import type { EqualizerDragTarget, EqualizerState } from "./equalizerEditorState";
+import type { ThemeColors } from "../theme/themeColors";
 
 export interface EqualizerCanvasRenderOptions {
   canvas: HTMLCanvasElement;
@@ -7,6 +7,7 @@ export interface EqualizerCanvasRenderOptions {
   audioContext: BaseAudioContext;
   state: EqualizerState;
   getColors: () => ThemeColors;
+  selectedTarget?: EqualizerDragTarget | null;
 }
 
 export interface EqualizerCanvasPaintOptions {

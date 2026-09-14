@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Puoi anche attivare la visualizzazione dello spettro nelle Impostazioni."
+  },
+  "preset_import_syntax_error": {
+    "message": "Il file contiene JSON non valido."
+  },
+  "preset_import_structure_error": {
+    "message": "Il file dei preset ha una struttura non valida."
+  },
+  "preset_import_name_error": {
+    "message": "Il file dei preset contiene un nome non valido."
+  },
+  "preset_import_filter_error": {
+    "message": "Il file dei preset contiene un filtro non valido."
+  },
+  "preset_import_read_error": {
+    "message": "Impossibile leggere il file dei preset."
+  },
+  "preset_import_save_error": {
+    "message": "Impossibile salvare i preset importati."
+  },
+  "close": {
+    "message": "Chiudi"
+  },
+  "help_label": {
+    "message": "Aiuto"
+  },
+  "tab_label": {
+    "message": "Scheda"
+  },
+  "stop_capture_label": {
+    "message": "Interrompi acquisizione"
+  },
+  "equalizer_canvas_label": {
+    "message": "Controlli equalizzatore"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Seleziona una banda con Home, Fine, Pagina su o Pagina giù. Usa le frecce per frequenza e guadagno, Maiusc+Su/Giù per Q e Invio per ripristinare."
+  },
+  "window_mode_start_error": {
+    "message": "Impossibile aprire la modalità finestra. Riprova."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Compensazione automatica del volume"
   }
 }

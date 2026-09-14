@@ -182,19 +182,91 @@
   "preset_name_duplicate_error": {
     "message": "已存在同名预设。"
   },
-  "guide_back": { "message": "返回" },
-  "guide_next": { "message": "下一步" },
-  "guide_skip": { "message": "跳过" },
-  "guide_finish": { "message": "完成" },
-  "guide_theme_dark": { "message": "深色" },
-  "guide_theme_light": { "message": "浅色" },
-  "guide_shortcuts_hint": { "message": "你可以在设置中更改这些快捷键。" },
-  "guide_canvas_hint": { "message": "拖动控制点以调节均衡器。可在设置中更改控制点数量。" },
-  "guide_volume_hint": { "message": "使用此滑块调节整体音量。" },
-  "guide_presets_hint": { "message": "在这里保存当前设置或应用预设。" },
-  "donation_reminder_title": { "message": "支持开发者" },
-  "donation_reminder_message": { "message": "如果这个扩展对您有帮助，您可以支持它的开发。" },
-  "donation_reminder_link": { "message": "支持开发" },
-  "clipping_indicator_label": { "message": "CLIP" },
-  "guide_spectrum_visualization_hint": { "message": "您还可以在设置中启用频谱可视化。" }
+  "guide_back": {
+    "message": "返回"
+  },
+  "guide_next": {
+    "message": "下一步"
+  },
+  "guide_skip": {
+    "message": "跳过"
+  },
+  "guide_finish": {
+    "message": "完成"
+  },
+  "guide_theme_dark": {
+    "message": "深色"
+  },
+  "guide_theme_light": {
+    "message": "浅色"
+  },
+  "guide_shortcuts_hint": {
+    "message": "你可以在设置中更改这些快捷键。"
+  },
+  "guide_canvas_hint": {
+    "message": "拖动控制点以调节均衡器。可在设置中更改控制点数量。"
+  },
+  "guide_volume_hint": {
+    "message": "使用此滑块调节整体音量。"
+  },
+  "guide_presets_hint": {
+    "message": "在这里保存当前设置或应用预设。"
+  },
+  "donation_reminder_title": {
+    "message": "支持开发者"
+  },
+  "donation_reminder_message": {
+    "message": "如果这个扩展对您有帮助，您可以支持它的开发。"
+  },
+  "donation_reminder_link": {
+    "message": "支持开发"
+  },
+  "clipping_indicator_label": {
+    "message": "CLIP"
+  },
+  "guide_spectrum_visualization_hint": {
+    "message": "您还可以在设置中启用频谱可视化。"
+  },
+  "preset_import_syntax_error": {
+    "message": "文件包含无效的 JSON。"
+  },
+  "preset_import_structure_error": {
+    "message": "预设文件的结构无效。"
+  },
+  "preset_import_name_error": {
+    "message": "预设文件包含无效的名称。"
+  },
+  "preset_import_filter_error": {
+    "message": "预设文件包含无效的滤波器。"
+  },
+  "preset_import_read_error": {
+    "message": "无法读取预设文件。"
+  },
+  "preset_import_save_error": {
+    "message": "无法保存导入的预设。"
+  },
+  "close": {
+    "message": "关闭"
+  },
+  "help_label": {
+    "message": "帮助"
+  },
+  "tab_label": {
+    "message": "标签页"
+  },
+  "stop_capture_label": {
+    "message": "停止捕获"
+  },
+  "equalizer_canvas_label": {
+    "message": "均衡器控制"
+  },
+  "equalizer_keyboard_help": {
+    "message": "使用 Home、End、Page Up 或 Page Down 选择频段。使用方向键调整频率和增益，Shift+上/下调整 Q，Enter 重置。"
+  },
+  "window_mode_start_error": {
+    "message": "无法打开窗口模式。请重试。"
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "自动音量补偿"
+  }
 }

@@ -1,5 +1,5 @@
 import { frequencyToX } from "../../../domains/equalizer/equalizerMath";
-import type { ThemeColors } from "../../../domains/theme/themeColors";
+import type { ThemeColors } from "../../theme/themeColors";
 
 export interface SpectrumMeta {
   sampleRate: number;
@@ -75,11 +75,7 @@ const syncSpectrumCanvasSize = (canvas: HTMLCanvasElement): void => {
   }
 };
 
-const spectrumBinToFrequency = (
-  index: number,
-  binCount: number,
-  meta: SpectrumMeta,
-): number => {
+const spectrumBinToFrequency = (index: number, binCount: number, meta: SpectrumMeta): number => {
   const sampleRate = meta.sampleRate || 48000;
   const nyquist = sampleRate / 2;
 

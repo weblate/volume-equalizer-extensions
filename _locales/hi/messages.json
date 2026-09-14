@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "आप सेटिंग्स में स्पेक्ट्रम विज़ुअलाइज़ेशन भी सक्षम कर सकते हैं।"
+  },
+  "preset_import_syntax_error": {
+    "message": "फ़ाइल में अमान्य JSON है।"
+  },
+  "preset_import_structure_error": {
+    "message": "प्रीसेट फ़ाइल की संरचना अमान्य है।"
+  },
+  "preset_import_name_error": {
+    "message": "प्रीसेट फ़ाइल में एक अमान्य नाम है।"
+  },
+  "preset_import_filter_error": {
+    "message": "प्रीसेट फ़ाइल में एक अमान्य फ़िल्टर है।"
+  },
+  "preset_import_read_error": {
+    "message": "प्रीसेट फ़ाइल पढ़ी नहीं जा सकी।"
+  },
+  "preset_import_save_error": {
+    "message": "आयात किए गए प्रीसेट सहेजे नहीं जा सके।"
+  },
+  "close": {
+    "message": "बंद करें"
+  },
+  "help_label": {
+    "message": "सहायता"
+  },
+  "tab_label": {
+    "message": "टैब"
+  },
+  "stop_capture_label": {
+    "message": "कैप्चर रोकें"
+  },
+  "equalizer_canvas_label": {
+    "message": "इक्वलाइज़र नियंत्रण"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Home, End, Page Up या Page Down से बैंड चुनें। फ़्रीक्वेंसी और गेन के लिए तीर, Q के लिए Shift+Up/Down और रीसेट के लिए Enter दबाएँ।"
+  },
+  "window_mode_start_error": {
+    "message": "विंडो मोड नहीं खुल सका। कृपया फिर से कोशिश करें।"
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "स्वचालित वॉल्यूम क्षतिपूर्ति"
   }
 }

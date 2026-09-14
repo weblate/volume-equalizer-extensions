@@ -226,5 +226,47 @@
   },
   "guide_spectrum_visualization_hint": {
     "message": "Vous pouvez également activer la visualisation du spectre dans les paramètres."
+  },
+  "preset_import_syntax_error": {
+    "message": "Le fichier contient du JSON non valide."
+  },
+  "preset_import_structure_error": {
+    "message": "Le fichier de préréglages a une structure non valide."
+  },
+  "preset_import_name_error": {
+    "message": "Le fichier de préréglages contient un nom non valide."
+  },
+  "preset_import_filter_error": {
+    "message": "Le fichier de préréglages contient un filtre non valide."
+  },
+  "preset_import_read_error": {
+    "message": "Impossible de lire le fichier de préréglages."
+  },
+  "preset_import_save_error": {
+    "message": "Impossible d’enregistrer les préréglages importés."
+  },
+  "close": {
+    "message": "Fermer"
+  },
+  "help_label": {
+    "message": "Aide"
+  },
+  "tab_label": {
+    "message": "Onglet"
+  },
+  "stop_capture_label": {
+    "message": "Arrêter la capture"
+  },
+  "equalizer_canvas_label": {
+    "message": "Commandes de l’égaliseur"
+  },
+  "equalizer_keyboard_help": {
+    "message": "Sélectionnez une bande avec Début, Fin, Page précédente ou Page suivante. Utilisez les flèches pour la fréquence et le gain, Maj+Haut/Bas pour Q et Entrée pour réinitialiser."
+  },
+  "window_mode_start_error": {
+    "message": "Impossible d’ouvrir le mode fenêtre. Veuillez réessayer."
+  },
+  "enable_volume_compensation_setting_option": {
+    "message": "Compensation automatique du volume"
   }
 }
