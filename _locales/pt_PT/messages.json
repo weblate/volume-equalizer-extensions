@@ -147,7 +147,7 @@
     "message": "Este atalho já está a ser utilizado por outro comando."
   },
   "shortcut_reset_point_label": {
-    "message": "Repor ponto"
+    "message": "Ponto de reinicio"
   },
   "point_double_click_hint": {
     "message": "Faça duplo clique num ponto para o repor."
@@ -225,6 +225,6 @@
     "message": "CLIP"
   },
   "guide_spectrum_visualization_hint": {
-    "message": "Também pode ativar a visualização do espectro nas Definições."
+    "message": "Também pode ativar a visualização de espetro nas Definições."
   }
 }
